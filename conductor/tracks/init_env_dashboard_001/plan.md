@@ -1,7 +1,7 @@
 # Implementation Plan: Initialize full-stack Cloudflare environment and core dashboard UI
 
 ## Phase 1: Environment & Scaffolding
-- [ ] Task: Scaffold React+Vite frontend and install Tailwind CSS
+- [~] Task: Scaffold React+Vite frontend and install Tailwind CSS
     - [ ] Write Tests: Ensure frontend build passes and basic component renders
     - [ ] Implement Feature: Setup Vite, React, and Tailwind config
 - [ ] Task: Scaffold Hono backend for Cloudflare Workers
