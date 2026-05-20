@@ -38,4 +38,20 @@ export class AnalysisService {
     
     return gemini.generateResponse(prompt, context);
   }
+
+  async categorizeTransaction(merchant: string, description: string, gemini: any): Promise<string> {
+    const categories = [
+      "Housing", "Transport", "Food", "Utilities", "Insurance", "Healthcare", 
+      "Savings", "Personal", "Entertainment", "Income", "Other"
+    ];
+    const prompt = `Categorize this transaction into one of these: ${categories.join(", ")}. 
+    Merchant: ${merchant}
+    Description: ${description}
+    Respond with ONLY the category name.`;
+    
+    const category = await gemini.generateResponse(prompt);
+    const trimmed = category.trim();
+    
+    return categories.includes(trimmed) ? trimmed : "Other";
+  }
 }

@@ -95,15 +95,27 @@ app.get("/api/transactions", async (c) => {
 
 app.post("/api/transactions", async (c) => {
   const db = drizzle(c.env.DB);
+  const gemini = new GeminiService(c.env.GEMINI_API_KEY);
+  const analysis = new AnalysisService(db);
   const userId = "test-user";
   const body = await c.req.json();
   
+  let category = body.category;
+  if (!category || category === "Other") {
+    try {
+      category = await analysis.categorizeTransaction(body.merchant || "", body.description || "", gemini);
+    } catch (error) {
+      console.error("Categorization failed:", error);
+      category = "Other";
+    }
+  }
+
   const newTransaction = {
     id: uuidv4(),
     userId,
     accountId: body.accountId,
     amount: body.amount,
-    category: body.category,
+    category,
     merchant: body.merchant,
     description: body.description,
     date: new Date(body.date || Date.now()),
