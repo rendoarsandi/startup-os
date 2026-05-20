@@ -1,13 +1,13 @@
 # Implementation Plan: Initialize full-stack Cloudflare environment and core dashboard UI
 
-## Phase 1: Environment & Scaffolding
-- [~] Task: Scaffold React+Vite frontend and install Tailwind CSS
-    - [ ] Write Tests: Ensure frontend build passes and basic component renders
-    - [ ] Implement Feature: Setup Vite, React, and Tailwind config
-- [ ] Task: Scaffold Hono backend for Cloudflare Workers
-    - [ ] Write Tests: Add test for health check endpoint
-    - [ ] Implement Feature: Setup Hono app with basic `/api/health` endpoint
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Environment & Scaffolding' (Protocol in workflow.md)
+## Phase 1: Environment & Scaffolding [checkpoint: f13c0e0]
+- [x] Task: Scaffold React+Vite frontend and install Tailwind CSS f13c0e0
+    - [x] Write Tests: Ensure frontend build passes and basic component renders
+    - [x] Implement Feature: Setup Vite, React, and Tailwind config
+- [x] Task: Scaffold Hono backend for Cloudflare Workers f13c0e0
+    - [x] Write Tests: Add test for health check endpoint
+    - [x] Implement Feature: Setup Hono app with basic `/api/health` endpoint
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Environment & Scaffolding' (Protocol in workflow.md) f13c0e0
 
 ## Phase 2: Database & Authentication
 - [ ] Task: Provision Cloudflare D1 and setup Drizzle ORM
