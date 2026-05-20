@@ -91,35 +91,22 @@ app.get("/api/marketing/campaigns", async (c) => {
 app.post("/api/marketing/campaigns", async (c) => {
   const db = drizzle(c.env.DB);
   const userId = "test-user";
-  const body = await c.req.json();
   
-  const newCampaign = {
-    id: body.id || uuidv4(),
-    userId,
-    name: body.name,
-    status: body.status || 'active',
-    budget: Number(body.budget) || 500000,
-    spend: Number(body.spend) || 0,
-    conversions: Number(body.conversions) || 0,
-    roas: Number(body.roas) || 0,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  };
-
-  const existingIdx = campaignsStore.findIndex(x => x.id === newCampaign.id);
-  if (existingIdx >= 0) {
-    campaignsStore[existingIdx] = {
-      ...campaignsStore[existingIdx],
-      ...newCampaign,
-      spend: body.spend !== undefined ? Number(body.spend) : campaignsStore[existingIdx].spend,
-      conversions: body.conversions !== undefined ? Number(body.conversions) : campaignsStore[existingIdx].conversions,
-      roas: body.roas !== undefined ? Number(body.roas) : campaignsStore[existingIdx].roas,
-    };
-  } else {
-    campaignsStore.push(newCampaign);
-  }
-
   try {
+    const body = await c.req.json();
+    const newCampaign = {
+      id: body.id || uuidv4(),
+      userId,
+      name: body.name,
+      status: body.status || 'active',
+      budget: Number(body.budget) || 500000,
+      spend: Number(body.spend) || 0,
+      conversions: Number(body.conversions) || 0,
+      roas: Number(body.roas) || 0,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
     const existing = await db.select().from(marketingCampaigns).where(eq(marketingCampaigns.id, newCampaign.id)).get();
     if (existing) {
       await db.update(marketingCampaigns).set({
@@ -134,11 +121,25 @@ app.post("/api/marketing/campaigns", async (c) => {
     } else {
       await db.insert(marketingCampaigns).values(newCampaign).run();
     }
-  } catch (error) {
-    console.warn("DB campaigns insert/update failed, using in-memory:", error);
-  }
 
-  return c.json(newCampaign, 201);
+    const existingIdx = campaignsStore.findIndex(x => x.id === newCampaign.id);
+    if (existingIdx >= 0) {
+      campaignsStore[existingIdx] = {
+        ...campaignsStore[existingIdx],
+        ...newCampaign,
+        spend: body.spend !== undefined ? Number(body.spend) : campaignsStore[existingIdx].spend,
+        conversions: body.conversions !== undefined ? Number(body.conversions) : campaignsStore[existingIdx].conversions,
+        roas: body.roas !== undefined ? Number(body.roas) : campaignsStore[existingIdx].roas,
+      };
+    } else {
+      campaignsStore.push(newCampaign);
+    }
+
+    return c.json(newCampaign, 201);
+  } catch (error: any) {
+    console.error("DB campaigns insert/update failed:", error);
+    return c.json({ error: error.message }, 500);
+  }
 });
 
 app.post("/api/marketing/generate-ideas", async (c) => {
@@ -176,29 +177,22 @@ app.get("/api/hr/employees", async (c) => {
 app.post("/api/hr/employees", async (c) => {
   const db = drizzle(c.env.DB);
   const userId = "test-user";
-  const body = await c.req.json();
   
-  const newEmployee = {
-    id: body.id || uuidv4(),
-    userId,
-    name: body.name,
-    role: body.role,
-    department: body.department,
-    salary: Number(body.salary),
-    status: body.status || 'active',
-    startDate: body.startDate ? new Date(body.startDate) : new Date(),
-    createdAt: new Date(),
-    updatedAt: new Date()
-  };
-
-  const existingIdx = employeesStore.findIndex(x => x.id === newEmployee.id);
-  if (existingIdx >= 0) {
-    employeesStore[existingIdx] = { ...employeesStore[existingIdx], ...newEmployee };
-  } else {
-    employeesStore.push(newEmployee);
-  }
-
   try {
+    const body = await c.req.json();
+    const newEmployee = {
+      id: body.id || uuidv4(),
+      userId,
+      name: body.name,
+      role: body.role,
+      department: body.department,
+      salary: Number(body.salary),
+      status: body.status || 'active',
+      startDate: body.startDate ? new Date(body.startDate) : new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
     const existing = await db.select().from(employees).where(eq(employees.id, newEmployee.id)).get();
     if (existing) {
       await db.update(employees).set({
@@ -212,11 +206,19 @@ app.post("/api/hr/employees", async (c) => {
     } else {
       await db.insert(employees).values(newEmployee).run();
     }
-  } catch (error) {
-    console.warn("DB employees insert/update failed, using in-memory:", error);
-  }
 
-  return c.json(newEmployee, 201);
+    const existingIdx = employeesStore.findIndex(x => x.id === newEmployee.id);
+    if (existingIdx >= 0) {
+      employeesStore[existingIdx] = { ...employeesStore[existingIdx], ...newEmployee };
+    } else {
+      employeesStore.push(newEmployee);
+    }
+
+    return c.json(newEmployee, 201);
+  } catch (error: any) {
+    console.error("DB employees insert/update failed:", error);
+    return c.json({ error: error.message }, 500);
+  }
 });
 
 app.post("/api/hr/generate-doc", async (c) => {

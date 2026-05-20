@@ -23,8 +23,8 @@ describe('Authentication Integration', () => {
 
     // Better Auth might return 200 with null session or 401 depending on config
     // For now, we just want to ensure it doesn't crash
-    expect(res.status).toBeDefined();
+    expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toBeDefined();
+    expect(body).toBeNull();
   });
 });

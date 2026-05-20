@@ -19,6 +19,7 @@ describe('Multi-Role Executive API Endpoints', () => {
         all: vi.fn().mockResolvedValue([]),
         get: vi.fn().mockResolvedValue(null),
         raw: vi.fn().mockResolvedValue([]),
+        run: vi.fn().mockResolvedValue({ success: true }),
       }),
     },
   } as any;

@@ -11,7 +11,7 @@
     "@ai-cfo/db": "*",
     "@google/generative-ai": "^0.24.1",
     "better-auth": "^1.6.11",
-    "drizzle-orm": "^0.39.3",
+    "drizzle-orm": "^0.45.2",
     "hono": "^4.12.21",
     "plaid": "^42.2.0"
   },

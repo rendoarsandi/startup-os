@@ -8,11 +8,47 @@ import { PlaidLinkButton } from './components/PlaidLink'
 import { MarketingDashboard } from './components/MarketingDashboard'
 import { HRDashboard } from './components/HRDashboard'
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useTransactions } from './hooks/useTransactions'
 
 function App() {
   const [activeRole, setActiveRole] = useState<'cfo' | 'marketer' | 'hr'>('cfo');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const { transactions } = useTransactions();
+
+  // Query for bank accounts
+  const { data: accounts = [] } = useQuery<{ id: string, name: string, balance: number, type: string }[]>({
+    queryKey: ['accounts', refreshKey],
+    queryFn: async () => {
+      const res = await fetch('/api/accounts');
+      if (!res.ok) throw new Error('Failed to fetch accounts');
+      return res.json();
+    }
+  });
+
+  // Query for AI CFO Insights
+  const { data: insightsData, isLoading: insightsLoading } = useQuery<{ advice: string }>({
+    queryKey: ['insights', refreshKey],
+    queryFn: async () => {
+      const res = await fetch('/api/insights');
+      if (!res.ok) throw new Error('Failed to fetch insights');
+      return res.json();
+    }
+  });
+
+  // Calculate dynamic stats
+  const totalBalanceCents = accounts.length > 0
+    ? accounts.reduce((sum, acc) => sum + acc.balance, 0)
+    : 4259020; // fallback default cents
+
+  const monthlySpendingCents = transactions
+    .filter(t => t.amount < 0)
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+
+  const formattedBalance = `$${(totalBalanceCents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formattedSpending = `$${(monthlySpendingCents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
     <Layout activeRole={activeRole} setActiveRole={setActiveRole}>
@@ -29,14 +65,14 @@ function App() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <StatCard 
                 title="Total Balance" 
-                value="$42,590.20" 
-                change="+2.5%" 
+                value={formattedBalance} 
+                change={accounts.length > 0 ? "Live" : "+2.5%"} 
                 isPositive={true} 
               />
               <StatCard 
                 title="Monthly Spending" 
-                value="$3,240.50" 
-                change="-12%" 
+                value={formattedSpending} 
+                change={transactions.length > 0 ? "Calculated" : "-12%"} 
                 isPositive={true} 
               />
               <StatCard 
@@ -85,18 +121,31 @@ function App() {
                 <div className="glass-card p-8">
                   <h3 className="text-xl font-bold mb-6">AI Insights</h3>
                   <div className="space-y-4">
-                    <InsightItem 
-                      type="opportunity"
-                      message="You could save $45/mo by switching your Netflix plan."
-                    />
-                    <InsightItem 
-                      type="warning"
-                      message="Unexpected $200 charge from 'AWS'. Investigate?"
-                    />
-                    <InsightItem 
-                      type="success"
-                      message="Your investment portfolio is up 5% this week!"
-                    />
+                    {insightsLoading ? (
+                      <div className="h-20 rounded-xl bg-white/5 animate-pulse flex items-center justify-center text-xs opacity-50">
+                        Analyzing financial data...
+                      </div>
+                    ) : insightsData?.advice ? (
+                      <InsightItem 
+                        type="opportunity"
+                        message={insightsData.advice}
+                      />
+                    ) : (
+                      <>
+                        <InsightItem 
+                          type="opportunity"
+                          message="You could save $45/mo by switching your Netflix plan."
+                        />
+                        <InsightItem 
+                          type="warning"
+                          message="Unexpected $200 charge from 'AWS'. Investigate?"
+                        />
+                        <InsightItem 
+                          type="success"
+                          message="Your investment portfolio is up 5% this week!"
+                        />
+                      </>
+                    )}
                   </div>
                 </div>
 

@@ -1,21 +1,27 @@
 import { expect, test, describe, vi } from 'vitest';
 import { GeminiService } from './gemini';
 
+vi.mock('@google/generative-ai', () => {
+  const mockGenerateContent = vi.fn().mockResolvedValue({
+    response: {
+      text: () => 'Hello from AI CFO!',
+    },
+  });
+  
+  const mockGetGenerativeModel = vi.fn().mockReturnValue({
+    generateContent: mockGenerateContent,
+  });
+
+  return {
+    GoogleGenerativeAI: class {
+      getGenerativeModel = mockGetGenerativeModel;
+    },
+  };
+});
+
 describe('Gemini Service', () => {
-  test('generateResponse returns a string from mocked Gemini', async () => {
-    // This will fail because gemini.ts doesn't exist yet
+  test('generateResponse returns a string from mocked GoogleGenerativeAI SDK', async () => {
     const service = new GeminiService('test-key');
-    
-    // Mocking the model response
-    const mockResponse = {
-      response: {
-        text: () => 'Hello from AI CFO!',
-      },
-    };
-    
-    // Injecting mock (implementation detail depends on how we structure the service)
-    vi.spyOn(service, 'generateResponse').mockResolvedValue('Hello from AI CFO!');
-    
     const response = await service.generateResponse('Hello');
     expect(response).toBe('Hello from AI CFO!');
   });

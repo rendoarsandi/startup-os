@@ -1,4 +1,5 @@
 import { useBudgets } from '../hooks/useBudgets';
+import { useTransactions } from '../hooks/useTransactions';
 
 const categoryIcons: Record<string, string> = {
   Food: '🍔',
@@ -15,9 +16,10 @@ const categoryIcons: Record<string, string> = {
 };
 
 export function BudgetTracker() {
-  const { budgets, loading } = useBudgets();
+  const { budgets, loading: budgetsLoading } = useBudgets();
+  const { transactions, isLoading: transactionsLoading } = useTransactions();
 
-  if (loading) {
+  if (budgetsLoading || transactionsLoading) {
     return (
       <div className="space-y-3">
         {[1, 2, 3].map((i) => (
@@ -39,9 +41,17 @@ export function BudgetTracker() {
   return (
     <div className="space-y-4">
       {budgets.map((budget) => {
-        // Mock spent amount for now (will be calculated from transactions later)
-        const spent = Math.floor(Math.random() * budget.amount);
-        const percentage = Math.min(100, Math.round((spent / budget.amount) * 100));
+        // Calculate deterministic spent amount from transactions (tx.amount is in cents)
+        const categoryTransactions = transactions.filter(
+          (t) => t.category === budget.category && t.amount < 0
+        );
+        const spent = categoryTransactions.reduce(
+          (sum, t) => sum + Math.abs(t.amount), 
+          0
+        );
+        const percentage = budget.amount > 0 
+          ? Math.min(100, Math.round((spent / budget.amount) * 100)) 
+          : 0;
         const isOver = percentage >= 90;
         const isWarning = percentage >= 70 && percentage < 90;
 
