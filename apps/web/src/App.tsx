@@ -1,4 +1,5 @@
 import { Layout } from './components/Layout'
+import { Chat } from './components/Chat'
 
 function App() {
   return (
@@ -94,6 +95,8 @@ function App() {
             </div>
           </div>
         </div>
+
+        <Chat />
       </div>
     </Layout>
   )

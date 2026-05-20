@@ -1,15 +1,15 @@
 # Implementation Plan: AI Chat & Gemini Integration
 
-## Phase 1: Gemini API Integration
-- [ ] Task: Backend Gemini API Setup
-    - [ ] Write Tests: Ensure Gemini API client works with mocked responses
-    - [ ] Implement Feature: Create a dedicated Gemini service in `apps/api`
-- [ ] Task: AI Chat Endpoint
-    - [ ] Write Tests: Test chat endpoint with history and context
-    - [ ] Implement Feature: Implement `/api/chat` POST endpoint
+## Phase 1: Gemini API Integration [checkpoint: fe8ea50]
+- [x] Task: Backend Gemini API Setup fe8ea50
+    - [x] Write Tests: Ensure Gemini API client works with mocked responses fe8ea50
+    - [x] Implement Feature: Create a dedicated Gemini service in `apps/api` fe8ea50
+- [x] Task: AI Chat Endpoint fe8ea50
+    - [x] Write Tests: Test chat endpoint with history and context fe8ea50
+    - [x] Implement Feature: Implement `/api/chat` POST endpoint fe8ea50
 
 ## Phase 2: Frontend Chat Interface
-- [ ] Task: Build Chat UI
+- [~] Task: Build Chat UI
     - [ ] Write Tests: Ensure chat messages render and input works
     - [ ] Implement Feature: Create a floating chat component or a dedicated chat page
 - [ ] Task: Stream Gemini Responses
