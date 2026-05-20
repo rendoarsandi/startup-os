@@ -18,11 +18,10 @@
     - [x] Implement Feature: Setup BetterAuth with Drizzle adapter 906309a
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Database & Authentication' (Protocol in workflow.md) 906309a
 
-## Phase 3: Core Dashboard Layout
-- [~] Task: Build Dashboard Shell
-    - [ ] Write Tests: Test layout components render correctly with mocked auth state
-    - [ ] Implement Feature: Build main layout (Sidebar, Header, Main Content Area)
-- [ ] Task: Create Widget Placeholders
-    - [ ] Write Tests: Test rendering of chart and transaction list placeholders
-    - [ ] Implement Feature: Implement dummy UI components for Recharts and recent transactions
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Core Dashboard Layout' (Protocol in workflow.md)
+## Phase 3: Core Dashboard Layout [checkpoint: 2e52df4]
+- [x] Task: Build Dashboard Shell 2e52df4
+    - [x] Write Tests: Test layout components render correctly with mocked auth state 2e52df4
+    - [x] Implement Feature: Build main layout (Sidebar, Header, Main Content Area) 2e52df4
+- [x] Task: Create Widget Placeholders 2e52df4
+    - [x] Implement Feature: Add StatCards, InsightItems, and TransactionItem placeholders 2e52df4
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Core Dashboard Layout' (Protocol in workflow.md) 2e52df4
