@@ -2,6 +2,8 @@ import { Layout } from './components/Layout'
 import { Chat } from './components/Chat'
 import { TransactionList } from './components/TransactionList'
 import { TransactionModal } from './components/TransactionModal'
+import { BudgetTracker } from './components/BudgetTracker'
+import { SpendingTrendChart, CategoryBreakdownChart } from './components/Charts'
 import { useState } from 'react'
 
 function App() {
@@ -40,10 +42,13 @@ function App() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
             <div className="glass-card p-8 min-h-[400px]">
-              <h3 className="text-xl font-bold mb-6">Financial Overview</h3>
-              <div className="h-64 flex items-center justify-center text-white/10 italic">
-                Chart placeholder
-              </div>
+              <h3 className="text-xl font-bold mb-6">Spending Trends</h3>
+              <SpendingTrendChart />
+            </div>
+
+            <div className="glass-card p-8">
+              <h3 className="text-xl font-bold mb-6">Category Breakdown</h3>
+              <CategoryBreakdownChart />
             </div>
 
             <div className="lg:col-span-1 space-y-6">
@@ -64,6 +69,11 @@ function App() {
           </div>
 
           <div className="space-y-8">
+            <div className="glass-card p-8">
+              <h3 className="text-xl font-bold mb-6">Budget Tracker</h3>
+              <BudgetTracker />
+            </div>
+
             <div className="glass-card p-8">
               <h3 className="text-xl font-bold mb-6">AI Insights</h3>
               <div className="space-y-4">

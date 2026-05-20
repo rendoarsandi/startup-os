@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { drizzle } from 'drizzle-orm/d1'
 import { eq } from 'drizzle-orm'
-import { users, financialAccounts, transactions } from "@ai-cfo/db";
+import { users, financialAccounts, transactions, budgets } from "@ai-cfo/db";
 import { getAuth } from './auth';
 import { GeminiService } from "./gemini";
 import { AnalysisService } from "./analysis";
@@ -131,6 +131,37 @@ app.get('/api/users', async (c) => {
   const allUsers = await db.select().from(users).all()
   return c.json(allUsers)
 })
+
+app.get("/api/budgets", async (c) => {
+  const db = drizzle(c.env.DB);
+  const userId = "test-user";
+  try {
+    const results = await db.select().from(budgets).where(eq(budgets.userId, userId)).all();
+    return c.json(results);
+  } catch (error: any) {
+    console.error("GET /api/budgets error:", error);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.post("/api/budgets", async (c) => {
+  const db = drizzle(c.env.DB);
+  const userId = "test-user";
+  const body = await c.req.json();
+  
+  const newBudget = {
+    id: uuidv4(),
+    userId,
+    category: body.category,
+    amount: body.amount,
+    period: body.period || "monthly",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  await db.insert(budgets).values(newBudget).run();
+  return c.json(newBudget, 201);
+});
 
 app.get('/', (c) => {
   return c.text('AI CFO API')

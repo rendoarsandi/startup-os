@@ -79,3 +79,15 @@ export const transactions = sqliteTable('transaction', {
   date: integer('date', { mode: 'timestamp' }).notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
+
+export const budgets = sqliteTable('budget', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id),
+  category: text('category').notNull(),
+  amount: integer('amount').notNull(), // monthly limit in cents
+  period: text('period').notNull().default('monthly'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
