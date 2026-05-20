@@ -2,7 +2,7 @@ import '@testing-library/jest-dom';
 import { vi, beforeAll } from 'vitest';
 
 beforeAll(() => {
-  global.fetch = vi.fn().mockImplementation((url: string) => {
+  globalThis.fetch = vi.fn().mockImplementation((url: string) => {
     if (url.includes('/api/transactions')) {
       return Promise.resolve({
         ok: true,

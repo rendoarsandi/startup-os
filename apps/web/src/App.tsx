@@ -4,6 +4,7 @@ import { TransactionList } from './components/TransactionList'
 import { TransactionModal } from './components/TransactionModal'
 import { BudgetTracker } from './components/BudgetTracker'
 import { SpendingTrendChart, CategoryBreakdownChart } from './components/Charts'
+import { PlaidLinkButton } from './components/PlaidLink'
 import { useState } from 'react'
 
 function App() {
@@ -97,6 +98,11 @@ function App() {
               <p className="text-white/60 text-sm mb-6">Get instant answers about your finances using Gemini AI.</p>
               <button className="btn-primary w-full">Start Conversation</button>
             </div>
+
+            <div className="glass-card p-8">
+              <h3 className="text-xl font-bold mb-4">Bank Accounts</h3>
+              <PlaidLinkButton />
+            </div>
           </div>
         </div>
 
@@ -110,23 +116,6 @@ function App() {
     </Layout>
   )
 }
-
-const TransactionItem = ({ merchant, date, amount, category, isPositive }: { merchant: string, date: string, amount: string, category: string, isPositive?: boolean }) => (
-  <div className="flex items-center justify-between">
-    <div className="flex items-center gap-4">
-      <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center font-bold text-white/20">
-        {merchant[0]}
-      </div>
-      <div>
-        <h5 className="font-bold">{merchant}</h5>
-        <p className="text-xs text-white/30">{date} • {category}</p>
-      </div>
-    </div>
-    <div className={`font-bold ${isPositive ? 'text-green-400' : 'text-white'}`}>
-      {amount}
-    </div>
-  </div>
-)
 
 const StatCard = ({ title, value, change, isPositive }: { title: string, value: string, change: string, isPositive: boolean }) => (
   <div className="glass-card p-6 group hover:border-primary/50 transition-all cursor-default">

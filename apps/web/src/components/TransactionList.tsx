@@ -1,6 +1,6 @@
 import React from 'react';
 import { ShoppingCart, Coffee, Home, Car, Utensils, MoreHorizontal } from 'lucide-react';
-import { Transaction, useTransactions } from '../hooks/useTransactions';
+import { useTransactions } from '../hooks/useTransactions';
 
 const categoryIcons: Record<string, React.ReactNode> = {
   'Food': <Utensils size={18} />,

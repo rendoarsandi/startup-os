@@ -74,7 +74,7 @@ export function SpendingTrendChart() {
             color: 'white',
             fontSize: '13px',
           }}
-          formatter={(value: number) => [`$${value.toFixed(2)}`, 'Spending']}
+          formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Spending']}
         />
         <Area 
           type="monotone" 
@@ -139,7 +139,7 @@ export function CategoryBreakdownChart() {
                 color: 'white',
                 fontSize: '13px',
               }}
-              formatter={(value: number) => [`$${value.toFixed(2)}`, '']}
+              formatter={(value: any) => [`$${Number(value).toFixed(2)}`, '']}
             />
           </PieChart>
         </ResponsiveContainer>

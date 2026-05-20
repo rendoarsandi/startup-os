@@ -12,7 +12,8 @@
     "@google/generative-ai": "^0.24.1",
     "better-auth": "^1.6.11",
     "drizzle-orm": "^0.39.3",
-    "hono": "^4.12.21"
+    "hono": "^4.12.21",
+    "plaid": "^42.2.0"
   },
   "devDependencies": {
     "@types/uuid": "^10.0.0",

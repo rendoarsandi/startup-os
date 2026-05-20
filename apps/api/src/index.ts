@@ -5,6 +5,7 @@ import { users, financialAccounts, transactions, budgets } from "@ai-cfo/db";
 import { getAuth } from './auth';
 import { GeminiService } from "./gemini";
 import { AnalysisService } from "./analysis";
+import { PlaidService } from "./plaid";
 import { v4 as uuidv4 } from 'uuid';
 
 type Bindings = {
@@ -12,6 +13,9 @@ type Bindings = {
   BETTER_AUTH_URL: string
   BETTER_AUTH_SECRET: string
   GEMINI_API_KEY: string
+  PLAID_CLIENT_ID: string
+  PLAID_SECRET: string
+  PLAID_ENV: string
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -161,6 +165,38 @@ app.post("/api/budgets", async (c) => {
 
   await db.insert(budgets).values(newBudget).run();
   return c.json(newBudget, 201);
+});
+
+// Plaid endpoints
+app.post("/api/plaid/create-link-token", async (c) => {
+  try {
+    const plaid = new PlaidService({
+      clientId: c.env.PLAID_CLIENT_ID,
+      secret: c.env.PLAID_SECRET,
+      environment: c.env.PLAID_ENV || 'sandbox',
+    });
+    const userId = "test-user";
+    const linkToken = await plaid.createLinkToken(userId);
+    return c.json({ linkToken });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.post("/api/plaid/exchange-token", async (c) => {
+  try {
+    const plaid = new PlaidService({
+      clientId: c.env.PLAID_CLIENT_ID,
+      secret: c.env.PLAID_SECRET,
+      environment: c.env.PLAID_ENV || 'sandbox',
+    });
+    const { publicToken } = await c.req.json();
+    const { accessToken, itemId } = await plaid.exchangePublicToken(publicToken);
+    // TODO: Store accessToken securely in the database
+    return c.json({ success: true, itemId });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
 });
 
 app.get('/', (c) => {
