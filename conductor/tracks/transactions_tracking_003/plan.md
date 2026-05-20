@@ -8,12 +8,12 @@
     - [x] Write Tests: Test transaction list and create endpoints bf7ac60
     - [x] Implement Feature: Implement `/api/transactions` (GET, POST) bf7ac60
 
-## Phase 2: Transaction UI [checkpoint: 69aa09e]
+## Phase 2: Transaction UI [checkpoint: f9849a2]
 - [x] Task: Transaction List View 69aa09e
     - [x] Write Tests: Ensure transactions table renders correctly 69aa09e
     - [x] Implement Feature: Build a dedicated Transactions page or expand the dashboard widget 69aa09e
-- [ ] Task: Add Transaction Form
-    - [ ] Implement Feature: Create a premium modal/form for manual entry
+- [x] Task: Add Transaction Form f9849a2
+    - [x] Implement Feature: Create a premium modal/form for manual entry f9849a2
 
 ## Phase 3: AI + Real Data
 - [ ] Task: Context-Aware Analysis

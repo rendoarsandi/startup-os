@@ -19,7 +19,7 @@ export class GeminiService {
     return response.text();
   }
 
-  async chat(history: { role: "user" | "model", parts: string[] }[], message: string): Promise<string> {
+  async chat(history: { role: "user" | "model", parts: string[] }[], message: string, context?: string): Promise<string> {
     const chatSession = this.model.startChat({
       history: history.map(h => ({
         role: h.role,
@@ -30,7 +30,11 @@ export class GeminiService {
       },
     });
 
-    const result = await chatSession.sendMessage(message);
+    const finalMessage = context 
+      ? `[Financial Context]\n${context}\n\n[User Message]\n${message}`
+      : message;
+
+    const result = await chatSession.sendMessage(finalMessage);
     const response = await result.response;
     return response.text();
   }

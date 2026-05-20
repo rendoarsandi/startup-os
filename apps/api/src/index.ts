@@ -26,11 +26,17 @@ app.on(['POST', 'GET'], '/api/auth/*', (c) => {
 });
 
 app.post("/api/chat", async (c) => {
+  const db = drizzle(c.env.DB);
   const gemini = new GeminiService(c.env.GEMINI_API_KEY);
+  const analysis = new AnalysisService(db);
   const { message, history } = await c.req.json();
   
+  // Mocking userId for now
+  const userId = "test-user";
+  
   try {
-    const response = await gemini.chat(history || [], message);
+    const context = await analysis.getUserContext(userId);
+    const response = await gemini.chat(history || [], message, context);
     return c.json({ response });
   } catch (error: any) {
     return c.json({ error: error.message }, 500);

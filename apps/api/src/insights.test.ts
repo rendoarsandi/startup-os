@@ -14,7 +14,8 @@ describe('Insights Endpoint', () => {
         prepare: vi.fn().mockReturnValue({
           bind: vi.fn().mockReturnThis(),
           get: vi.fn().mockResolvedValue({ id: 'test-user', name: 'Test' }),
-          raw: vi.fn().mockResolvedValue([['test-user', 'Test']]), // In case it uses raw
+          all: vi.fn().mockResolvedValue([]),
+          raw: vi.fn().mockResolvedValue([]),
         }),
       },
       GEMINI_API_KEY: 'test-key',

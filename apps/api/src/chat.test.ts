@@ -19,6 +19,14 @@ describe('Chat Endpoint', () => {
       },
     }, {
       GEMINI_API_KEY: 'test-key',
+      DB: {
+        prepare: vi.fn().mockReturnValue({
+          bind: vi.fn().mockReturnThis(),
+          all: vi.fn().mockResolvedValue([]),
+          get: vi.fn().mockResolvedValue({ id: 'test-user', name: 'Test User' }),
+          raw: vi.fn().mockResolvedValue([]),
+        }),
+      },
     } as any);
 
     expect(res.status).toBe(200);
