@@ -10,7 +10,7 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Environment & Scaffolding' (Protocol in workflow.md) f13c0e0
 
 ## Phase 2: Database & Authentication
-- [ ] Task: Provision Cloudflare D1 and setup Drizzle ORM
+- [~] Task: Provision Cloudflare D1 and setup Drizzle ORM
     - [ ] Write Tests: Write integration tests for database connection and basic schema
     - [ ] Implement Feature: Create initial Drizzle schema (Users) and local D1 setup
 - [ ] Task: Integrate BetterAuth

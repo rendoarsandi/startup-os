@@ -1,0 +1,18 @@
+{
+  "name": "@ai-cfo/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "drizzle-orm": "latest"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.30.4"
+  }
+}

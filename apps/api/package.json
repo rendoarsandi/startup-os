@@ -8,6 +8,9 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@ai-cfo/db": "*",
+    "better-auth": "^1.6.11",
+    "drizzle-orm": "^0.39.3",
     "hono": "^4.12.21"
   },
   "devDependencies": {
