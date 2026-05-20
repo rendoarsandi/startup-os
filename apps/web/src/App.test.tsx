@@ -5,6 +5,6 @@ import '@testing-library/jest-dom';
 
 test('renders AI CFO Dashboard heading', () => {
   render(<App />);
-  const headingElement = screen.getByText(/AI CFO Dashboard/i);
-  expect(headingElement).toBeInTheDocument();
+  const heading = screen.getByRole('heading', { name: /^AI CFO$/i, level: 1 });
+  expect(heading).toBeInTheDocument();
 });

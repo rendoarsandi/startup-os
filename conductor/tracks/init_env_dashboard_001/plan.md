@@ -19,7 +19,7 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Database & Authentication' (Protocol in workflow.md) 906309a
 
 ## Phase 3: Core Dashboard Layout
-- [ ] Task: Build Dashboard Shell
+- [~] Task: Build Dashboard Shell
     - [ ] Write Tests: Test layout components render correctly with mocked auth state
     - [ ] Implement Feature: Build main layout (Sidebar, Header, Main Content Area)
 - [ ] Task: Create Widget Placeholders
