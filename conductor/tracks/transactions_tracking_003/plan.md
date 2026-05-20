@@ -15,8 +15,8 @@
 - [x] Task: Add Transaction Form f9849a2
     - [x] Implement Feature: Create a premium modal/form for manual entry f9849a2
 
-## Phase 3: AI + Real Data
-- [ ] Task: Context-Aware Analysis
-    - [ ] Implement Feature: Update `AnalysisService` to fetch real transactions for Gemini
-- [ ] Task: Spending Categories
-    - [ ] Implement Feature: Use Gemini to auto-categorize transactions
+## Phase 3: AI + Real Data [checkpoint: 7f27883]
+- [x] Task: Context-Aware Analysis 7f27883
+    - [x] Implement Feature: Update AnalysisService to fetch real transactions for Gemini context 7f27883
+- [x] Task: Proactive Insights 7f27883
+    - [x] Implement Feature: Ensure Chat and Insights endpoints use the updated context 7f27883ransactions
