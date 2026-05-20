@@ -8,10 +8,10 @@
     - [x] Write Tests: Test chat endpoint with history and context fe8ea50
     - [x] Implement Feature: Implement `/api/chat` POST endpoint fe8ea50
 
-## Phase 2: Frontend Chat Interface
-- [~] Task: Build Chat UI
-    - [ ] Write Tests: Ensure chat messages render and input works
-    - [ ] Implement Feature: Create a floating chat component or a dedicated chat page
+## Phase 2: Frontend Chat Interface [checkpoint: 95bcc30]
+- [x] Task: Build Chat UI 95bcc30
+    - [x] Write Tests: Ensure chat messages render and input works 95bcc30
+    - [x] Implement Feature: Create a floating chat component or a dedicated chat page 95bcc30
 - [ ] Task: Stream Gemini Responses
     - [ ] Write Tests: Test streaming response handling in frontend
     - [ ] Implement Feature: Use Server-Sent Events or streaming for real-time chat

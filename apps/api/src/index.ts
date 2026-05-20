@@ -3,6 +3,7 @@ import { drizzle } from 'drizzle-orm/d1'
 import { users } from '@ai-cfo/db'
 import { getAuth } from './auth'
 import { GeminiService } from "./gemini";
+import { AnalysisService } from "./analysis";
 
 type Bindings = {
   DB: D1Database
@@ -29,6 +30,22 @@ app.post("/api/chat", async (c) => {
   try {
     const response = await gemini.chat(history || [], message);
     return c.json({ response });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.get("/api/insights", async (c) => {
+  const db = drizzle(c.env.DB);
+  const gemini = new GeminiService(c.env.GEMINI_API_KEY);
+  const analysis = new AnalysisService(db);
+  
+  // Mocking userId for now since we don't have session middleware fully wired in Hono yet
+  const userId = "test-user";
+  
+  try {
+    const advice = await analysis.getFinancialAdvice(userId, gemini);
+    return c.json({ advice });
   } catch (error: any) {
     return c.json({ error: error.message }, 500);
   }
