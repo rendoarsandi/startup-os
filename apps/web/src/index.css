@@ -1,8 +1,23 @@
 @import "tailwindcss";
 
+:root {
+  --primary: oklch(0.65 0.25 260); /* Electric Blue */
+  --secondary: oklch(0.7 0.2 300); /* Purple */
+}
+
+:root.theme-marketer {
+  --primary: oklch(0.65 0.22 30); /* Cyber Coral / Orange */
+  --secondary: oklch(0.6 0.25 340); /* Neon Pink */
+}
+
+:root.theme-hr {
+  --primary: oklch(0.65 0.2 160); /* Vivid Emerald */
+  --secondary: oklch(0.7 0.15 200); /* Mint Teal */
+}
+
 @theme {
-  --color-primary: oklch(0.65 0.25 260); /* Electric Blue */
-  --color-secondary: oklch(0.7 0.2 300); /* Purple */
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
   --color-accent: oklch(0.8 0.15 150); /* Soft Mint */
   --color-background: oklch(0.1 0.02 240); /* Deep Space */
   --color-surface: oklch(0.15 0.03 240 / 0.8); /* Glass Surface */
@@ -10,6 +25,7 @@
   
   --font-sans: 'Outfit', sans-serif;
 }
+
 
 @layer base {
   body {
@@ -27,18 +43,30 @@
 @layer components {
   .glass-card {
     @apply bg-surface backdrop-blur-xl border border-border rounded-2xl shadow-2xl;
+    transition: background-color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
   }
 
   .nav-link {
-    @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 hover:bg-white/5 text-white/60 hover:text-white;
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-white/60 hover:text-white;
+    transition: all 0.3s ease;
   }
 
   .nav-link.active {
     @apply bg-primary/10 text-primary border border-primary/20;
+    transition: all 0.3s ease;
   }
 
   .btn-primary {
-    @apply px-6 py-2.5 rounded-xl bg-primary text-white font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-primary/20;
+    @apply px-6 py-2.5 rounded-xl bg-primary text-white font-semibold shadow-lg shadow-primary/20;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .btn-primary:hover {
+    @apply scale-[1.02];
+  }
+
+  .btn-primary:active {
+    @apply scale-[0.98];
   }
 }
 

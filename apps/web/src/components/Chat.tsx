@@ -1,11 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Bot, User, Loader2 } from 'lucide-react';
+import { MessageCircle, X, Send, User, Loader2, Sparkles, Briefcase, Users } from 'lucide-react';
 import { useChat } from '../hooks/useChat';
 
-export const Chat: React.FC = () => {
+interface ChatProps {
+  activeRole: 'cfo' | 'marketer' | 'hr';
+}
+
+export const Chat: React.FC<ChatProps> = ({ activeRole }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
-  const { messages, sendMessage, isLoading } = useChat();
+  const { messages, sendMessage, isLoading } = useChat(activeRole);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -21,13 +25,31 @@ export const Chat: React.FC = () => {
     setInput('');
   };
 
+  const roleTitle = {
+    cfo: "AI CFO Assistant",
+    marketer: "AI CMO Growth Partner",
+    hr: "AI CHRO People Advisor"
+  };
+
+  const roleWelcome = {
+    cfo: "Hello! I'm your AI CFO. How can I help you manage your finances, expenses, or cashflow today?",
+    marketer: "Hey there! I'm your AI CMO. Let's design some high-converting campaigns or brainstorm growth ideas!",
+    hr: "Welcome! I'm your AI CHRO. I can assist you with HR policies, job descriptions, offer letters, or compliance questions."
+  };
+
+  const RoleIcon = () => {
+    if (activeRole === 'marketer') return <Sparkles size={20} />;
+    if (activeRole === 'hr') return <Users size={20} />;
+    return <Briefcase size={20} />;
+  };
+
   return (
     <div className="fixed bottom-8 right-8 z-50">
       {/* Toggle Button */}
       {!isOpen && (
         <button 
           onClick={() => setIsOpen(true)}
-          className="w-16 h-16 rounded-2xl bg-primary shadow-2xl shadow-primary/40 flex items-center justify-center text-white transition-all duration-300 hover:scale-110 active:scale-95 group"
+          className="w-16 h-16 rounded-2xl bg-primary shadow-2xl shadow-primary/40 flex items-center justify-center text-white transition-all duration-300 hover:scale-110 active:scale-95 group cursor-pointer"
         >
           <MessageCircle size={28} className="group-hover:rotate-12 transition-transform" />
           <span className="absolute -top-1 -right-1 w-4 h-4 bg-secondary rounded-full border-2 border-background animate-bounce" />
@@ -41,19 +63,19 @@ export const Chat: React.FC = () => {
           <div className="p-6 border-b border-border flex items-center justify-between bg-white/5 rounded-t-2xl">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
-                <Bot size={22} />
+                <RoleIcon />
               </div>
               <div>
-                <h3 className="font-bold">AI CFO Assistant</h3>
+                <h3 className="font-bold">{roleTitle[activeRole]}</h3>
                 <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                   <span className="text-[10px] text-white/40 uppercase tracking-widest font-black">Online</span>
                 </div>
               </div>
             </div>
             <button 
               onClick={() => setIsOpen(false)}
-              className="text-white/30 hover:text-white transition-colors"
+              className="text-white/30 hover:text-white transition-colors cursor-pointer"
             >
               <X size={20} />
             </button>
@@ -66,17 +88,20 @@ export const Chat: React.FC = () => {
           >
             {messages.length === 0 && (
               <div className="h-full flex flex-col items-center justify-center text-center space-y-4 px-4 opacity-50">
-                <Bot size={48} className="text-primary/50" />
-                <p className="text-sm font-medium">Hello! I'm your AI CFO. How can I help you manage your finances today?</p>
+                <div className="text-primary/50">
+                  <RoleIcon />
+                </div>
+                <p className="text-sm font-medium">{roleWelcome[activeRole]}</p>
               </div>
             )}
+
             
             {messages.map((msg, i) => (
               <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
                   msg.role === 'user' ? 'bg-secondary/20 text-secondary' : 'bg-primary/20 text-primary'
                 }`}>
-                  {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
+                  {msg.role === 'user' ? <User size={16} /> : <RoleIcon />}
                 </div>
                 <div className={`max-w-[80%] p-3 rounded-2xl text-sm leading-relaxed ${
                   msg.role === 'user' 
@@ -91,7 +116,7 @@ export const Chat: React.FC = () => {
             {isLoading && (
               <div className="flex gap-3">
                 <div className="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center">
-                  <Bot size={16} />
+                  <RoleIcon />
                 </div>
                 <div className="bg-white/5 p-3 rounded-2xl rounded-tl-none border border-white/5">
                   <Loader2 size={16} className="animate-spin text-primary" />

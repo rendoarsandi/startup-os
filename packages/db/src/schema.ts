@@ -91,3 +91,34 @@ export const budgets = sqliteTable('budget', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
+
+export const marketingCampaigns = sqliteTable('marketing_campaign', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id),
+  name: text('name').notNull(),
+  status: text('status').notNull().default('active'),
+  budget: integer('budget').notNull(), // in cents
+  spend: integer('spend').notNull().default(0), // in cents
+  conversions: integer('conversions').notNull().default(0),
+  roas: integer('roas').notNull().default(0), // multiplied by 100
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const employees = sqliteTable('employee', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id),
+  name: text('name').notNull(),
+  role: text('role').notNull(),
+  department: text('department').notNull(),
+  salary: integer('salary').notNull(), // in cents
+  status: text('status').notNull().default('active'),
+  startDate: integer('start_date', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+

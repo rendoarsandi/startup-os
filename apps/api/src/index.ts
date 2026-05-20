@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { drizzle } from 'drizzle-orm/d1'
 import { eq } from 'drizzle-orm'
-import { users, financialAccounts, transactions, budgets } from "@ai-cfo/db";
+import { users, financialAccounts, transactions, budgets, marketingCampaigns, employees } from "@ai-cfo/db";
 import { getAuth } from './auth';
 import { GeminiService } from "./gemini";
 import { AnalysisService } from "./analysis";
@@ -20,6 +20,26 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>()
 
+// Resilient Mock Data Seeds
+const DEFAULT_CAMPAIGNS = [
+  { id: 'mc-1', name: 'Google Ads Q2', status: 'active', budget: 500000, spend: 320000, conversions: 240, roas: 420 },
+  { id: 'mc-2', name: 'Meta Retargeting', status: 'active', budget: 400000, spend: 380000, conversions: 310, roas: 380 },
+  { id: 'mc-3', name: 'TikTok Product Launch', status: 'active', budget: 600000, spend: 450000, conversions: 180, roas: 290 },
+  { id: 'mc-4', name: 'LinkedIn Enterprise', status: 'paused', budget: 500000, spend: 95000, conversions: 12, roas: 180 }
+];
+
+const DEFAULT_EMPLOYEES = [
+  { id: 'emp-1', name: 'Alice Vance', role: 'Engineering Lead', department: 'Engineering', salary: 14500000, status: 'active', startDate: new Date('2024-03-15') },
+  { id: 'emp-2', name: 'Bob Sterling', role: 'Senior Designer', department: 'Product', salary: 11000000, status: 'active', startDate: new Date('2024-09-01') },
+  { id: 'emp-3', name: 'Clara Hayes', role: 'Growth Marketer', department: 'Marketing', salary: 9500000, status: 'active', startDate: new Date('2025-01-10') },
+  { id: 'emp-4', name: 'David Miller', role: 'HR Specialist', department: 'People & Culture', salary: 8500000, status: 'active', startDate: new Date('2025-04-01') },
+  { id: 'emp-5', name: 'Emily Rose', role: 'Frontend Engineer', department: 'Engineering', salary: 10500000, status: 'onboarding', startDate: new Date('2026-06-01') }
+];
+
+// Memory fallback stores
+const campaignsStore = [...DEFAULT_CAMPAIGNS];
+const employeesStore = [...DEFAULT_EMPLOYEES];
+
 app.get('/api/health', (c) => {
   return c.json({ status: 'OK' })
 })
@@ -33,19 +53,211 @@ app.post("/api/chat", async (c) => {
   const db = drizzle(c.env.DB);
   const gemini = new GeminiService(c.env.GEMINI_API_KEY);
   const analysis = new AnalysisService(db);
-  const { message, history } = await c.req.json();
+  const { message, history, role } = await c.req.json();
   
   // Mocking userId for now
   const userId = "test-user";
   
   try {
-    const context = await analysis.getUserContext(userId);
-    const response = await gemini.chat(history || [], message, context);
+    let context = "";
+    if (!role || role === 'cfo') {
+      context = await analysis.getUserContext(userId);
+    } else if (role === 'marketer') {
+      context = `Marketing Profile:\nActive Campaigns:\n` + campaignsStore.map(c => `- ${c.name} (${c.status}): Budget $${(c.budget/100).toFixed(2)}, Spend $${(c.spend/100).toFixed(2)}, ROAS ${(c.roas/100).toFixed(1)}x`).join('\n') + `\n\nGoal: Keep average CAC under $45 and boost conversion funnel.`;
+    } else if (role === 'hr') {
+      context = `HR & People Profile:\nTotal Employees: ${employeesStore.length}\nActive Staff:\n` + employeesStore.map(e => `- ${e.name}: ${e.role} (${e.department}) - $${(e.salary/100).toFixed(2)}/yr`).join('\n') + `\n\nHiring targets: Q3 Headcount growth and document generator.`;
+    }
+
+    const response = await gemini.chat(history || [], message, context, role || 'cfo');
     return c.json({ response });
   } catch (error: any) {
     return c.json({ error: error.message }, 500);
   }
 });
+
+// Marketing campaigns API
+app.get("/api/marketing/campaigns", async (c) => {
+  const db = drizzle(c.env.DB);
+  const userId = "test-user";
+  try {
+    const results = await db.select().from(marketingCampaigns).where(eq(marketingCampaigns.userId, userId)).all();
+    return c.json(results.length > 0 ? results : campaignsStore);
+  } catch (error) {
+    console.warn("DB campaigns query failed, using in-memory fallback:", error);
+    return c.json(campaignsStore);
+  }
+});
+
+app.post("/api/marketing/campaigns", async (c) => {
+  const db = drizzle(c.env.DB);
+  const userId = "test-user";
+  const body = await c.req.json();
+  
+  const newCampaign = {
+    id: body.id || uuidv4(),
+    userId,
+    name: body.name,
+    status: body.status || 'active',
+    budget: Number(body.budget) || 500000,
+    spend: Number(body.spend) || 0,
+    conversions: Number(body.conversions) || 0,
+    roas: Number(body.roas) || 0,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+
+  const existingIdx = campaignsStore.findIndex(x => x.id === newCampaign.id);
+  if (existingIdx >= 0) {
+    campaignsStore[existingIdx] = {
+      ...campaignsStore[existingIdx],
+      ...newCampaign,
+      spend: body.spend !== undefined ? Number(body.spend) : campaignsStore[existingIdx].spend,
+      conversions: body.conversions !== undefined ? Number(body.conversions) : campaignsStore[existingIdx].conversions,
+      roas: body.roas !== undefined ? Number(body.roas) : campaignsStore[existingIdx].roas,
+    };
+  } else {
+    campaignsStore.push(newCampaign);
+  }
+
+  try {
+    const existing = await db.select().from(marketingCampaigns).where(eq(marketingCampaigns.id, newCampaign.id)).get();
+    if (existing) {
+      await db.update(marketingCampaigns).set({
+        name: newCampaign.name,
+        status: newCampaign.status,
+        budget: newCampaign.budget,
+        spend: newCampaign.spend,
+        conversions: newCampaign.conversions,
+        roas: newCampaign.roas,
+        updatedAt: new Date()
+      }).where(eq(marketingCampaigns.id, newCampaign.id)).run();
+    } else {
+      await db.insert(marketingCampaigns).values(newCampaign).run();
+    }
+  } catch (error) {
+    console.warn("DB campaigns insert/update failed, using in-memory:", error);
+  }
+
+  return c.json(newCampaign, 201);
+});
+
+app.post("/api/marketing/generate-ideas", async (c) => {
+  const gemini = new GeminiService(c.env.GEMINI_API_KEY);
+  const { productDescription, targetAudience } = await c.req.json();
+  const prompt = `Brainstorm 4 creative marketing campaign concepts for this product: "${productDescription}" targeting this audience: "${targetAudience}". 
+  For each campaign, provide:
+  1. Campaign Name
+  2. Concept Description
+  3. Primary Marketing Channel (e.g. Social, Search, Email, Video, Event)
+  4. Suggested Initial Budget & Target ROI/ROAS.
+  Format your response as a clean, highly structured, and readable Markdown list. Do not include excessive preambles. Go straight into the ideas.`;
+  
+  try {
+    const ideas = await gemini.generateResponse(prompt, "", "marketer");
+    return c.json({ ideas });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// HR Employees API
+app.get("/api/hr/employees", async (c) => {
+  const db = drizzle(c.env.DB);
+  const userId = "test-user";
+  try {
+    const results = await db.select().from(employees).where(eq(employees.userId, userId)).all();
+    return c.json(results.length > 0 ? results : employeesStore);
+  } catch (error) {
+    console.warn("DB employees query failed, using in-memory fallback:", error);
+    return c.json(employeesStore);
+  }
+});
+
+app.post("/api/hr/employees", async (c) => {
+  const db = drizzle(c.env.DB);
+  const userId = "test-user";
+  const body = await c.req.json();
+  
+  const newEmployee = {
+    id: body.id || uuidv4(),
+    userId,
+    name: body.name,
+    role: body.role,
+    department: body.department,
+    salary: Number(body.salary),
+    status: body.status || 'active',
+    startDate: body.startDate ? new Date(body.startDate) : new Date(),
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+
+  const existingIdx = employeesStore.findIndex(x => x.id === newEmployee.id);
+  if (existingIdx >= 0) {
+    employeesStore[existingIdx] = { ...employeesStore[existingIdx], ...newEmployee };
+  } else {
+    employeesStore.push(newEmployee);
+  }
+
+  try {
+    const existing = await db.select().from(employees).where(eq(employees.id, newEmployee.id)).get();
+    if (existing) {
+      await db.update(employees).set({
+        name: newEmployee.name,
+        role: newEmployee.role,
+        department: newEmployee.department,
+        salary: newEmployee.salary,
+        status: newEmployee.status,
+        updatedAt: new Date()
+      }).where(eq(employees.id, newEmployee.id)).run();
+    } else {
+      await db.insert(employees).values(newEmployee).run();
+    }
+  } catch (error) {
+    console.warn("DB employees insert/update failed, using in-memory:", error);
+  }
+
+  return c.json(newEmployee, 201);
+});
+
+app.post("/api/hr/generate-doc", async (c) => {
+  const gemini = new GeminiService(c.env.GEMINI_API_KEY);
+  const { docType, title, department, salary, details } = await c.req.json();
+  
+  let prompt = "";
+  if (docType === "job_description") {
+    prompt = `Create a professional Job Description for a "${title}" in the "${department}" department. 
+    Salary Range: ${salary}. 
+    Additional details/responsibilities: ${details || 'None'}.
+    Include:
+    - Position Summary
+    - Key Responsibilities
+    - Required Qualifications
+    - Key Benefits & Why Join Us.`;
+  } else if (docType === "offer_letter") {
+    prompt = `Draft a standard professional Employee Offer Letter for a candidate named "${details || 'Candidate Name'}" for the position of "${title}" in the "${department}" department.
+    Annual Base Salary: ${salary}.
+    Assume start date is two weeks from today.
+    Include standard sections: Job Title, Salary, Benefits (medical, dental, 401k), At-Will Employment statement, and sign-off blocks.`;
+  } else {
+    prompt = `Draft a company HR Policy regarding "${title}" for the "${department}" department / general company-wide policy.
+    Key constraints/context: ${details || 'None'}.
+    Include:
+    - Policy Objective
+    - Scope of Policy
+    - Specific Rules & Guidelines
+    - Compliance and Penalties.`;
+  }
+  
+  prompt += "\nFormat the output in professional, highly structured, clean Markdown document layout. Direct response, do not include chatter or generic introduction.";
+  
+  try {
+    const document = await gemini.generateResponse(prompt, "", "hr");
+    return c.json({ document });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
 
 app.get("/api/insights", async (c) => {
   const db = drizzle(c.env.DB);

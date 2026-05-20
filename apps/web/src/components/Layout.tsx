@@ -1,34 +1,132 @@
-import React from 'react';
-import { LayoutDashboard, Wallet, PieChart, TrendingUp, Settings, LogOut, Bell, Search } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { 
+  LayoutDashboard, Wallet, PieChart, TrendingUp, Settings, LogOut, Bell, Search, 
+  Users, Sparkles, Briefcase, Award 
+} from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
+  activeRole: 'cfo' | 'marketer' | 'hr';
+  setActiveRole: (role: 'cfo' | 'marketer' | 'hr') => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, activeRole, setActiveRole }) => {
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove('theme-cfo', 'theme-marketer', 'theme-hr');
+    if (activeRole === 'marketer') {
+      root.classList.add('theme-marketer');
+    } else if (activeRole === 'hr') {
+      root.classList.add('theme-hr');
+    }
+  }, [activeRole]);
+
+  const searchPlaceholder = {
+    cfo: "Ask AI CFO about cashflow, burn rate, budgets...",
+    marketer: "Ask AI CMO about growth campaigns, ad spend, copy concepts...",
+    hr: "Ask AI CHRO about headcount, job descriptions, employee policies..."
+  };
+
+  const currentTitle = {
+    cfo: "AI CFO",
+    marketer: "AI CMO",
+    hr: "AI CHRO"
+  };
+
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-64 glass-card m-4 mr-0 flex flex-col">
-        <div className="p-8">
-          <h1 className="text-2xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent italic">
-            AI CFO
+      <aside className="w-64 glass-card m-4 mr-0 flex flex-col shrink-0">
+        <div className="p-6 border-b border-border/50">
+          <h1 className="text-2xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent italic tracking-wider">
+            {currentTitle[activeRole]}
           </h1>
+          <p className="text-[10px] text-white/30 uppercase tracking-widest font-black mt-1">C-Suite Workspace</p>
         </div>
 
-        <nav className="flex-1 px-4 space-y-2">
+        {/* Office Switcher */}
+        <div className="p-4 space-y-1.5 border-b border-border/50 bg-white/5">
+          <div className="px-2 pb-1 text-[10px] font-semibold text-white/30 uppercase tracking-wider">
+            Select Department
+          </div>
+          <button 
+            onClick={() => setActiveRole('cfo')}
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeRole === 'cfo' 
+                ? 'bg-primary/20 text-primary border border-primary/20 shadow-md shadow-primary/10' 
+                : 'text-white/50 hover:bg-white/5 hover:text-white border border-transparent'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Briefcase size={14} />
+              <span>Finance (CFO)</span>
+            </div>
+            {activeRole === 'cfo' && <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
+          </button>
+          
+          <button 
+            onClick={() => setActiveRole('marketer')}
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeRole === 'marketer' 
+                ? 'bg-primary/20 text-primary border border-primary/20 shadow-md shadow-primary/10' 
+                : 'text-white/50 hover:bg-white/5 hover:text-white border border-transparent'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Sparkles size={14} />
+              <span>Marketing (CMO)</span>
+            </div>
+            {activeRole === 'marketer' && <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
+          </button>
+
+          <button 
+            onClick={() => setActiveRole('hr')}
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeRole === 'hr' 
+                ? 'bg-primary/20 text-primary border border-primary/20 shadow-md shadow-primary/10' 
+                : 'text-white/50 hover:bg-white/5 hover:text-white border border-transparent'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Users size={14} />
+              <span>People Ops (CHRO)</span>
+            </div>
+            {activeRole === 'hr' && <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
+          </button>
+        </div>
+
+        <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto custom-scrollbar">
+          <div className="px-4 pb-2 text-[10px] font-semibold text-white/30 uppercase tracking-wider">
+            Workspace
+          </div>
           <NavLink icon={<LayoutDashboard size={20} />} label="Dashboard" active />
-          <NavLink icon={<Wallet size={20} />} label="Transactions" />
-          <NavLink icon={<PieChart size={20} />} label="Budgeting" />
-          <NavLink icon={<TrendingUp size={20} />} label="Investments" />
-          <div className="pt-8 pb-4 px-4 text-xs font-semibold text-white/30 uppercase tracking-wider">
+          {activeRole === 'cfo' && (
+            <>
+              <NavLink icon={<Wallet size={20} />} label="Transactions" />
+              <NavLink icon={<PieChart size={20} />} label="Budgeting" />
+              <NavLink icon={<TrendingUp size={20} />} label="Investments" />
+            </>
+          )}
+          {activeRole === 'marketer' && (
+            <>
+              <NavLink icon={<Sparkles size={20} />} label="Campaign Ideas" />
+              <NavLink icon={<TrendingUp size={20} />} label="Funnel Analysis" />
+            </>
+          )}
+          {activeRole === 'hr' && (
+            <>
+              <NavLink icon={<Users size={20} />} label="Employees" />
+              <NavLink icon={<Award size={20} />} label="Documents" />
+            </>
+          )}
+          <div className="pt-6 pb-2 px-4 text-[10px] font-semibold text-white/30 uppercase tracking-wider">
             System
           </div>
           <NavLink icon={<Settings size={20} />} label="Settings" />
         </nav>
 
         <div className="p-4 border-t border-border">
-          <button className="nav-link w-full text-red-400 hover:bg-red-400/10">
+          <button className="nav-link w-full text-red-400 hover:bg-red-400/10 justify-center cursor-pointer">
             <LogOut size={20} />
             <span>Sign Out</span>
           </button>
@@ -42,20 +140,20 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="absolute bottom-[-10%] left-[-10%] w-[30%] h-[30%] bg-secondary/20 blur-[100px] rounded-full -z-10" />
 
         {/* Header */}
-        <header className="h-20 flex items-center justify-between px-8">
+        <header className="h-20 flex items-center justify-between px-8 shrink-0 border-b border-border/10 bg-background/50 backdrop-blur-md">
           <div className="flex items-center gap-4 flex-1">
             <div className="relative max-w-md w-full">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={18} />
               <input 
                 type="text" 
-                placeholder="Ask AI CFO anything..." 
-                className="w-full bg-white/5 border border-border rounded-xl py-2.5 pl-12 pr-4 focus:outline-none focus:border-primary/50 transition-all"
+                placeholder={searchPlaceholder[activeRole]} 
+                className="w-full bg-white/5 border border-border rounded-xl py-2.5 pl-12 pr-4 focus:outline-none focus:border-primary/50 transition-all text-sm"
               />
             </div>
           </div>
 
           <div className="flex items-center gap-6">
-            <button className="relative text-white/60 hover:text-white transition-colors">
+            <button className="relative text-white/60 hover:text-white transition-colors cursor-pointer">
               <Bell size={22} />
               <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full shadow-[0_0_10px_rgba(var(--color-primary),0.5)]" />
             </button>
@@ -88,3 +186,4 @@ const NavLink: React.FC<NavLinkProps> = ({ icon, label, active }) => (
     <span className="font-medium">{label}</span>
   </a>
 );
+

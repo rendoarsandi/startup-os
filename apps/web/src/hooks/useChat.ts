@@ -6,8 +6,14 @@ export interface Message {
   parts: { text: string }[];
 }
 
-export const useChat = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+export const useChat = (activeRole: 'cfo' | 'marketer' | 'hr') => {
+  const [messagesMap, setMessagesMap] = useState<Record<'cfo' | 'marketer' | 'hr', Message[]>>({
+    cfo: [],
+    marketer: [],
+    hr: []
+  });
+
+  const currentMessages = messagesMap[activeRole] || [];
 
   const mutation = useMutation({
     mutationFn: async (text: string) => {
@@ -16,7 +22,8 @@ export const useChat = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: text,
-          history: messages,
+          history: currentMessages,
+          role: activeRole
         }),
       });
 
@@ -26,11 +33,17 @@ export const useChat = () => {
     },
     onMutate: (text) => {
       const userMessage: Message = { role: 'user', parts: [{ text }] };
-      setMessages(prev => [...prev, userMessage]);
+      setMessagesMap(prev => ({
+        ...prev,
+        [activeRole]: [...(prev[activeRole] || []), userMessage]
+      }));
     },
     onSuccess: (responseText) => {
       const modelMessage: Message = { role: 'model', parts: [{ text: responseText }] };
-      setMessages(prev => [...prev, modelMessage]);
+      setMessagesMap(prev => ({
+        ...prev,
+        [activeRole]: [...(prev[activeRole] || []), modelMessage]
+      }));
     },
   });
 
@@ -38,10 +51,19 @@ export const useChat = () => {
     mutation.mutate(text);
   };
 
+  const clearChat = () => {
+    setMessagesMap(prev => ({
+      ...prev,
+      [activeRole]: []
+    }));
+  };
+
   return {
-    messages,
+    messages: currentMessages,
     sendMessage,
+    clearChat,
     isLoading: mutation.isPending,
     error: mutation.error ? (mutation.error as Error).message : null,
   };
 };
+

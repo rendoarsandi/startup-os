@@ -1,26 +1,45 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
+export const SYSTEM_PROMPTS = {
+  cfo: `You are a brilliant, hyper-analytical AI CFO (Chief Financial Officer). You specialize in corporate finance, cashflow optimization, budgeting, burn-rate analysis, and providing strategic financial advice based on historical transactions and account balances. Keep your responses highly precise, professional, and numbers-focused.`,
+  marketer: `You are a creative, data-driven AI CMO (Chief Marketing Officer). You specialize in digital marketing, customer acquisition funnels, campaign ROI calculation, search engine optimization (SEO), social media strategy, brand building, and creating copy concepts. You analyze marketing spends and provide growth tactics. Keep your responses engaging, strategic, and focused on marketing ROI and user acquisition.`,
+  hr: `You are an empathetic, highly structured AI CHRO (Chief Human Resources Officer) and HR expert. You specialize in talent acquisition, payroll administration, employee engagement, HR policy compliance, benefits, workforce planning, and career pathing. You assist in drafting professional job descriptions, employee offer letters, and policy documents. Keep your responses professional, supportive, compliant, and well-structured.`
+};
+
 export class GeminiService {
   private genAI: GoogleGenerativeAI;
-  private model: any;
 
   constructor(apiKey: string) {
     this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
   }
 
-  async generateResponse(prompt: string, context?: string): Promise<string> {
+  async generateResponse(prompt: string, context?: string, role: keyof typeof SYSTEM_PROMPTS = 'cfo'): Promise<string> {
+    const modelWithSystem = this.genAI.getGenerativeModel({ 
+      model: "gemini-1.5-flash",
+      systemInstruction: SYSTEM_PROMPTS[role] || SYSTEM_PROMPTS.cfo
+    });
+
     const fullPrompt = context 
       ? `Context: ${context}\n\nUser: ${prompt}`
       : prompt;
 
-    const result = await this.model.generateContent(fullPrompt);
+    const result = await modelWithSystem.generateContent(fullPrompt);
     const response = await result.response;
     return response.text();
   }
 
-  async chat(history: { role: "user" | "model", parts: string[] }[], message: string, context?: string): Promise<string> {
-    const chatSession = this.model.startChat({
+  async chat(
+    history: { role: "user" | "model", parts: string[] }[], 
+    message: string, 
+    context?: string,
+    role: keyof typeof SYSTEM_PROMPTS = 'cfo'
+  ): Promise<string> {
+    const modelWithSystem = this.genAI.getGenerativeModel({ 
+      model: "gemini-1.5-flash",
+      systemInstruction: SYSTEM_PROMPTS[role] || SYSTEM_PROMPTS.cfo
+    });
+
+    const chatSession = modelWithSystem.startChat({
       history: history.map(h => ({
         role: h.role,
         parts: [{ text: h.parts[0] }]
@@ -30,8 +49,14 @@ export class GeminiService {
       },
     });
 
+    const contextPrefix = role === 'marketer' 
+      ? '[Marketing Context]' 
+      : role === 'hr' 
+      ? '[HR / Employee Context]' 
+      : '[Financial Context]';
+
     const finalMessage = context 
-      ? `[Financial Context]\n${context}\n\n[User Message]\n${message}`
+      ? `${contextPrefix}\n${context}\n\n[User Message]\n${message}`
       : message;
 
     const result = await chatSession.sendMessage(finalMessage);
@@ -39,3 +64,4 @@ export class GeminiService {
     return response.text();
   }
 }
+
