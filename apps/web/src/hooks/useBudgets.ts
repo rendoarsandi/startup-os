@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 interface Budget {
   id: string;
@@ -8,24 +8,14 @@ interface Budget {
 }
 
 export function useBudgets() {
-  const [budgets, setBudgets] = useState<Budget[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchBudgets = async () => {
-    try {
+  const { data: budgets = [], isLoading: loading, refetch } = useQuery<Budget[]>({
+    queryKey: ['budgets'],
+    queryFn: async () => {
       const res = await fetch('/api/budgets');
-      const data = await res.json();
-      setBudgets(data);
-    } catch (error) {
-      console.error('Failed to fetch budgets:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (!res.ok) throw new Error('Failed to fetch budgets');
+      return res.json();
+    },
+  });
 
-  useEffect(() => {
-    fetchBudgets();
-  }, []);
-
-  return { budgets, loading, refetch: fetchBudgets };
+  return { budgets, loading, refetch };
 }

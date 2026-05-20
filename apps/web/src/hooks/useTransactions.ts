@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 export interface Transaction {
   id: string;
@@ -11,25 +11,14 @@ export interface Transaction {
 }
 
 export const useTransactions = () => {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const fetchTransactions = async () => {
-    setIsLoading(true);
-    try {
+  const { data: transactions = [], isLoading, refetch } = useQuery<Transaction[]>({
+    queryKey: ['transactions'],
+    queryFn: async () => {
       const response = await fetch('/api/transactions');
-      const data = await response.json();
-      setTransactions(data);
-    } catch (error) {
-      console.error('Failed to fetch transactions', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      if (!response.ok) throw new Error('Failed to fetch transactions');
+      return response.json();
+    },
+  });
 
-  useEffect(() => {
-    fetchTransactions();
-  }, []);
-
-  return { transactions, isLoading, refetch: fetchTransactions };
+  return { transactions, isLoading, refetch };
 };

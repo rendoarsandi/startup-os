@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface TransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
 export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, onSuccess }) => {
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     merchant: '',
     amount: '',
@@ -16,12 +17,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
     date: new Date().toISOString().split('T')[0],
   });
 
-  if (!isOpen) return null;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
+  const mutation = useMutation({
+    mutationFn: async () => {
       const response = await fetch('/api/transactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -32,15 +29,30 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
         }),
       });
 
-      if (response.ok) {
-        onSuccess();
-        onClose();
-      }
-    } catch (error) {
-      console.error('Failed to add transaction', error);
-    } finally {
-      setLoading(false);
-    }
+      if (!response.ok) throw new Error('Failed to add transaction');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      // Invalidate budgets too since adding a transaction updates spending/budgets
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      if (onSuccess) onSuccess();
+      onClose();
+      // Reset form
+      setFormData({
+        merchant: '',
+        amount: '',
+        category: 'Food',
+        date: new Date().toISOString().split('T')[0],
+      });
+    },
+  });
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    mutation.mutate();
   };
 
   return (
@@ -108,10 +120,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
 
           <button 
             type="submit" 
-            disabled={loading}
+            disabled={mutation.isPending}
             className="btn-primary w-full h-14 font-bold flex items-center justify-center gap-2"
           >
-            {loading ? <Loader2 size={20} className="animate-spin" /> : 'Confirm Transaction'}
+            {mutation.isPending ? <Loader2 size={20} className="animate-spin" /> : 'Confirm Transaction'}
           </button>
         </form>
       </div>

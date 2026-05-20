@@ -1,29 +1,26 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 
 interface PlaidLinkProps {
   onSuccess?: () => void;
 }
 
 export function PlaidLinkButton({ onSuccess }: PlaidLinkProps) {
-  const [loading, setLoading] = useState(false);
   const [linked, setLinked] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const handleLink = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Step 1: Get link token from our API
+  const mutation = useMutation({
+    mutationFn: async () => {
       const tokenRes = await fetch('/api/plaid/create-link-token', { method: 'POST' });
-      const tokenData = await tokenRes.json() as any;
-      
-      if (tokenData.error) {
-        setError('Configure PLAID_CLIENT_ID and PLAID_SECRET to enable bank linking.');
-        setLoading(false);
-        return;
+      if (!tokenRes.ok) {
+        throw new Error('Failed to connect bank');
       }
-
+      const tokenData = await tokenRes.json() as any;
+      if (tokenData.error) {
+        throw new Error('Configure PLAID_CLIENT_ID and PLAID_SECRET to enable bank linking.');
+      }
+      return tokenData;
+    },
+    onSuccess: (tokenData) => {
       // Step 2: In production, this would open Plaid Link
       // For now, simulate a successful sandbox connection
       console.log('Link token received:', tokenData.linkToken);
@@ -31,12 +28,12 @@ export function PlaidLinkButton({ onSuccess }: PlaidLinkProps) {
       // Simulate Plaid Link flow in sandbox
       setLinked(true);
       onSuccess?.();
-    } catch (err: any) {
-      setError(err.message || 'Failed to connect bank');
-    } finally {
-      setLoading(false);
-    }
-  }, [onSuccess]);
+    },
+  });
+
+  const handleLink = () => {
+    mutation.mutate();
+  };
 
   if (linked) {
     return (
@@ -54,10 +51,10 @@ export function PlaidLinkButton({ onSuccess }: PlaidLinkProps) {
     <div className="space-y-3">
       <button
         onClick={handleLink}
-        disabled={loading}
+        disabled={mutation.isPending}
         className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50"
       >
-        {loading ? (
+        {mutation.isPending ? (
           <>
             <span className="animate-spin">⏳</span>
             Connecting...
@@ -68,8 +65,8 @@ export function PlaidLinkButton({ onSuccess }: PlaidLinkProps) {
           </>
         )}
       </button>
-      {error && (
-        <p className="text-orange-400/80 text-xs text-center">{error}</p>
+      {mutation.error && (
+        <p className="text-orange-400/80 text-xs text-center">{(mutation.error as Error).message}</p>
       )}
       <p className="text-white/20 text-[10px] text-center">
         Powered by Plaid • Sandbox Mode
