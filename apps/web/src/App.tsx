@@ -1,8 +1,13 @@
 import { Layout } from './components/Layout'
 import { Chat } from './components/Chat'
 import { TransactionList } from './components/TransactionList'
+import { TransactionModal } from './components/TransactionModal'
+import { useState } from 'react'
 
 function App() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
   return (
     <Layout>
       <div className="space-y-8">
@@ -44,9 +49,17 @@ function App() {
             <div className="lg:col-span-1 space-y-6">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-bold text-lg">Recent Activity</h3>
-                <button className="text-xs text-primary font-bold hover:underline">View All</button>
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => setIsModalOpen(true)}
+                    className="text-[10px] bg-white/5 hover:bg-white/10 px-2 py-1 rounded-md uppercase tracking-widest font-black transition-colors"
+                  >
+                    + Add
+                  </button>
+                  <button className="text-xs text-primary font-bold hover:underline text-[10px] uppercase tracking-widest">View All</button>
+                </div>
               </div>
-              <TransactionList />
+              <TransactionList key={refreshKey} />
             </div>
           </div>
 
@@ -78,6 +91,11 @@ function App() {
         </div>
 
         <Chat />
+        <TransactionModal 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+          onSuccess={() => setRefreshKey(prev => prev + 1)}
+        />
       </div>
     </Layout>
   )
