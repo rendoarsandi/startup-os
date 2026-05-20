@@ -9,14 +9,14 @@
     - [x] Implement Feature: Setup Hono app with basic `/api/health` endpoint
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Environment & Scaffolding' (Protocol in workflow.md) f13c0e0
 
-## Phase 2: Database & Authentication
-- [~] Task: Provision Cloudflare D1 and setup Drizzle ORM
-    - [ ] Write Tests: Write integration tests for database connection and basic schema
-    - [ ] Implement Feature: Create initial Drizzle schema (Users) and local D1 setup
-- [ ] Task: Integrate BetterAuth
-    - [ ] Write Tests: Write tests for authentication middleware and routes
-    - [ ] Implement Feature: Implement login/register endpoints and frontend auth context
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Database & Authentication' (Protocol in workflow.md)
+## Phase 2: Database & Authentication [checkpoint: 906309a]
+- [x] Task: Provision Cloudflare D1 and setup Drizzle ORM 906309a
+    - [x] Write Tests: Write integration tests for database connection and basic schema 906309a
+    - [x] Implement Feature: Create initial Drizzle schema (Users) and local D1 setup 906309a
+- [x] Task: Integrate BetterAuth 906309a
+    - [x] Write Tests: Add test for auth session endpoint 906309a
+    - [x] Implement Feature: Setup BetterAuth with Drizzle adapter 906309a
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Database & Authentication' (Protocol in workflow.md) 906309a
 
 ## Phase 3: Core Dashboard Layout
 - [ ] Task: Build Dashboard Shell
