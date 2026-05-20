@@ -16,8 +16,8 @@
     - [ ] Write Tests: Test streaming response handling in frontend
     - [ ] Implement Feature: Use Server-Sent Events or streaming for real-time chat
 
-## Phase 3: AI Insights & Financial Analysis
-- [ ] Task: Financial Context Preparation
-    - [ ] Implement Feature: Create a service to aggregate user data for AI context
-- [ ] Task: Automated Insights
-    - [ ] Implement Feature: Trigger AI analysis on new transactions for dashboard widgets
+## Phase 3: AI Insights & Financial Analysis [checkpoint: 7f4a178]
+- [x] Task: Financial Context Preparation 7f4a178
+    - [x] Implement Feature: Create a service to aggregate user data for AI context 7f4a178
+- [x] Task: Automated Insights 7f4a178
+    - [x] Implement Feature: Trigger AI analysis on new transactions for dashboard widgets 7f4a178

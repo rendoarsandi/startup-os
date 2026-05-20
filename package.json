@@ -23,5 +23,8 @@
     "jsdom": "^29.1.1",
     "tailwindcss": "^4.3.0",
     "vitest": "^4.1.6"
+  },
+  "dependencies": {
+    "uuid": "^14.0.0"
   }
 }

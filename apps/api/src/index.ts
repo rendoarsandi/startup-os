@@ -1,9 +1,11 @@
 import { Hono } from 'hono'
 import { drizzle } from 'drizzle-orm/d1'
-import { users } from '@ai-cfo/db'
-import { getAuth } from './auth'
+import { eq } from 'drizzle-orm'
+import { users, financialAccounts, transactions } from "@ai-cfo/db";
+import { getAuth } from './auth';
 import { GeminiService } from "./gemini";
 import { AnalysisService } from "./analysis";
+import { v4 as uuidv4 } from 'uuid';
 
 type Bindings = {
   DB: D1Database
@@ -49,6 +51,61 @@ app.get("/api/insights", async (c) => {
   } catch (error: any) {
     return c.json({ error: error.message }, 500);
   }
+});
+
+app.get("/api/accounts", async (c) => {
+  const db = drizzle(c.env.DB);
+  const userId = "test-user";
+  const results = await db.select().from(financialAccounts).where(eq(financialAccounts.userId, userId)).all();
+  return c.json(results);
+});
+
+app.post("/api/accounts", async (c) => {
+  const db = drizzle(c.env.DB);
+  const userId = "test-user";
+  const body = await c.req.json();
+  
+  const newAccount = {
+    id: uuidv4(),
+    userId,
+    name: body.name,
+    type: body.type,
+    balance: body.balance || 0,
+    currency: body.currency || "USD",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  await db.insert(financialAccounts).values(newAccount).run();
+  return c.json(newAccount, 201);
+});
+
+app.get("/api/transactions", async (c) => {
+  const db = drizzle(c.env.DB);
+  const userId = "test-user";
+  const results = await db.select().from(transactions).where(eq(transactions.userId, userId)).all();
+  return c.json(results);
+});
+
+app.post("/api/transactions", async (c) => {
+  const db = drizzle(c.env.DB);
+  const userId = "test-user";
+  const body = await c.req.json();
+  
+  const newTransaction = {
+    id: uuidv4(),
+    userId,
+    accountId: body.accountId,
+    amount: body.amount,
+    category: body.category,
+    merchant: body.merchant,
+    description: body.description,
+    date: new Date(body.date || Date.now()),
+    createdAt: new Date(),
+  };
+
+  await db.insert(transactions).values(newTransaction).run();
+  return c.json(newTransaction, 201);
 });
 
 app.get('/api/users', async (c) => {

@@ -49,3 +49,33 @@ export const verifications = sqliteTable('verification', {
   createdAt: integer('created_at', { mode: 'timestamp' }),
   updatedAt: integer('updated_at', { mode: 'timestamp' }),
 });
+
+// Financial Tables
+export const financialAccounts = sqliteTable('financial_account', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id),
+  name: text('name').notNull(),
+  type: text('type').notNull(), // 'checking', 'savings', 'credit', etc.
+  balance: integer('balance').notNull().default(0), // in cents
+  currency: text('currency').notNull().default('USD'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const transactions = sqliteTable('transaction', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id),
+  accountId: text('account_id')
+    .notNull()
+    .references(() => financialAccounts.id),
+  amount: integer('amount').notNull(), // in cents, negative for expense
+  category: text('category').notNull(),
+  merchant: text('merchant').notNull(),
+  description: text('description'),
+  date: integer('date', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
