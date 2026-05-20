@@ -1,12 +1,12 @@
 # Implementation Plan: Transactions & Financial Data
 
-## Phase 1: Database Expansion
-- [ ] Task: Update Schema with Transactions & Accounts
-    - [ ] Implement Feature: Add `accounts` and `transactions` tables to `@ai-cfo/db`
-    - [ ] Implement Feature: Generate migrations and apply to D1
-- [ ] Task: Transaction CRUD Endpoints
-    - [ ] Write Tests: Test transaction list and create endpoints
-    - [ ] Implement Feature: Implement `/api/transactions` (GET, POST)
+## Phase 1: Database Expansion [checkpoint: bf7ac60]
+- [x] Task: Update Schema with Transactions & Accounts bf7ac60
+    - [x] Implement Feature: Add `accounts` and `transactions` tables to `@ai-cfo/db` bf7ac60
+    - [x] Implement Feature: Generate migrations and apply to D1 bf7ac60
+- [x] Task: Transaction CRUD Endpoints bf7ac60
+    - [x] Write Tests: Test transaction list and create endpoints bf7ac60
+    - [x] Implement Feature: Implement `/api/transactions` (GET, POST) bf7ac60
 
 ## Phase 2: Transaction UI
 - [ ] Task: Transaction List View

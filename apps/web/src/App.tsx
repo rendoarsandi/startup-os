@@ -1,5 +1,6 @@
 import { Layout } from './components/Layout'
 import { Chat } from './components/Chat'
+import { TransactionList } from './components/TransactionList'
 
 function App() {
   return (
@@ -40,32 +41,12 @@ function App() {
               </div>
             </div>
 
-            <div className="glass-card p-8">
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-xl font-bold">Recent Transactions</h3>
-                <button className="text-primary text-sm font-semibold hover:underline">View All</button>
+            <div className="lg:col-span-1 space-y-6">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-bold text-lg">Recent Activity</h3>
+                <button className="text-xs text-primary font-bold hover:underline">View All</button>
               </div>
-              <div className="space-y-6">
-                <TransactionItem 
-                  merchant="Apple Store" 
-                  date="24 May, 2024" 
-                  amount="-$1,299.00" 
-                  category="Electronics"
-                />
-                <TransactionItem 
-                  merchant="Starbucks" 
-                  date="24 May, 2024" 
-                  amount="-$12.50" 
-                  category="Food & Drink"
-                />
-                <TransactionItem 
-                  merchant="Stripe Payout" 
-                  date="23 May, 2024" 
-                  amount="+$4,500.00" 
-                  category="Income"
-                  isPositive
-                />
-              </div>
+              <TransactionList />
             </div>
           </div>
 
