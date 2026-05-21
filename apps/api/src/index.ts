@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { drizzle } from 'drizzle-orm/d1'
-import { eq } from 'drizzle-orm'
-import { users, financialAccounts, transactions, budgets, marketingCampaigns, employees } from "@ai-cfo/db";
+import { eq, and, desc } from 'drizzle-orm'
+import { users, financialAccounts, transactions, budgets, marketingCampaigns, employees, plaidConnections } from "@ai-cfo/db";
 import { getAuth } from './auth';
 import { GeminiService } from "./gemini";
 import { AnalysisService } from "./analysis";
@@ -453,16 +453,240 @@ app.post("/api/plaid/create-link-token", async (c) => {
 });
 
 app.post("/api/plaid/exchange-token", async (c) => {
+  const db = drizzle(c.env.DB);
+  const userId = "test-user";
+  
   try {
     const plaid = new PlaidService({
       clientId: c.env.PLAID_CLIENT_ID,
       secret: c.env.PLAID_SECRET,
       environment: c.env.PLAID_ENV || 'sandbox',
     });
-    const { publicToken } = await c.req.json();
+    const analysis = new AnalysisService(db);
+    const gemini = new GeminiService(c.env.GEMINI_API_KEY);
+
+    const { publicToken, institutionName } = await c.req.json();
     const { accessToken, itemId } = await plaid.exchangePublicToken(publicToken);
-    // TODO: Store accessToken securely in the database
+    
+    // Store plaid connection securely
+    const connectionId = uuidv4();
+    await db.insert(plaidConnections).values({
+      id: connectionId,
+      userId,
+      accessToken,
+      itemId,
+      institutionName: institutionName || 'Chase',
+      status: 'active',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }).run();
+
+    // Fetch accounts and sync them
+    const plaidAccounts = await plaid.getAccounts(accessToken);
+    const accountIdMap = new Map<string, string>();
+
+    for (const plaidAcc of plaidAccounts) {
+      const accBalanceCents = Math.round((plaidAcc.balances.current || 0) * 100);
+      
+      const existingAcc = await db.select().from(financialAccounts).where(
+        and(
+          eq(financialAccounts.userId, userId),
+          eq(financialAccounts.plaidAccountId, plaidAcc.account_id)
+        )
+      ).get();
+
+      let localAccountId = uuidv4();
+      if (existingAcc) {
+        localAccountId = existingAcc.id;
+        await db.update(financialAccounts).set({
+          name: plaidAcc.name,
+          balance: accBalanceCents,
+          plaidConnectionId: connectionId,
+          updatedAt: new Date(),
+        }).where(eq(financialAccounts.id, localAccountId)).run();
+      } else {
+        await db.insert(financialAccounts).values({
+          id: localAccountId,
+          userId,
+          name: plaidAcc.name,
+          type: plaidAcc.type === 'depository' ? (plaidAcc.subtype || 'checking') : plaidAcc.type,
+          balance: accBalanceCents,
+          currency: plaidAcc.balances.iso_currency_code || 'USD',
+          plaidAccountId: plaidAcc.account_id,
+          plaidConnectionId: connectionId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }).run();
+      }
+      accountIdMap.set(plaidAcc.account_id, localAccountId);
+    }
+
+    // Sync last 30 days of transactions
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const plaidTxList = await plaid.getTransactions(accessToken, startDate, endDate);
+
+    for (const tx of plaidTxList) {
+      const existingTx = await db.select().from(transactions).where(
+        eq(transactions.plaidTransactionId, tx.transaction_id)
+      ).get();
+
+      if (existingTx) continue;
+
+      const localAccId = accountIdMap.get(tx.account_id);
+      if (!localAccId) continue;
+
+      // Invert amount (Plaid positive = money spent. In local DB: negative = money spent).
+      const localAmount = Math.round(-tx.amount * 100);
+
+      let category = 'Other';
+      try {
+        category = await analysis.categorizeTransaction(tx.merchant_name || tx.name || '', tx.name || '', gemini);
+      } catch (err) {
+        console.warn("AI categorization failed, using Plaid or Other:", err);
+        category = (tx.category && tx.category[0]) || 'Other';
+      }
+
+      await db.insert(transactions).values({
+        id: uuidv4(),
+        userId,
+        accountId: localAccId,
+        amount: localAmount,
+        category,
+        merchant: tx.merchant_name || tx.name || 'Unknown Merchant',
+        description: tx.name || '',
+        date: new Date(tx.date),
+        plaidTransactionId: tx.transaction_id,
+        createdAt: new Date(),
+      }).run();
+    }
+
     return c.json({ success: true, itemId });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.post("/api/plaid/sync-transactions", async (c) => {
+  const db = drizzle(c.env.DB);
+  const userId = "test-user";
+  
+  try {
+    const plaid = new PlaidService({
+      clientId: c.env.PLAID_CLIENT_ID,
+      secret: c.env.PLAID_SECRET,
+      environment: c.env.PLAID_ENV || 'sandbox',
+    });
+    const analysis = new AnalysisService(db);
+    const gemini = new GeminiService(c.env.GEMINI_API_KEY);
+
+    // Query active connections
+    const activeConnections = await db.select().from(plaidConnections).where(
+      and(
+        eq(plaidConnections.userId, userId),
+        eq(plaidConnections.status, 'active')
+      )
+    ).all();
+
+    let accountsSynced = 0;
+    let newTransactionsSynced = 0;
+
+    for (const conn of activeConnections) {
+      // Get updated accounts and balances
+      const plaidAccounts = await plaid.getAccounts(conn.accessToken);
+      const accountIdMap = new Map<string, string>();
+
+      for (const plaidAcc of plaidAccounts) {
+        const accBalanceCents = Math.round((plaidAcc.balances.current || 0) * 100);
+
+        const existingAcc = await db.select().from(financialAccounts).where(
+          and(
+            eq(financialAccounts.userId, userId),
+            eq(financialAccounts.plaidAccountId, plaidAcc.account_id)
+          )
+        ).get();
+
+        let localAccountId = uuidv4();
+        if (existingAcc) {
+          localAccountId = existingAcc.id;
+          await db.update(financialAccounts).set({
+            name: plaidAcc.name,
+            balance: accBalanceCents,
+            plaidConnectionId: conn.id,
+            updatedAt: new Date(),
+          }).where(eq(financialAccounts.id, localAccountId)).run();
+        } else {
+          await db.insert(financialAccounts).values({
+            id: localAccountId,
+            userId,
+            name: plaidAcc.name,
+            type: plaidAcc.type === 'depository' ? (plaidAcc.subtype || 'checking') : plaidAcc.type,
+            balance: accBalanceCents,
+            currency: plaidAcc.balances.iso_currency_code || 'USD',
+            plaidAccountId: plaidAcc.account_id,
+            plaidConnectionId: conn.id,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }).run();
+        }
+        accountIdMap.set(plaidAcc.account_id, localAccountId);
+        accountsSynced++;
+      }
+
+      // Fetch transactions with overlap safety
+      const latestTx = await db.select().from(transactions).where(
+        eq(transactions.userId, userId)
+      ).orderBy(desc(transactions.date)).limit(1).get();
+
+      const startDate = latestTx
+        ? new Date(latestTx.date.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const endDate = new Date().toISOString().split('T')[0];
+
+      const plaidTxList = await plaid.getTransactions(conn.accessToken, startDate, endDate);
+
+      for (const tx of plaidTxList) {
+        const existingTx = await db.select().from(transactions).where(
+          eq(transactions.plaidTransactionId, tx.transaction_id)
+        ).get();
+
+        if (existingTx) continue;
+
+        const localAccId = accountIdMap.get(tx.account_id);
+        if (!localAccId) continue;
+
+        const localAmount = Math.round(-tx.amount * 100);
+
+        let category = 'Other';
+        try {
+          category = await analysis.categorizeTransaction(tx.merchant_name || tx.name || '', tx.name || '', gemini);
+        } catch (err) {
+          console.warn("AI categorization failed, using Plaid or Other:", err);
+          category = (tx.category && tx.category[0]) || 'Other';
+        }
+
+        await db.insert(transactions).values({
+          id: uuidv4(),
+          userId,
+          accountId: localAccId,
+          amount: localAmount,
+          category,
+          merchant: tx.merchant_name || tx.name || 'Unknown Merchant',
+          description: tx.name || '',
+          date: new Date(tx.date),
+          plaidTransactionId: tx.transaction_id,
+          createdAt: new Date(),
+        }).run();
+
+        newTransactionsSynced++;
+      }
+    }
+
+    return c.json({
+      success: true,
+      accountsSynced,
+      newTransactionsSynced,
+    });
   } catch (error: any) {
     return c.json({ error: error.message }, 500);
   }

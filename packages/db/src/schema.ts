@@ -51,6 +51,19 @@ export const verifications = sqliteTable('verification', {
 });
 
 // Financial Tables
+export const plaidConnections = sqliteTable('plaid_connection', {
+  id: text('id').primaryKey(), // Generated UUID
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id),
+  accessToken: text('access_token').notNull(), // Secure Plaid access token
+  itemId: text('item_id').notNull(), // Plaid Item ID
+  institutionName: text('institution_name'), // e.g. Chase, SVB, BofA
+  status: text('status').notNull().default('active'), // 'active', 'error'
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
 export const financialAccounts = sqliteTable('financial_account', {
   id: text('id').primaryKey(),
   userId: text('user_id')
@@ -60,6 +73,9 @@ export const financialAccounts = sqliteTable('financial_account', {
   type: text('type').notNull(), // 'checking', 'savings', 'credit', etc.
   balance: integer('balance').notNull().default(0), // in cents
   currency: text('currency').notNull().default('USD'),
+  plaidAccountId: text('plaid_account_id'),
+  plaidConnectionId: text('plaid_connection_id')
+    .references(() => plaidConnections.id),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
@@ -77,6 +93,7 @@ export const transactions = sqliteTable('transaction', {
   merchant: text('merchant').notNull(),
   description: text('description'),
   date: integer('date', { mode: 'timestamp' }).notNull(),
+  plaidTransactionId: text('plaid_transaction_id'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 

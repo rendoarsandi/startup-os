@@ -224,9 +224,33 @@ function App() {
                   <button className="btn-primary w-full cursor-pointer">Start Conversation</button>
                 </div>
 
-                <div className="glass-card p-8">
-                  <h3 className="text-xl font-bold mb-4">Bank Accounts</h3>
-                  <PlaidLinkButton />
+                <div className="glass-card p-8 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-bold">Bank Accounts</h3>
+                    {accounts.length > 0 && (
+                      <SyncBankButton onSyncSuccess={() => setRefreshKey(prev => prev + 1)} />
+                    )}
+                  </div>
+                  
+                  {accounts.length > 0 ? (
+                    <div className="space-y-3">
+                      {accounts.map((acc: any) => (
+                        <div key={acc.id} className="flex justify-between items-center p-3 rounded-lg bg-white/5 border border-white/10">
+                          <div>
+                            <p className="text-sm font-semibold text-white">{acc.name}</p>
+                            <p className="text-[10px] text-white/40 capitalize">{acc.type}</p>
+                          </div>
+                          <p className="text-sm font-bold text-white">
+                            ${(acc.balance / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-zinc-500 text-xs">No bank accounts linked yet.</p>
+                  )}
+                  
+                  <PlaidLinkButton onSuccess={() => setRefreshKey(prev => prev + 1)} />
                 </div>
               </div>
             </div>
@@ -277,5 +301,73 @@ const InsightItem = ({ type, message }: { type: 'opportunity' | 'warning' | 'suc
   )
 }
 
-export default App
+function SyncBankButton({ onSyncSuccess }: { onSyncSuccess: () => void }) {
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
+  const [metrics, setMetrics] = useState<{ accountsSynced: number; newTransactionsSynced: number } | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/plaid/sync-transactions', { method: 'POST' });
+      if (!res.ok) throw new Error('Sync failed');
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setMetrics(data);
+      setSyncStatus('success');
+      onSyncSuccess();
+      setTimeout(() => {
+        setSyncStatus('idle');
+        setMetrics(null);
+      }, 3000);
+    },
+    onError: () => {
+      setSyncStatus('error');
+      setTimeout(() => setSyncStatus('idle'), 3000);
+    }
+  });
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => {
+          if (syncStatus === 'idle') {
+            setSyncStatus('syncing');
+            mutation.mutate();
+          }
+        }}
+        disabled={syncStatus === 'syncing'}
+        className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] uppercase font-black bg-white/5 hover:bg-white/10 text-white rounded-md tracking-wider transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <span className={`inline-block text-xs transition-transform duration-1000 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`}>
+          🔄
+        </span>
+        {syncStatus === 'syncing' ? 'Syncing...' : 'Sync Bank'}
+      </button>
+
+      {syncStatus === 'success' && metrics && (
+        <div className="absolute right-0 top-8 z-30 w-56 p-3 bg-zinc-900 border border-green-500/30 rounded-xl shadow-xl text-left animate-in fade-in slide-in-from-top-2 duration-200 text-white">
+          <p className="text-green-400 font-bold text-xs flex items-center gap-1">
+            <span>✓</span> Bank Sync Complete
+          </p>
+          <p className="text-[10px] text-zinc-400 mt-1">
+            Successfully updated {metrics.accountsSynced} accounts. Imported {metrics.newTransactionsSynced} new transactions.
+          </p>
+        </div>
+      )}
+
+      {syncStatus === 'error' && (
+        <div className="absolute right-0 top-8 z-30 w-48 p-3 bg-zinc-900 border border-red-500/30 rounded-xl shadow-xl text-left animate-in fade-in slide-in-from-top-2 duration-200 text-white">
+          <p className="text-red-400 font-bold text-xs flex items-center gap-1">
+            <span>✕</span> Sync Failed
+          </p>
+          <p className="text-[10px] text-zinc-400 mt-1">
+            Please check connection or try again.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default App;
 
