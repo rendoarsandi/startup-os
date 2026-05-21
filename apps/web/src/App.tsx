@@ -11,14 +11,21 @@ import { useState } from 'react'
 import { ScenarioPlanner } from './components/ScenarioPlanner'
 import { Sparkles } from 'lucide-react'
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { useTransactions } from './hooks/useTransactions'
+import { calculateCustomProjections } from './hooks/useScenario'
 
 function App() {
   const [activeRole, setActiveRole] = useState<'cfo' | 'marketer' | 'hr'>('cfo');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [chatSeedPrompt, setChatSeedPrompt] = useState<string | undefined>(undefined);
+
+  // Custom Runway Projection growth and seasonality parameters
+  const [revGrowth, setRevGrowth] = useState<number>(0);
+  const [expGrowth, setExpGrowth] = useState<number>(0);
+  const [seasonalityProfile, setSeasonalityProfile] = useState<string>('steady');
+  const [isParamsOpen, setIsParamsOpen] = useState<boolean>(false);
 
 
   const { transactions } = useTransactions();
@@ -61,6 +68,11 @@ function App() {
     }
   });
 
+  // Calculate custom runway based on growth and seasonality parameters
+  const customRunway = runwayData
+    ? calculateCustomProjections(runwayData, revGrowth, expGrowth, seasonalityProfile)
+    : undefined;
+
   // Calculate dynamic stats
   const totalBalanceCents = accounts.length > 0
     ? accounts.reduce((sum, acc) => sum + acc.balance, 0)
@@ -100,9 +112,9 @@ function App() {
               />
               <StatCard 
                 title="AI Cash Runway" 
-                value={runwayLoading ? "Loading..." : runwayData?.runwayMonths === "Infinite" ? "Infinite Runway" : `${runwayData?.runwayMonths ?? '0'} Months`} 
-                change={runwayLoading ? "Calculating" : runwayData?.runwayMonths === "Infinite" ? "Profitable" : `$${Math.round((runwayData?.netBurn ?? 0) / 100).toLocaleString()}/mo burn`} 
-                isPositive={runwayData?.runwayMonths === "Infinite" || (runwayData?.runwayMonths ?? 12) >= 6} 
+                value={runwayLoading ? "Loading..." : customRunway?.runwayMonths === "Infinite" ? "Infinite Runway" : `${customRunway?.runwayMonths ?? '0'} Months`} 
+                change={runwayLoading ? "Calculating" : customRunway?.runwayMonths === "Infinite" ? "Profitable" : `$${Math.round((customRunway?.netBurn ?? 0) / 100).toLocaleString()}/mo burn`} 
+                isPositive={customRunway?.runwayMonths === "Infinite" || (customRunway?.runwayMonths ?? 12) >= 6} 
               />
             </div>
 
@@ -116,21 +128,83 @@ function App() {
                 <div className="glass-card p-8 min-h-[400px]">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-xl font-bold">Cash Runway Projections</h3>
-                    {!runwayLoading && runwayData && (
-                      <span className={`text-xs px-2.5 py-1 rounded-md font-bold ${
-                        runwayData.runwayMonths === 'Infinite' 
-                          ? 'bg-green-500/10 text-green-400' 
-                          : runwayData.runwayMonths < 6 
-                            ? 'bg-red-500/10 text-red-400 animate-pulse' 
-                            : 'bg-amber-500/10 text-amber-400'
-                      }`}>
-                        {runwayData.runwayMonths === 'Infinite' 
-                          ? 'Profitable' 
-                          : `${runwayData.runwayMonths} Mo. Runway`}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-3">
+                      <button 
+                        onClick={() => setIsParamsOpen(!isParamsOpen)}
+                        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-white/10 hover:border-white/20 bg-white/5 text-white/70 hover:text-white transition-all cursor-pointer animate-pulse"
+                      >
+                        ⚙️ Model Parameters {isParamsOpen ? '▲' : '▼'}
+                      </button>
+                      {!runwayLoading && customRunway && (
+                        <span className={`text-xs px-2.5 py-1 rounded-md font-bold ${
+                          customRunway.runwayMonths === 'Infinite' 
+                            ? 'bg-green-500/10 text-green-400' 
+                            : customRunway.runwayMonths < 6 
+                              ? 'bg-red-500/10 text-red-400 animate-pulse' 
+                              : 'bg-amber-500/10 text-amber-400'
+                        }`}>
+                          {customRunway.runwayMonths === 'Infinite' 
+                            ? 'Profitable' 
+                            : `${customRunway.runwayMonths} Mo. Runway`}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <RunwayProjectionChart projections={runwayData?.projections ?? []} />
+
+                  {isParamsOpen && (
+                    <div className="mb-6 p-4 rounded-xl border border-white/5 bg-white/[0.02] grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-top duration-200">
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-white/60 font-medium">Revenue Growth Rate</span>
+                          <span className="text-primary font-bold">{revGrowth >= 0 ? '+' : ''}{revGrowth}% MoM</span>
+                        </div>
+                        <input 
+                          type="range"
+                          min="-10"
+                          max="20"
+                          step="0.5"
+                          value={revGrowth}
+                          onChange={(e) => setRevGrowth(parseFloat(e.target.value))}
+                          className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
+                        />
+                        <p className="text-[10px] text-white/30">Compounds baseline monthly revenue.</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-white/60 font-medium">Expense Growth Rate</span>
+                          <span className="text-secondary font-bold">{expGrowth >= 0 ? '+' : ''}{expGrowth}% MoM</span>
+                        </div>
+                        <input 
+                          type="range"
+                          min="-10"
+                          max="20"
+                          step="0.5"
+                          value={expGrowth}
+                          onChange={(e) => setExpGrowth(parseFloat(e.target.value))}
+                          className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-secondary"
+                        />
+                        <p className="text-[10px] text-white/30">Compounds variable operating costs.</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="block text-xs text-white/60 font-medium">Seasonality Profile</label>
+                        <select 
+                          value={seasonalityProfile}
+                          onChange={(e) => setSeasonalityProfile(e.target.value)}
+                          className="w-full px-3 py-1.5 bg-zinc-950 border border-white/10 rounded-lg text-xs text-white focus:outline-none focus:border-primary/50 transition-colors"
+                        >
+                          <option value="steady">Steady SaaS / Constant</option>
+                          <option value="holiday">Holiday/Q4 Surge (E-commerce)</option>
+                          <option value="quarterly">B2B Quarterly Spikes</option>
+                          <option value="summer">Summer Slump Profile</option>
+                        </select>
+                        <p className="text-[10px] text-white/30">Applies cyclical peaks and valleys.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <RunwayProjectionChart projections={customRunway?.projections ?? []} />
                 </div>
 
                 {/* Interactive What-If Scenario Simulator */}
@@ -143,7 +217,7 @@ function App() {
                     <p className="text-white/50 text-xs mt-1">Run predictive growth models, overhead adjustments, and simulate new hiring impacts on your business.</p>
                   </header>
                   <ScenarioPlanner 
-                    baseline={runwayData} 
+                    baseline={customRunway} 
                     onOpenChat={(seed) => {
                       setChatSeedPrompt(seed);
                     }} 

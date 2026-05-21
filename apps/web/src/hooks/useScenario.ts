@@ -25,6 +25,40 @@ const DEFAULT_INPUTS: ScenarioInputs = {
   newHires: []
 };
 
+export interface SeasonalityWeight {
+  rev: number;
+  exp: number;
+}
+
+export const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+export const SEASONALITY_PROFILES: Record<string, Record<string, SeasonalityWeight>> = {
+  steady: {
+    Jan: { rev: 1.0, exp: 1.0 }, Feb: { rev: 1.0, exp: 1.0 }, Mar: { rev: 1.0, exp: 1.0 },
+    Apr: { rev: 1.0, exp: 1.0 }, May: { rev: 1.0, exp: 1.0 }, Jun: { rev: 1.0, exp: 1.0 },
+    Jul: { rev: 1.0, exp: 1.0 }, Aug: { rev: 1.0, exp: 1.0 }, Sep: { rev: 1.0, exp: 1.0 },
+    Oct: { rev: 1.0, exp: 1.0 }, Nov: { rev: 1.0, exp: 1.0 }, Dec: { rev: 1.0, exp: 1.0 }
+  },
+  holiday: {
+    Jan: { rev: 0.8, exp: 0.9 }, Feb: { rev: 1.0, exp: 1.0 }, Mar: { rev: 1.0, exp: 1.0 },
+    Apr: { rev: 1.0, exp: 1.0 }, May: { rev: 1.0, exp: 1.0 }, Jun: { rev: 1.0, exp: 1.0 },
+    Jul: { rev: 1.0, exp: 1.0 }, Aug: { rev: 1.0, exp: 1.0 }, Sep: { rev: 1.0, exp: 1.0 },
+    Oct: { rev: 1.0, exp: 1.0 }, Nov: { rev: 1.4, exp: 1.2 }, Dec: { rev: 1.6, exp: 1.3 }
+  },
+  quarterly: {
+    Jan: { rev: 0.9, exp: 0.95 }, Feb: { rev: 0.9, exp: 0.95 }, Mar: { rev: 1.25, exp: 1.15 },
+    Apr: { rev: 0.9, exp: 0.95 }, May: { rev: 0.9, exp: 0.95 }, Jun: { rev: 1.25, exp: 1.15 },
+    Jul: { rev: 0.9, exp: 0.95 }, Aug: { rev: 0.9, exp: 0.95 }, Sep: { rev: 1.25, exp: 1.15 },
+    Oct: { rev: 0.9, exp: 0.95 }, Nov: { rev: 0.9, exp: 0.95 }, Dec: { rev: 1.25, exp: 1.15 }
+  },
+  summer: {
+    Jan: { rev: 1.1, exp: 1.04 }, Feb: { rev: 1.1, exp: 1.04 }, Mar: { rev: 1.1, exp: 1.04 },
+    Apr: { rev: 1.1, exp: 1.04 }, May: { rev: 1.1, exp: 1.04 }, Jun: { rev: 0.75, exp: 0.9 },
+    Jul: { rev: 0.75, exp: 0.9 }, Aug: { rev: 0.75, exp: 0.9 }, Sep: { rev: 1.1, exp: 1.04 },
+    Oct: { rev: 1.1, exp: 1.04 }, Nov: { rev: 1.1, exp: 1.04 }, Dec: { rev: 1.1, exp: 1.04 }
+  }
+};
+
 export interface BaselineRunwayData {
   cashBalance: number;
   fixedCosts: { payroll: number; subscriptions: number; total: number };
@@ -33,6 +67,104 @@ export interface BaselineRunwayData {
   netBurn: number;
   runwayMonths: number | "Infinite";
   projections: { month: string; balance: number }[];
+  baselineRevenueGrowth?: number;
+  baselineExpenseGrowth?: number;
+  baselineSeasonalityProfile?: string;
+}
+
+export function calculateCustomProjections(
+  baseline: {
+    cashBalance: number;
+    fixedCosts: { payroll: number; subscriptions: number; total: number };
+    variableExpenses: number;
+    monthlyRevenue: number;
+  },
+  revGrowth: number,
+  expGrowth: number,
+  seasonalityProfile: string
+): BaselineRunwayData {
+  const baseCash = baseline.cashBalance;
+  const baseRevenue = baseline.monthlyRevenue;
+  const basePayroll = baseline.fixedCosts.payroll;
+  const baseSubs = baseline.fixedCosts.subscriptions;
+  const baseVariable = baseline.variableExpenses;
+
+  const projections: { month: string; balance: number }[] = [];
+  const currentMonthIdx = new Date().getMonth();
+
+  let currentProjBalance = baseCash;
+
+  // Month 0
+  projections.push({
+    month: MONTH_NAMES[currentMonthIdx],
+    balance: Math.round(currentProjBalance)
+  });
+
+  for (let i = 1; i <= 12; i++) {
+    const monthIdx = (currentMonthIdx + i) % 12;
+    const monthLabel = MONTH_NAMES[monthIdx];
+    const profile = SEASONALITY_PROFILES[seasonalityProfile] || SEASONALITY_PROFILES.steady;
+    const weights = profile[monthLabel] || { rev: 1.0, exp: 1.0 };
+
+    const monthlyRevenue = Math.round(
+      baseRevenue * Math.pow(1 + revGrowth / 100, i) * weights.rev
+    );
+
+    const monthlyVariable = Math.round(
+      baseVariable * Math.pow(1 + expGrowth / 100, i) * weights.exp
+    );
+
+    const monthlyExpenses = basePayroll + baseSubs + monthlyVariable;
+    const netBurn = monthlyExpenses - monthlyRevenue;
+
+    currentProjBalance -= netBurn;
+    if (currentProjBalance < 0) {
+      currentProjBalance = 0;
+    }
+
+    projections.push({
+      month: monthLabel,
+      balance: Math.round(currentProjBalance)
+    });
+  }
+
+  let totalNetBurn = 0;
+  // Calculate average net burn across month 1 to 12
+  for (let i = 1; i <= 12; i++) {
+    const monthLabel = MONTH_NAMES[(currentMonthIdx + i) % 12];
+    const profile = SEASONALITY_PROFILES[seasonalityProfile] || SEASONALITY_PROFILES.steady;
+    const weights = profile[monthLabel] || { rev: 1.0, exp: 1.0 };
+
+    const monthlyRevenue = Math.round(
+      baseRevenue * Math.pow(1 + revGrowth / 100, i) * weights.rev
+    );
+
+    const monthlyVariable = Math.round(
+      baseVariable * Math.pow(1 + expGrowth / 100, i) * weights.exp
+    );
+
+    const monthlyExpenses = basePayroll + baseSubs + monthlyVariable;
+    totalNetBurn += (monthlyExpenses - monthlyRevenue);
+  }
+  const avgNetBurn = Math.round(totalNetBurn / 12);
+
+  let runwayMonths: number | "Infinite" = "Infinite";
+  if (avgNetBurn > 0) {
+    runwayMonths = parseFloat((baseCash / avgNetBurn).toFixed(1));
+  }
+
+  return {
+    cashBalance: baseCash,
+    fixedCosts: baseline.fixedCosts,
+    variableExpenses: baseVariable,
+    monthlyRevenue: baseRevenue,
+    netBurn: avgNetBurn,
+    runwayMonths,
+    projections,
+    baselineRevenueGrowth: revGrowth,
+    baselineExpenseGrowth: expGrowth,
+    baselineSeasonalityProfile: seasonalityProfile
+  };
 }
 
 export const useScenario = (baseline: BaselineRunwayData | undefined) => {
@@ -124,9 +256,12 @@ export const useScenario = (baseline: BaselineRunwayData | undefined) => {
   const baseSubs = baseline.fixedCosts.subscriptions;
   const baseVariable = baseline.variableExpenses;
 
+  const baselineRevGrowth = baseline.baselineRevenueGrowth ?? 0;
+  const baselineExpGrowth = baseline.baselineExpenseGrowth ?? 0;
+  const baselineSeasonality = baseline.baselineSeasonalityProfile ?? 'steady';
+
   // Compiling simulated values over 12 months
   const projections: { month: string; balance: number; revenue: number; expenses: number }[] = [];
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const currentMonthIdx = new Date().getMonth();
   
   let currentProjBalance = baseCash;
@@ -134,7 +269,7 @@ export const useScenario = (baseline: BaselineRunwayData | undefined) => {
   // Let's compute month by month
   // Month 0 is the current starting point
   projections.push({
-    month: monthNames[currentMonthIdx],
+    month: MONTH_NAMES[currentMonthIdx],
     balance: Math.round(currentProjBalance),
     revenue: baseRevenue,
     expenses: basePayroll + baseSubs + baseVariable
@@ -142,7 +277,9 @@ export const useScenario = (baseline: BaselineRunwayData | undefined) => {
 
   for (let i = 1; i <= 12; i++) {
     const monthIdx = (currentMonthIdx + i) % 12;
-    const monthLabel = monthNames[monthIdx];
+    const monthLabel = MONTH_NAMES[monthIdx];
+    const profile = SEASONALITY_PROFILES[baselineSeasonality] || SEASONALITY_PROFILES.steady;
+    const weights = profile[monthLabel] || { rev: 1.0, exp: 1.0 };
 
     // 1. Calculate Simulated New Hire Payroll for this month (i)
     // newHires startMonth is 1-indexed (1 means starts in month 1)
@@ -152,18 +289,21 @@ export const useScenario = (baseline: BaselineRunwayData | undefined) => {
 
     const monthlyPayroll = basePayroll + simulatedHiresPayrollCents;
 
-    // 2. Variable Overhead (base variable scaled + marketing spend delta)
-    const scaledVariable = Math.round(baseVariable * (inputs.overheadMultiplier / 100));
+    // 2. Variable Overhead
+    // Apply baseline expense growth and seasonality, then scale by overhead multiplier
+    const baselineVariableThisMonth = baseVariable * Math.pow(1 + baselineExpGrowth / 100, i) * weights.exp;
+    const scaledVariable = Math.round(baselineVariableThisMonth * (inputs.overheadMultiplier / 100));
     const marketingSpendCents = Math.round(inputs.marketingSpendDelta * 100);
     const monthlyExpenses = monthlyPayroll + baseSubs + scaledVariable + marketingSpendCents;
 
-    // 3. Simulated Revenue (base + marketing contribution) grew compounding at revenueGrowthRate MoM
+    // 3. Simulated Revenue
+    // Apply baseline + scenario revenue growth compounding monthly, plus marketing contribution, then seasonality
     const marketingRevenueContribution = Math.round(marketingSpendCents * inputs.marketingRoas);
     const baseRevenuePlusMarketing = baseRevenue + marketingRevenueContribution;
     
-    // Growth compounding monthly
+    const totalRevGrowthRate = baselineRevGrowth + inputs.revenueGrowthRate;
     const monthlyRevenue = Math.round(
-      baseRevenuePlusMarketing * Math.pow(1 + inputs.revenueGrowthRate / 100, i)
+      baseRevenuePlusMarketing * Math.pow(1 + totalRevGrowthRate / 100, i) * weights.rev
     );
 
     // Net monthly burn
