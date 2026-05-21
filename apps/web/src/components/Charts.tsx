@@ -1,7 +1,7 @@
 import { useTransactions } from '../hooks/useTransactions';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell,
+  PieChart, Pie, Cell, Legend
 } from 'recharts';
 
 const COLORS = [
@@ -221,3 +221,88 @@ export function RunwayProjectionChart({ projections = [] }: { projections: { mon
     </ResponsiveContainer>
   );
 }
+
+export function ComparativeRunwayChart({ 
+  baselineProjections = [], 
+  scenarioProjections = [] 
+}: { 
+  baselineProjections: { month: string; balance: number }[],
+  scenarioProjections: { month: string; balance: number }[]
+}) {
+  // Combine baseline and scenario data by month
+  const chartData = baselineProjections.map((bp, idx) => {
+    const sp = scenarioProjections[idx] || bp;
+    return {
+      month: bp.month,
+      baseline: Math.round(bp.balance / 100),
+      scenario: Math.round(sp.balance / 100)
+    };
+  });
+
+  return (
+    <ResponsiveContainer width="100%" height={320}>
+      <AreaChart data={chartData}>
+        <defs>
+          <linearGradient id="baselineGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.15} />
+            <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
+          </linearGradient>
+          <linearGradient id="scenarioGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#10b981" stopOpacity={0.3} />
+            <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <XAxis 
+          dataKey="month" 
+          axisLine={false} 
+          tickLine={false}
+          tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }}
+        />
+        <YAxis 
+          axisLine={false} 
+          tickLine={false}
+          tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }}
+          tickFormatter={(v) => `$${v.toLocaleString()}`}
+        />
+        <Tooltip 
+          contentStyle={{ 
+            background: 'rgba(15,15,25,0.95)', 
+            border: '1px solid rgba(255,255,255,0.1)', 
+            borderRadius: '12px',
+            color: 'white',
+            fontSize: '13px',
+          }}
+          formatter={(value: any, name: any) => [
+            `$${Number(value).toLocaleString()}`, 
+            name === 'baseline' ? 'Baseline Cash Balance' : 'Simulated Cash Balance'
+          ]}
+        />
+        <Legend 
+          verticalAlign="top"
+          height={36}
+          iconType="circle"
+          iconSize={8}
+          wrapperStyle={{ fontSize: 12, opacity: 0.8, color: '#fff' }}
+        />
+        <Area 
+          name="baseline"
+          type="monotone" 
+          dataKey="baseline" 
+          stroke="#f59e0b" 
+          strokeWidth={2}
+          strokeDasharray="4 4"
+          fill="url(#baselineGrad)" 
+        />
+        <Area 
+          name="scenario"
+          type="monotone" 
+          dataKey="scenario" 
+          stroke="#10b981" 
+          strokeWidth={3}
+          fill="url(#scenarioGrad)" 
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+

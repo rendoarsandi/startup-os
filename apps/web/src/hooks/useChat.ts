@@ -17,13 +17,28 @@ export const useChat = (activeRole: 'cfo' | 'marketer' | 'hr') => {
 
   const mutation = useMutation({
     mutationFn: async (text: string) => {
+      // Read active scenario from localStorage to inject into AI context
+      let activeScenario = null;
+      try {
+        const isActive = localStorage.getItem('ai_cfo_scenario_active') === 'true';
+        if (isActive && activeRole === 'cfo') {
+          const stored = localStorage.getItem('ai_cfo_scenario_inputs');
+          if (stored) {
+            activeScenario = JSON.parse(stored);
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to read scenario from localStorage", e);
+      }
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: text,
           history: currentMessages,
-          role: activeRole
+          role: activeRole,
+          activeScenario
         }),
       });
 

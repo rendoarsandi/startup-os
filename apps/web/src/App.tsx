@@ -8,6 +8,9 @@ import { PlaidLinkButton } from './components/PlaidLink'
 import { MarketingDashboard } from './components/MarketingDashboard'
 import { HRDashboard } from './components/HRDashboard'
 import { useState } from 'react'
+import { ScenarioPlanner } from './components/ScenarioPlanner'
+import { Sparkles } from 'lucide-react'
+
 import { useQuery } from '@tanstack/react-query'
 import { useTransactions } from './hooks/useTransactions'
 
@@ -15,6 +18,8 @@ function App() {
   const [activeRole, setActiveRole] = useState<'cfo' | 'marketer' | 'hr'>('cfo');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [chatSeedPrompt, setChatSeedPrompt] = useState<string | undefined>(undefined);
+
 
   const { transactions } = useTransactions();
 
@@ -128,6 +133,24 @@ function App() {
                   <RunwayProjectionChart projections={runwayData?.projections ?? []} />
                 </div>
 
+                {/* Interactive What-If Scenario Simulator */}
+                <div className="glass-card p-8 border-emerald-500/10 bg-gradient-to-b from-white/[0.01] to-emerald-950/[0.02]">
+                  <header className="mb-6">
+                    <h3 className="text-xl font-extrabold flex items-center gap-2 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent italic">
+                      <Sparkles size={20} className="text-emerald-400 shrink-0" />
+                      <span>Interactive What-If Scenario Simulator</span>
+                    </h3>
+                    <p className="text-white/50 text-xs mt-1">Run predictive growth models, overhead adjustments, and simulate new hiring impacts on your business.</p>
+                  </header>
+                  <ScenarioPlanner 
+                    baseline={runwayData} 
+                    onOpenChat={(seed) => {
+                      setChatSeedPrompt(seed);
+                    }} 
+                  />
+                </div>
+
+
                 <div className="glass-card p-8">
                   <h3 className="text-xl font-bold mb-6">Category Breakdown</h3>
                   <CategoryBreakdownChart />
@@ -214,7 +237,8 @@ function App() {
 
         {activeRole === 'hr' && <HRDashboard />}
 
-        <Chat activeRole={activeRole} />
+        <Chat activeRole={activeRole} seedPrompt={chatSeedPrompt} setSeedPrompt={setChatSeedPrompt} />
+
         
         <TransactionModal 
           isOpen={isModalOpen} 

@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, User, Loader2, Sparkles, Briefcase, Users } from 'lucide-react';
+import { MessageCircle, X, Send, User, Loader2, Sparkles, Briefcase, Users, Zap } from 'lucide-react';
 import { useChat } from '../hooks/useChat';
 
 interface ChatProps {
   activeRole: 'cfo' | 'marketer' | 'hr';
+  seedPrompt?: string;
+  setSeedPrompt?: (prompt: string | undefined) => void;
 }
 
-export const Chat: React.FC<ChatProps> = ({ activeRole }) => {
+export const Chat: React.FC<ChatProps> = ({ activeRole, seedPrompt, setSeedPrompt }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const { messages, sendMessage, isLoading } = useChat(activeRole);
@@ -17,6 +19,19 @@ export const Chat: React.FC<ChatProps> = ({ activeRole }) => {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Auto-open and send seed prompt when triggered from ScenarioPlanner
+  useEffect(() => {
+    if (seedPrompt && !isLoading) {
+      setIsOpen(true);
+      // Short delay so the chat window renders before sending
+      const timer = setTimeout(() => {
+        sendMessage(seedPrompt);
+        setSeedPrompt?.(undefined);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [seedPrompt]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +57,21 @@ export const Chat: React.FC<ChatProps> = ({ activeRole }) => {
     if (activeRole === 'hr') return <Users size={20} />;
     return <Briefcase size={20} />;
   };
+
+  // Check if scenario is active for quick-prompt suggestions
+  const hasActiveScenario = (() => {
+    try {
+      return localStorage.getItem('ai_cfo_scenario_active') === 'true' && activeRole === 'cfo';
+    } catch {
+      return false;
+    }
+  })();
+
+  const quickPrompts = hasActiveScenario ? [
+    "What are the risks in my current hiring scenario?",
+    "How can I optimize my runway under this plan?",
+    "Is my marketing spend justified by the projected ROAS?"
+  ] : [];
 
   return (
     <div className="fixed bottom-8 right-8 z-50">
@@ -70,6 +100,11 @@ export const Chat: React.FC<ChatProps> = ({ activeRole }) => {
                 <div className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                   <span className="text-[10px] text-white/40 uppercase tracking-widest font-black">Online</span>
+                  {hasActiveScenario && (
+                    <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded font-bold ml-1">
+                      SCENARIO ACTIVE
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -87,11 +122,32 @@ export const Chat: React.FC<ChatProps> = ({ activeRole }) => {
             className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar"
           >
             {messages.length === 0 && (
-              <div className="h-full flex flex-col items-center justify-center text-center space-y-4 px-4 opacity-50">
+              <div className="h-full flex flex-col items-center justify-center text-center space-y-4 px-4">
                 <div className="text-primary/50">
                   <RoleIcon />
                 </div>
-                <p className="text-sm font-medium">{roleWelcome[activeRole]}</p>
+                <p className="text-sm font-medium opacity-50">{roleWelcome[activeRole]}</p>
+
+                {/* Scenario Quick-Prompts */}
+                {quickPrompts.length > 0 && (
+                  <div className="w-full space-y-2 pt-4 border-t border-white/5">
+                    <div className="flex items-center gap-1.5 justify-center mb-2">
+                      <Zap size={12} className="text-emerald-400" />
+                      <span className="text-[10px] uppercase tracking-widest font-black text-emerald-400">Scenario Quick Actions</span>
+                    </div>
+                    {quickPrompts.map((prompt, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          sendMessage(prompt);
+                        }}
+                        className="w-full text-left text-xs px-3 py-2.5 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-emerald-500/20 transition-all cursor-pointer text-white/60 hover:text-white"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

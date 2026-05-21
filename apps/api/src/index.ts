@@ -53,7 +53,7 @@ app.post("/api/chat", async (c) => {
   const db = drizzle(c.env.DB);
   const gemini = new GeminiService(c.env.GEMINI_API_KEY);
   const analysis = new AnalysisService(db);
-  const { message, history, role } = await c.req.json();
+  const { message, history, role, activeScenario } = await c.req.json();
   
   // Mocking userId for now
   const userId = "test-user";
@@ -62,6 +62,27 @@ app.post("/api/chat", async (c) => {
     let context = "";
     if (!role || role === 'cfo') {
       context = await analysis.getUserContext(userId);
+
+      // Inject active scenario context if present
+      if (activeScenario) {
+        context += `\n\n--- ACTIVE WHAT-IF SCENARIO SIMULATION ---\n`;
+        context += `The user is currently running a financial forecasting simulation with the following parameters:\n`;
+        context += `- MoM Revenue Growth Rate: ${activeScenario.revenueGrowthRate || 0}%\n`;
+        context += `- Additional Marketing Spend: $${(activeScenario.marketingSpendDelta || 0).toLocaleString()}/mo\n`;
+        context += `- Simulated Marketing ROAS: ${activeScenario.marketingRoas || 1.5}x\n`;
+        context += `- Variable Overhead Multiplier: ${activeScenario.overheadMultiplier || 100}%\n`;
+        
+        if (activeScenario.newHires && activeScenario.newHires.length > 0) {
+          context += `- Simulated New Hires (${activeScenario.newHires.length}):\n`;
+          activeScenario.newHires.forEach((hire: any) => {
+            context += `  * ${hire.name} - ${hire.role} (${hire.department}), $${(hire.salary || 0).toLocaleString()}/yr, starting Month ${hire.startMonth}\n`;
+          });
+        } else {
+          context += `- No simulated new hires.\n`;
+        }
+        context += `--- END SCENARIO ---\n`;
+        context += `When responding, factor in the above scenario parameters and provide analysis specific to this simulation. Be concrete about the financial impact.`;
+      }
     } else if (role === 'marketer') {
       context = `Marketing Profile:\nActive Campaigns:\n` + campaignsStore.map(c => `- ${c.name} (${c.status}): Budget $${(c.budget/100).toFixed(2)}, Spend $${(c.spend/100).toFixed(2)}, ROAS ${(c.roas/100).toFixed(1)}x`).join('\n') + `\n\nGoal: Keep average CAC under $45 and boost conversion funnel.`;
     } else if (role === 'hr') {
