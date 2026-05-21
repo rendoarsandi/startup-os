@@ -161,3 +161,63 @@ export function CategoryBreakdownChart() {
     </div>
   );
 }
+
+export function RunwayProjectionChart({ projections = [] }: { projections: { month: string; balance: number }[] }) {
+  const chartData = projections.map(p => ({
+    month: p.month,
+    balance: Math.round(p.balance / 100)
+  }));
+
+  // Default demo projections if empty
+  const displayData = chartData.length > 0 ? chartData : [
+    { month: 'May', balance: 42590 },
+    { month: 'Jun', balance: 35000 },
+    { month: 'Jul', balance: 28000 },
+    { month: 'Aug', balance: 21000 },
+    { month: 'Sep', balance: 14000 },
+    { month: 'Oct', balance: 7000 },
+    { month: 'Nov', balance: 0 },
+  ];
+
+  return (
+    <ResponsiveContainer width="100%" height={240}>
+      <AreaChart data={displayData}>
+        <defs>
+          <linearGradient id="runwayGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.4} />
+            <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <XAxis 
+          dataKey="month" 
+          axisLine={false} 
+          tickLine={false}
+          tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }}
+        />
+        <YAxis 
+          axisLine={false} 
+          tickLine={false}
+          tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }}
+          tickFormatter={(v) => `$${v.toLocaleString()}`}
+        />
+        <Tooltip 
+          contentStyle={{ 
+            background: 'rgba(15,15,25,0.95)', 
+            border: '1px solid rgba(255,255,255,0.1)', 
+            borderRadius: '12px',
+            color: 'white',
+            fontSize: '13px',
+          }}
+          formatter={(value: any) => [`$${Number(value).toLocaleString()}`, 'Projected Cash']}
+        />
+        <Area 
+          type="monotone" 
+          dataKey="balance" 
+          stroke="#f59e0b" 
+          strokeWidth={2.5}
+          fill="url(#runwayGradient)" 
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}

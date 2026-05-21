@@ -3,7 +3,7 @@ import { Chat } from './components/Chat'
 import { TransactionList } from './components/TransactionList'
 import { TransactionModal } from './components/TransactionModal'
 import { BudgetTracker } from './components/BudgetTracker'
-import { SpendingTrendChart, CategoryBreakdownChart } from './components/Charts'
+import { SpendingTrendChart, CategoryBreakdownChart, RunwayProjectionChart } from './components/Charts'
 import { PlaidLinkButton } from './components/PlaidLink'
 import { MarketingDashboard } from './components/MarketingDashboard'
 import { HRDashboard } from './components/HRDashboard'
@@ -29,11 +29,29 @@ function App() {
   });
 
   // Query for AI CFO Insights
-  const { data: insightsData, isLoading: insightsLoading } = useQuery<{ advice: string }>({
+  const { data: insightsData, isLoading: insightsLoading } = useQuery<{ advice: string, items?: any[] }>({
     queryKey: ['insights', refreshKey],
     queryFn: async () => {
       const res = await fetch('/api/insights');
       if (!res.ok) throw new Error('Failed to fetch insights');
+      return res.json();
+    }
+  });
+
+  // Query for Cash Runway and Burn Rate details
+  const { data: runwayData, isLoading: runwayLoading } = useQuery<{
+    cashBalance: number;
+    fixedCosts: { payroll: number; subscriptions: number; total: number };
+    variableExpenses: number;
+    monthlyRevenue: number;
+    netBurn: number;
+    runwayMonths: number | "Infinite";
+    projections: { month: string; balance: number }[];
+  }>({
+    queryKey: ['runway', refreshKey],
+    queryFn: async () => {
+      const res = await fetch('/api/cfo/runway');
+      if (!res.ok) throw new Error('Failed to fetch runway data');
       return res.json();
     }
   });
@@ -76,10 +94,10 @@ function App() {
                 isPositive={true} 
               />
               <StatCard 
-                title="AI Savings Goal" 
-                value="$1,200.00" 
-                change="On Track" 
-                isPositive={true} 
+                title="AI Cash Runway" 
+                value={runwayLoading ? "Loading..." : runwayData?.runwayMonths === "Infinite" ? "Infinite Runway" : `${runwayData?.runwayMonths ?? '0'} Months`} 
+                change={runwayLoading ? "Calculating" : runwayData?.runwayMonths === "Infinite" ? "Profitable" : `$${Math.round((runwayData?.netBurn ?? 0) / 100).toLocaleString()}/mo burn`} 
+                isPositive={runwayData?.runwayMonths === "Infinite" || (runwayData?.runwayMonths ?? 12) >= 6} 
               />
             </div>
 
@@ -88,6 +106,26 @@ function App() {
                 <div className="glass-card p-8 min-h-[400px]">
                   <h3 className="text-xl font-bold mb-6">Spending Trends</h3>
                   <SpendingTrendChart />
+                </div>
+
+                <div className="glass-card p-8 min-h-[400px]">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold">Cash Runway Projections</h3>
+                    {!runwayLoading && runwayData && (
+                      <span className={`text-xs px-2.5 py-1 rounded-md font-bold ${
+                        runwayData.runwayMonths === 'Infinite' 
+                          ? 'bg-green-500/10 text-green-400' 
+                          : runwayData.runwayMonths < 6 
+                            ? 'bg-red-500/10 text-red-400 animate-pulse' 
+                            : 'bg-amber-500/10 text-amber-400'
+                      }`}>
+                        {runwayData.runwayMonths === 'Infinite' 
+                          ? 'Profitable' 
+                          : `${runwayData.runwayMonths} Mo. Runway`}
+                      </span>
+                    )}
+                  </div>
+                  <RunwayProjectionChart projections={runwayData?.projections ?? []} />
                 </div>
 
                 <div className="glass-card p-8">
@@ -125,6 +163,14 @@ function App() {
                       <div className="h-20 rounded-xl bg-white/5 animate-pulse flex items-center justify-center text-xs opacity-50">
                         Analyzing financial data...
                       </div>
+                    ) : insightsData?.items && Array.isArray(insightsData.items) ? (
+                      insightsData.items.map((item: any, idx: number) => (
+                        <InsightItem 
+                          key={idx}
+                          type={item.type}
+                          message={item.message}
+                        />
+                      ))
                     ) : insightsData?.advice ? (
                       <InsightItem 
                         type="opportunity"

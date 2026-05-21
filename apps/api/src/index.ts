@@ -261,17 +261,51 @@ app.post("/api/hr/generate-doc", async (c) => {
 });
 
 
+app.get("/api/cfo/runway", async (c) => {
+  const db = drizzle(c.env.DB);
+  const analysis = new AnalysisService(db);
+  const userId = "test-user";
+  try {
+    const runwayData = await analysis.calculateRunwayAndBurn(userId);
+    return c.json(runwayData);
+  } catch (error: any) {
+    console.error("GET /api/cfo/runway error:", error);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
 app.get("/api/insights", async (c) => {
   const db = drizzle(c.env.DB);
   const gemini = new GeminiService(c.env.GEMINI_API_KEY);
   const analysis = new AnalysisService(db);
-  
-  // Mocking userId for now since we don't have session middleware fully wired in Hono yet
   const userId = "test-user";
   
   try {
     const advice = await analysis.getFinancialAdvice(userId, gemini);
-    return c.json({ advice });
+    const runway = await analysis.calculateRunwayAndBurn(userId);
+    
+    const items = [
+      { type: 'opportunity', message: advice }
+    ];
+
+    if (runway.runwayMonths !== "Infinite" && runway.runwayMonths < 6) {
+      items.unshift({
+        type: 'warning',
+        message: `CRITICAL ALERT: Your cash runway is down to ${runway.runwayMonths} months ($${(runway.netBurn/100).toLocaleString('en-US', { maximumFractionDigits: 2 })}/mo net burn). Consider freezing non-essential hiring or reducing marketing spends immediately.`
+      });
+    } else if (runway.runwayMonths === "Infinite") {
+      items.push({
+        type: 'success',
+        message: "STABLE HEALTH: Your business is currently cash-flow positive! You have infinite runway at current growth rates."
+      });
+    } else {
+      items.push({
+        type: 'success',
+        message: `STABLE HEALTH: Your cash runway is solid at ${runway.runwayMonths} months. Keep monitoring variable operating spends.`
+      });
+    }
+
+    return c.json({ advice, items });
   } catch (error: any) {
     return c.json({ error: error.message }, 500);
   }
