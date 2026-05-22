@@ -274,7 +274,7 @@ async function getUserId(c: any): Promise<string | null> {
   }
 
   try {
-    const auth = getAuth(c.env.DB, c.env.BETTER_AUTH_URL);
+    const auth = getAuth(c.env.DB, c.env.BETTER_AUTH_URL, c.env.BETTER_AUTH_SECRET);
     const session = await auth.api.getSession({
       headers: c.req.raw.headers
     });
@@ -321,7 +321,7 @@ app.get('/api/health', (c) => {
 })
 
 app.on(['POST', 'GET'], '/api/auth/*', (c) => {
-  const auth = getAuth(c.env.DB, c.env.BETTER_AUTH_URL);
+  const auth = getAuth(c.env.DB, c.env.BETTER_AUTH_URL, c.env.BETTER_AUTH_SECRET);
   return auth.handler(c.req.raw);
 });
 

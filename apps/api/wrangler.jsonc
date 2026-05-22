@@ -10,7 +10,8 @@
     {
       "binding": "DB",
       "database_name": "ai-cfo-db",
-      "database_id": "d34b94ac-e688-442a-a866-70e5c19d42ac"
+      "database_id": "d34b94ac-e688-442a-a866-70e5c19d42ac",
+      "migrations_dir": "../../packages/db/drizzle"
     }
   ],
   "vars": {
