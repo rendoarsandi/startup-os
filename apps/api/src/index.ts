@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { drizzle } from 'drizzle-orm/d1'
 import { eq, and, desc } from 'drizzle-orm'
-import { users, financialAccounts, transactions, budgets, marketingCampaigns, employees, plaidConnections } from "@ai-cfo/db";
+import { users, financialAccounts, transactions, budgets, marketingCampaigns, employees, plaidConnections, saasConfigs } from "@ai-cfo/db";
 import { getAuth } from './auth';
 import { GeminiService } from "./gemini";
 import { AnalysisService } from "./analysis";
@@ -281,6 +281,65 @@ app.post("/api/hr/generate-doc", async (c) => {
   }
 });
 
+app.get("/api/cfo/saas-config", async (c) => {
+  const db = drizzle(c.env.DB);
+  const userId = "test-user";
+  try {
+    const config = await db.select().from(saasConfigs).where(eq(saasConfigs.userId, userId)).get();
+    if (!config) {
+      return c.json({
+        startingMrr: 0,
+        churnRate: 0,
+        cac: 0,
+        arpu: 0
+      });
+    }
+    return c.json(config);
+  } catch (error: any) {
+    console.error("GET /api/cfo/saas-config error:", error);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.post("/api/cfo/saas-config", async (c) => {
+  const db = drizzle(c.env.DB);
+  const userId = "test-user";
+  try {
+    const { startingMrr, churnRate, cac, arpu } = await c.req.json();
+    const existing = await db.select().from(saasConfigs).where(eq(saasConfigs.userId, userId)).get();
+    const now = new Date();
+    if (existing) {
+      await db.update(saasConfigs)
+        .set({
+          startingMrr: Number(startingMrr),
+          churnRate: Number(churnRate),
+          cac: Number(cac),
+          arpu: Number(arpu),
+          updatedAt: now
+        })
+        .where(eq(saasConfigs.userId, userId))
+        .run();
+    } else {
+      await db.insert(saasConfigs)
+        .values({
+          id: uuidv4(),
+          userId,
+          startingMrr: Number(startingMrr),
+          churnRate: Number(churnRate),
+          cac: Number(cac),
+          arpu: Number(arpu),
+          createdAt: now,
+          updatedAt: now
+        })
+        .run();
+    }
+    const updated = await db.select().from(saasConfigs).where(eq(saasConfigs.userId, userId)).get();
+    return c.json(updated);
+  } catch (error: any) {
+    console.error("POST /api/cfo/saas-config error:", error);
+    return c.json({ error: error.message }, 500);
+  }
+});
 
 app.get("/api/cfo/runway", async (c) => {
   const db = drizzle(c.env.DB);

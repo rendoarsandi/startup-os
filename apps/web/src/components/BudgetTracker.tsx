@@ -29,7 +29,9 @@ export function BudgetTracker() {
     );
   }
 
-  if (budgets.length === 0) {
+  const budgetsArray = Array.isArray(budgets) ? budgets : [];
+
+  if (budgetsArray.length === 0) {
     return (
       <div className="text-center py-8">
         <p className="text-white/30 text-sm">No budgets set yet.</p>
@@ -40,7 +42,7 @@ export function BudgetTracker() {
 
   return (
     <div className="space-y-4">
-      {budgets.map((budget) => {
+      {budgetsArray.map((budget) => {
         // Calculate deterministic spent amount from transactions (tx.amount is in cents)
         const categoryTransactions = transactions.filter(
           (t) => t.category === budget.category && t.amount < 0

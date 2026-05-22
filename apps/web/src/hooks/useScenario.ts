@@ -15,6 +15,10 @@ export interface ScenarioInputs {
   marketingRoas: number; // e.g. 1.5 (means 150%)
   overheadMultiplier: number; // in % (e.g. 100% is baseline)
   newHires: SimulatedHire[];
+  startingMrrDelta: number; // in dollars
+  churnRate: number; // in % (e.g. 2.0 for 2%)
+  cac: number; // in dollars
+  arpu: number; // in dollars
 }
 
 const DEFAULT_INPUTS: ScenarioInputs = {
@@ -22,7 +26,11 @@ const DEFAULT_INPUTS: ScenarioInputs = {
   marketingSpendDelta: 0,
   marketingRoas: 1.5,
   overheadMultiplier: 100,
-  newHires: []
+  newHires: [],
+  startingMrrDelta: 0,
+  churnRate: 2.0,
+  cac: 100,
+  arpu: 50
 };
 
 export interface SeasonalityWeight {
@@ -70,24 +78,37 @@ export interface BaselineRunwayData {
   baselineRevenueGrowth?: number;
   baselineExpenseGrowth?: number;
   baselineSeasonalityProfile?: string;
+  startingMrr?: number;
+  churnRate?: number;
+  cac?: number;
+  arpu?: number;
 }
 
 export function calculateCustomProjections(
   baseline: {
     cashBalance: number;
-    fixedCosts: { payroll: number; subscriptions: number; total: number };
+    fixedCosts?: { payroll: number; subscriptions: number; total: number };
     variableExpenses: number;
     monthlyRevenue: number;
+    startingMrr?: number;
+    churnRate?: number;
+    cac?: number;
+    arpu?: number;
   },
   revGrowth: number,
   expGrowth: number,
   seasonalityProfile: string
 ): BaselineRunwayData {
-  const baseCash = baseline.cashBalance;
-  const baseRevenue = baseline.monthlyRevenue;
-  const basePayroll = baseline.fixedCosts.payroll;
-  const baseSubs = baseline.fixedCosts.subscriptions;
-  const baseVariable = baseline.variableExpenses;
+  const baseCash = baseline?.cashBalance || 4259020;
+  const baseRevenue = baseline?.monthlyRevenue || 1500000;
+  const basePayroll = baseline?.fixedCosts?.payroll || 0;
+  const baseSubs = baseline?.fixedCosts?.subscriptions || 0;
+  const baseVariable = baseline?.variableExpenses || 0;
+
+  const baseMrr = baseline?.startingMrr !== undefined ? baseline.startingMrr : 0;
+  const baseChurnRate = baseline?.churnRate !== undefined ? baseline.churnRate : 200; // basis points
+  const baseCac = baseline?.cac !== undefined ? baseline.cac : 10000;
+  const baseArpu = baseline?.arpu !== undefined ? baseline.arpu : 5000;
 
   const projections: { month: string; balance: number }[] = [];
   const currentMonthIdx = new Date().getMonth();
@@ -100,15 +121,22 @@ export function calculateCustomProjections(
     balance: Math.round(currentProjBalance)
   });
 
+  const nonRecurringRevenue = Math.max(0, baseRevenue - baseMrr);
+  let currentMrr = baseMrr;
+
   for (let i = 1; i <= 12; i++) {
     const monthIdx = (currentMonthIdx + i) % 12;
     const monthLabel = MONTH_NAMES[monthIdx];
     const profile = SEASONALITY_PROFILES[seasonalityProfile] || SEASONALITY_PROFILES.steady;
     const weights = profile[monthLabel] || { rev: 1.0, exp: 1.0 };
 
-    const monthlyRevenue = Math.round(
-      baseRevenue * Math.pow(1 + revGrowth / 100, i) * weights.rev
-    );
+    // MRR decays by churn, and grows by organic growth scaled with seasonality
+    const churnDecay = currentMrr * (baseChurnRate / 10000);
+    const organicGrowth = currentMrr * (revGrowth / 100) * weights.rev;
+    currentMrr = Math.round(currentMrr - churnDecay + organicGrowth);
+    if (currentMrr < 0) currentMrr = 0;
+
+    const monthlyRevenue = currentMrr + Math.round(nonRecurringRevenue * Math.pow(1 + revGrowth / 100, i) * weights.rev);
 
     const monthlyVariable = Math.round(
       baseVariable * Math.pow(1 + expGrowth / 100, i) * weights.exp
@@ -129,15 +157,19 @@ export function calculateCustomProjections(
   }
 
   let totalNetBurn = 0;
+  let currentMrrForBurn = baseMrr;
   // Calculate average net burn across month 1 to 12
   for (let i = 1; i <= 12; i++) {
     const monthLabel = MONTH_NAMES[(currentMonthIdx + i) % 12];
     const profile = SEASONALITY_PROFILES[seasonalityProfile] || SEASONALITY_PROFILES.steady;
     const weights = profile[monthLabel] || { rev: 1.0, exp: 1.0 };
 
-    const monthlyRevenue = Math.round(
-      baseRevenue * Math.pow(1 + revGrowth / 100, i) * weights.rev
-    );
+    const churnDecay = currentMrrForBurn * (baseChurnRate / 10000);
+    const organicGrowth = currentMrrForBurn * (revGrowth / 100) * weights.rev;
+    currentMrrForBurn = Math.round(currentMrrForBurn - churnDecay + organicGrowth);
+    if (currentMrrForBurn < 0) currentMrrForBurn = 0;
+
+    const monthlyRevenue = currentMrrForBurn + Math.round(nonRecurringRevenue * Math.pow(1 + revGrowth / 100, i) * weights.rev);
 
     const monthlyVariable = Math.round(
       baseVariable * Math.pow(1 + expGrowth / 100, i) * weights.exp
@@ -155,7 +187,7 @@ export function calculateCustomProjections(
 
   return {
     cashBalance: baseCash,
-    fixedCosts: baseline.fixedCosts,
+    fixedCosts: baseline?.fixedCosts || { payroll: basePayroll, subscriptions: baseSubs, total: basePayroll + baseSubs },
     variableExpenses: baseVariable,
     monthlyRevenue: baseRevenue,
     netBurn: avgNetBurn,
@@ -163,7 +195,11 @@ export function calculateCustomProjections(
     projections,
     baselineRevenueGrowth: revGrowth,
     baselineExpenseGrowth: expGrowth,
-    baselineSeasonalityProfile: seasonalityProfile
+    baselineSeasonalityProfile: seasonalityProfile,
+    startingMrr: baseMrr,
+    churnRate: baseChurnRate,
+    cac: baseCac,
+    arpu: baseArpu
   };
 }
 
@@ -187,6 +223,17 @@ export const useScenario = (baseline: BaselineRunwayData | undefined) => {
       return false;
     }
   });
+
+  useEffect(() => {
+    if (baseline && !localStorage.getItem('ai_cfo_scenario_inputs')) {
+      setInputs(prev => ({
+        ...prev,
+        churnRate: baseline.churnRate !== undefined ? baseline.churnRate / 100 : 2.0,
+        cac: baseline.cac !== undefined ? Math.round(baseline.cac / 100) : 100,
+        arpu: baseline.arpu !== undefined ? Math.round(baseline.arpu / 100) : 50
+      }));
+    }
+  }, [baseline]);
 
   useEffect(() => {
     try {
@@ -250,11 +297,14 @@ export const useScenario = (baseline: BaselineRunwayData | undefined) => {
   };
 
   // Baseline values in cents
-  const baseCash = baseline.cashBalance;
-  const baseRevenue = baseline.monthlyRevenue;
-  const basePayroll = baseline.fixedCosts.payroll;
-  const baseSubs = baseline.fixedCosts.subscriptions;
-  const baseVariable = baseline.variableExpenses;
+  const baseCash = baseline.cashBalance || 4259020;
+  const baseRevenue = baseline.monthlyRevenue || 1500000;
+  const basePayroll = baseline.fixedCosts?.payroll || 0;
+  const baseSubs = baseline.fixedCosts?.subscriptions || 0;
+  const baseVariable = baseline.variableExpenses || 0;
+
+  const baseMrr = baseline.startingMrr !== undefined ? baseline.startingMrr : 0;
+  const baseChurnRate = baseline.churnRate !== undefined ? baseline.churnRate : 200; // basis points
 
   const baselineRevGrowth = baseline.baselineRevenueGrowth ?? 0;
   const baselineExpGrowth = baseline.baselineExpenseGrowth ?? 0;
@@ -274,6 +324,11 @@ export const useScenario = (baseline: BaselineRunwayData | undefined) => {
     revenue: baseRevenue,
     expenses: basePayroll + baseSubs + baseVariable
   });
+
+  let currentMrr = baseMrr + Math.round(inputs.startingMrrDelta * 100);
+  if (currentMrr < 0) currentMrr = 0;
+
+  const nonRecurringRevenue = Math.max(0, baseRevenue - baseMrr);
 
   for (let i = 1; i <= 12; i++) {
     const monthIdx = (currentMonthIdx + i) % 12;
@@ -296,15 +351,24 @@ export const useScenario = (baseline: BaselineRunwayData | undefined) => {
     const marketingSpendCents = Math.round(inputs.marketingSpendDelta * 100);
     const monthlyExpenses = monthlyPayroll + baseSubs + scaledVariable + marketingSpendCents;
 
-    // 3. Simulated Revenue
-    // Apply baseline + scenario revenue growth compounding monthly, plus marketing contribution, then seasonality
-    const marketingRevenueContribution = Math.round(marketingSpendCents * inputs.marketingRoas);
-    const baseRevenuePlusMarketing = baseRevenue + marketingRevenueContribution;
-    
+    // 3. Simulated SaaS Revenue
+    // Calculate new MRR from marketing (CAC & ARPU-driven)
+    let newMrrFromMarketing = 0;
+    if (inputs.cac > 0) {
+      const newCustomers = inputs.marketingSpendDelta / inputs.cac;
+      newMrrFromMarketing = Math.round(newCustomers * inputs.arpu * 100);
+    }
+
+    const churnRateBasisPoints = inputs.churnRate * 100;
+    const churnDecay = currentMrr * (churnRateBasisPoints / 10000);
     const totalRevGrowthRate = baselineRevGrowth + inputs.revenueGrowthRate;
-    const monthlyRevenue = Math.round(
-      baseRevenuePlusMarketing * Math.pow(1 + totalRevGrowthRate / 100, i) * weights.rev
-    );
+    const organicGrowth = currentMrr * (totalRevGrowthRate / 100) * weights.rev;
+    const marketingAdditions = newMrrFromMarketing * weights.rev;
+
+    currentMrr = Math.round(currentMrr - churnDecay + organicGrowth + marketingAdditions);
+    if (currentMrr < 0) currentMrr = 0;
+
+    const monthlyRevenue = currentMrr + Math.round(nonRecurringRevenue * Math.pow(1 + totalRevGrowthRate / 100, i) * weights.rev);
 
     // Net monthly burn
     const netBurn = monthlyExpenses - monthlyRevenue;
@@ -322,9 +386,7 @@ export const useScenario = (baseline: BaselineRunwayData | undefined) => {
     });
   }
 
-  // Calculate simulated runway in months based on first-month simulated net burn or average simulated burn
-  // Let's use average simulated net burn to be more robust, or simple netBurn if positive.
-  // We'll compute average simulated net burn over the 12 projection months
+  // Calculate simulated runway in months based on average simulated net burn
   let totalNetBurn = 0;
   for (let i = 1; i <= 12; i++) {
     totalNetBurn += (projections[i].expenses - projections[i].revenue);
@@ -348,7 +410,7 @@ export const useScenario = (baseline: BaselineRunwayData | undefined) => {
     if (runwayMonths === "Infinite") {
       runwayDelta = 999; // Represents reaches profitability
     } else {
-      runwayDelta = parseFloat((runwayMonths - baseline.runwayMonths).toFixed(1));
+      runwayDelta = parseFloat((runwayMonths - (baseline.runwayMonths || 0)).toFixed(1));
     }
   }
 

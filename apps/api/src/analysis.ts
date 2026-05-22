@@ -1,4 +1,4 @@
-import { users, transactions, financialAccounts, employees } from "@ai-cfo/db";
+import { users, transactions, financialAccounts, employees, saasConfigs } from "@ai-cfo/db";
 import { eq, desc } from "drizzle-orm";
 
 export class AnalysisService {
@@ -39,6 +39,8 @@ export class AnalysisService {
       context += `- Rolling Average Monthly Revenue: $${(runway.monthlyRevenue / 100).toFixed(2)}\n`;
       context += `- Net Monthly Burn: $${(runway.netBurn / 100).toFixed(2)}\n`;
       context += `- Current Runway: ${runway.runwayMonths === "Infinite" ? "Infinite / Profitable" : runway.runwayMonths + " Months"}\n`;
+      context += `- SaaS Starting MRR: $${(runway.startingMrr / 100).toFixed(2)}\n`;
+      context += `- SaaS Monthly Churn Rate: ${(runway.churnRate / 100).toFixed(2)}%\n`;
     } catch (e) {
       console.warn("Could not calculate runway for context:", e);
     }
@@ -54,6 +56,10 @@ export class AnalysisService {
     netBurn: number;
     runwayMonths: number | "Infinite";
     projections: { month: string; balance: number }[];
+    startingMrr: number;
+    churnRate: number;
+    cac: number;
+    arpu: number;
   }> {
     // 1. Fetch current total balance from financial accounts
     const accounts = await this.db
@@ -101,9 +107,6 @@ export class AnalysisService {
       totalVariableExpenses = 1200000; // $12,000.00
       totalRevenue = 1500000; // $15,000.00
     } else {
-      let expenseTxsIn90Days = 0;
-      let revenueTxsIn90Days = 0;
-
       txs.forEach((tx: any) => {
         const txDate = tx.date instanceof Date ? tx.date.getTime() : new Date(tx.date).getTime();
         
@@ -136,50 +139,108 @@ export class AnalysisService {
             } else {
               totalVariableExpenses += absAmt;
             }
-            expenseTxsIn90Days++;
           } else {
             totalRevenue += amount;
-            revenueTxsIn90Days++;
           }
         }
       });
 
-      // If there was transactions but nothing in the 90 day window, calculate based on total data to avoid 0 burn
+      // Scale to 30 days
       const dayRange = 90;
       monthlySubscriptions = Math.round((monthlySubscriptions * 30) / dayRange);
       totalVariableExpenses = Math.round((totalVariableExpenses * 30) / dayRange);
       totalRevenue = Math.round((totalRevenue * 30) / dayRange);
     }
 
-    // 4. Calculate Net Monthly Burn
-    const totalFixedCosts = monthlyPayroll + monthlySubscriptions;
-    const netBurn = totalFixedCosts + totalVariableExpenses - totalRevenue;
-
-    // 5. Calculate Runway in Months
-    let runwayMonths: number | "Infinite" = "Infinite";
-    if (netBurn > 0) {
-      runwayMonths = parseFloat((cashBalance / netBurn).toFixed(1));
+    // 4. Fetch SaaS Config and auto-detect recurring revenue
+    let saasConfig = null;
+    try {
+      saasConfig = await this.db
+        .select()
+        .from(saasConfigs)
+        .where(eq(saasConfigs.userId, userId))
+        .get();
+    } catch (e) {
+      console.warn("Could not fetch saasConfig, table might not exist in D1 yet:", e);
     }
 
-    // 6. Generate Projections for the next 12 months
+    let startingMrr = 1000000; // $10,000 fallback
+    let churnRate = 200; // 2.0% default
+    let cac = 10000; // $100 default
+    let arpu = 5000; // $50 default
+
+    if (saasConfig) {
+      startingMrr = saasConfig.startingMrr;
+      churnRate = saasConfig.churnRate;
+      cac = saasConfig.cac;
+      arpu = saasConfig.arpu;
+    } else if (txs.length > 0) {
+      // Auto-detect recurring deposits in last 90 days
+      let totalRecurringDeposits = 0;
+      txs.forEach((tx: any) => {
+        const txDate = tx.date instanceof Date ? tx.date.getTime() : new Date(tx.date).getTime();
+        if (txDate >= ninetyDaysAgo && tx.amount > 0) {
+          const mLower = (tx.merchant || tx.description || "").toLowerCase();
+          if (mLower.includes("stripe") || mLower.includes("paypal") || mLower.includes("shopify") || mLower.includes("app store") || mLower.includes("deposit")) {
+            totalRecurringDeposits += tx.amount;
+          }
+        }
+      });
+      startingMrr = Math.round(totalRecurringDeposits / 3);
+      if (startingMrr === 0) {
+        startingMrr = Math.round(totalRevenue * 0.7); // 70% of total revenue is assumed recurring
+      }
+    } else {
+      startingMrr = 1500000; // $15,000 default if no txs
+    }
+
+    const totalFixedCosts = monthlyPayroll + monthlySubscriptions;
+    const nonRecurringRevenue = Math.max(0, totalRevenue - startingMrr);
+
+    // 5. Generate Projections for the next 12 months with SaaS metrics
     const projections = [];
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     let currentProjBalance = cashBalance;
     const currentMonthIdx = new Date().getMonth();
 
-    for (let i = 0; i <= 12; i++) {
+    // Month 0
+    projections.push({
+      month: monthNames[currentMonthIdx],
+      balance: Math.round(currentProjBalance)
+    });
+
+    let totalProjectedNetBurn = 0;
+    let currentMrr = startingMrr;
+
+    for (let i = 1; i <= 12; i++) {
       const monthIdx = (currentMonthIdx + i) % 12;
       const monthLabel = monthNames[monthIdx];
-      
-      projections.push({
-        month: monthLabel,
-        balance: Math.max(0, currentProjBalance)
-      });
 
-      currentProjBalance -= netBurn;
-      if (currentProjBalance <= 0 && netBurn > 0) {
+      // Decaying MRR month-over-month
+      currentMrr = Math.round(currentMrr * (1 - churnRate / 10000));
+      
+      const projectedRevenue = currentMrr + nonRecurringRevenue;
+      const projectedExpenses = totalFixedCosts + totalVariableExpenses;
+      const monthNetBurn = projectedExpenses - projectedRevenue;
+
+      totalProjectedNetBurn += monthNetBurn;
+      currentProjBalance -= monthNetBurn;
+      if (currentProjBalance < 0) {
         currentProjBalance = 0;
       }
+
+      projections.push({
+        month: monthLabel,
+        balance: Math.round(currentProjBalance)
+      });
+    }
+
+    const netBurn = Math.round(totalProjectedNetBurn / 12);
+
+    // 6. Calculate Runway in Months
+    let runwayMonths: number | "Infinite" = "Infinite";
+    if (netBurn > 0) {
+      runwayMonths = parseFloat((cashBalance / netBurn).toFixed(1));
     }
 
     return {
@@ -193,7 +254,11 @@ export class AnalysisService {
       monthlyRevenue: totalRevenue,
       netBurn,
       runwayMonths,
-      projections
+      projections,
+      startingMrr,
+      churnRate,
+      cac,
+      arpu
     };
   }
 

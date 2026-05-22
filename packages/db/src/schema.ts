@@ -139,3 +139,17 @@ export const employees = sqliteTable('employee', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
+export const saasConfigs = sqliteTable('saas_config', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .unique()
+    .references(() => users.id),
+  startingMrr: integer('starting_mrr').notNull().default(0), // in cents
+  churnRate: integer('churn_rate').notNull().default(0), // multiplied by 100 (e.g. 250 = 2.50%)
+  cac: integer('cac').notNull().default(0), // in cents
+  arpu: integer('arpu').notNull().default(0), // in cents
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+

@@ -62,7 +62,11 @@ export const ScenarioPlanner: React.FC<ScenarioPlannerProps> = ({ baseline, onOp
 
     const seedPrompt = `I am running a financial forecasting scenario simulation. Here are my simulated parameters:
 - MoM Revenue Growth: ${scenario.inputs.revenueGrowthRate}%
-- Marketing Budget Adjustment: $${scenario.inputs.marketingSpendDelta.toLocaleString()}/mo with simulated ROAS ${scenario.inputs.marketingRoas}x
+- Marketing Budget Adjustment: $${scenario.inputs.marketingSpendDelta.toLocaleString()}/mo
+- Simulated CAC: $${scenario.inputs.cac}
+- Simulated ARPU: $${scenario.inputs.arpu}
+- Simulated Churn Rate: ${scenario.inputs.churnRate}%
+- Starting MRR Delta: $${scenario.inputs.startingMrrDelta.toLocaleString()}
 - Variable Overhead Multiplier: ${scenario.inputs.overheadMultiplier}%
 - Simulated New Hires: ${hireSummary}
 
@@ -220,32 +224,95 @@ Please analyze my active scenario. What are the key financial risks, and how can
             />
             <div className="flex justify-between text-[10px] text-white/30">
               <span>Adds to variable expenses</span>
-              <span>Yields {scenario.inputs.marketingRoas}x simulated ROAS</span>
+              <span>Acquires users at ${scenario.inputs.cac} CAC</span>
             </div>
           </div>
 
-          {/* Marketing ROAS Adjuster */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-xs font-semibold">
-              <span className="text-white/60">Simulated Marketing ROAS</span>
-              <span className="text-amber-400 font-bold">
-                {scenario.inputs.marketingRoas}x Return
-              </span>
+          {/* SaaS Unit Economics & Churn section */}
+          <div className="border-t border-white/5 pt-4 space-y-4">
+            <h4 className="text-[10px] uppercase tracking-widest font-black text-indigo-400 flex items-center gap-1.5">
+              <Sparkles size={12} /> Simulated SaaS Metrics
+            </h4>
+
+            {/* Starting MRR Delta */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-semibold">
+                <span className="text-white/60">Starting MRR Delta</span>
+                <span className="text-indigo-400 font-bold">
+                  {scenario.inputs.startingMrrDelta >= 0 ? '+' : ''}${scenario.inputs.startingMrrDelta.toLocaleString()}
+                </span>
+              </div>
+              <input 
+                type="range" 
+                min="-20000" 
+                max="20000" 
+                step="500"
+                value={scenario.inputs.startingMrrDelta}
+                onChange={(e) => scenario.updateInput('startingMrrDelta', parseInt(e.target.value))}
+                className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+              />
             </div>
-            <input 
-              type="range" 
-              min="0.5" 
-              max="4.0" 
-              step="0.1"
-              value={scenario.inputs.marketingRoas}
-              onChange={(e) => scenario.updateInput('marketingRoas', parseFloat(e.target.value))}
-              className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
-            />
-            <span className="text-[10px] text-white/30 block">Multiplied by marketing spend to boost baseline revenue growth.</span>
+
+            {/* Simulated Churn Rate */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-semibold">
+                <span className="text-white/60">Simulated Churn Rate</span>
+                <span className="text-rose-400 font-bold">
+                  {scenario.inputs.churnRate}% MoM
+                </span>
+              </div>
+              <input 
+                type="range" 
+                min="0" 
+                max="15" 
+                step="0.1"
+                value={scenario.inputs.churnRate}
+                onChange={(e) => scenario.updateInput('churnRate', parseFloat(e.target.value))}
+                className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+              />
+            </div>
+
+            {/* Simulated CAC */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-semibold">
+                <span className="text-white/60">Simulated CAC</span>
+                <span className="text-amber-400 font-bold">
+                  ${scenario.inputs.cac}
+                </span>
+              </div>
+              <input 
+                type="range" 
+                min="10" 
+                max="500" 
+                step="5"
+                value={scenario.inputs.cac}
+                onChange={(e) => scenario.updateInput('cac', parseInt(e.target.value))}
+                className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+              />
+            </div>
+
+            {/* Simulated ARPU */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-semibold">
+                <span className="text-white/60">Simulated ARPU</span>
+                <span className="text-cyan-400 font-bold">
+                  ${scenario.inputs.arpu}
+                </span>
+              </div>
+              <input 
+                type="range" 
+                min="5" 
+                max="250" 
+                step="5"
+                value={scenario.inputs.arpu}
+                onChange={(e) => scenario.updateInput('arpu', parseInt(e.target.value))}
+                className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+              />
+            </div>
           </div>
 
           {/* Variable Overhead Multiplier */}
-          <div className="space-y-2">
+          <div className="space-y-2 border-t border-white/5 pt-4">
             <div className="flex justify-between text-xs font-semibold">
               <span className="text-white/60">Variable Overhead Scaler</span>
               <span className="text-white font-bold">
@@ -261,7 +328,7 @@ Please analyze my active scenario. What are the key financial risks, and how can
               onChange={(e) => scenario.updateInput('overheadMultiplier', parseInt(e.target.value))}
               className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
             />
-            <span className="text-[10px] text-white/30 block">Scales non-payroll variable expenses (e.g. server costs, sublicenses).</span>
+            <span className="text-[10px] text-white/30 block">Scales non-payroll variable expenses.</span>
           </div>
 
           {/* Discuss with AI CFO Button */}

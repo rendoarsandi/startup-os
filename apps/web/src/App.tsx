@@ -7,7 +7,7 @@ import { SpendingTrendChart, CategoryBreakdownChart, RunwayProjectionChart } fro
 import { PlaidLinkButton } from './components/PlaidLink'
 import { MarketingDashboard } from './components/MarketingDashboard'
 import { HRDashboard } from './components/HRDashboard'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ScenarioPlanner } from './components/ScenarioPlanner'
 import { Sparkles } from 'lucide-react'
 
@@ -59,12 +59,61 @@ function App() {
     netBurn: number;
     runwayMonths: number | "Infinite";
     projections: { month: string; balance: number }[];
+    startingMrr?: number;
+    churnRate?: number;
+    cac?: number;
+    arpu?: number;
   }>({
     queryKey: ['runway', refreshKey],
     queryFn: async () => {
       const res = await fetch('/api/cfo/runway');
       if (!res.ok) throw new Error('Failed to fetch runway data');
       return res.json();
+    }
+  });
+
+  // Query for SaaS config
+  const { data: saasConfig, refetch: refetchSaasConfig } = useQuery<{
+    startingMrr: number;
+    churnRate: number;
+    cac: number;
+    arpu: number;
+  }>({
+    queryKey: ['saasConfig', refreshKey],
+    queryFn: async () => {
+      const res = await fetch('/api/cfo/saas-config');
+      if (!res.ok) throw new Error('Failed to fetch SaaS config');
+      return res.json();
+    }
+  });
+
+  const [mrrInput, setMrrInput] = useState<number>(0);
+  const [churnInput, setChurnInput] = useState<number>(0);
+  const [cacInput, setCacInput] = useState<number>(0);
+  const [arpuInput, setArpuInput] = useState<number>(0);
+
+  useEffect(() => {
+    if (saasConfig) {
+      setMrrInput(Math.round(saasConfig.startingMrr / 100));
+      setChurnInput(saasConfig.churnRate / 100);
+      setCacInput(Math.round(saasConfig.cac / 100));
+      setArpuInput(Math.round(saasConfig.arpu / 100));
+    }
+  }, [saasConfig]);
+
+  const saasMutation = useMutation({
+    mutationFn: async (newConfig: { startingMrr: number; churnRate: number; cac: number; arpu: number }) => {
+      const res = await fetch('/api/cfo/saas-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newConfig)
+      });
+      if (!res.ok) throw new Error('Failed to update SaaS config');
+      return res.json();
+    },
+    onSuccess: () => {
+      setRefreshKey(prev => prev + 1); // refresh runway query which fetches from db
+      refetchSaasConfig();
     }
   });
 
@@ -152,54 +201,117 @@ function App() {
                   </div>
 
                   {isParamsOpen && (
-                    <div className="mb-6 p-4 rounded-xl border border-white/5 bg-white/[0.02] grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-top duration-200">
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-white/60 font-medium">Revenue Growth Rate</span>
-                          <span className="text-primary font-bold">{revGrowth >= 0 ? '+' : ''}{revGrowth}% MoM</span>
+                    <div className="mb-6 p-6 rounded-xl border border-white/5 bg-white/[0.02] space-y-6 animate-in slide-in-from-top duration-200">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-white/60 font-medium">Revenue Growth Rate</span>
+                            <span className="text-primary font-bold">{revGrowth >= 0 ? '+' : ''}{revGrowth}% MoM</span>
+                          </div>
+                          <input 
+                            type="range"
+                            min="-10"
+                            max="20"
+                            step="0.5"
+                            value={revGrowth}
+                            onChange={(e) => setRevGrowth(parseFloat(e.target.value))}
+                            className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
+                          />
+                          <p className="text-[10px] text-white/30">Compounds baseline monthly revenue.</p>
                         </div>
-                        <input 
-                          type="range"
-                          min="-10"
-                          max="20"
-                          step="0.5"
-                          value={revGrowth}
-                          onChange={(e) => setRevGrowth(parseFloat(e.target.value))}
-                          className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
-                        />
-                        <p className="text-[10px] text-white/30">Compounds baseline monthly revenue.</p>
+
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-white/60 font-medium">Expense Growth Rate</span>
+                            <span className="text-secondary font-bold">{expGrowth >= 0 ? '+' : ''}{expGrowth}% MoM</span>
+                          </div>
+                          <input 
+                            type="range"
+                            min="-10"
+                            max="20"
+                            step="0.5"
+                            value={expGrowth}
+                            onChange={(e) => setExpGrowth(parseFloat(e.target.value))}
+                            className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-secondary"
+                          />
+                          <p className="text-[10px] text-white/30">Compounds variable operating costs.</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="block text-xs text-white/60 font-medium">Seasonality Profile</label>
+                          <select 
+                            value={seasonalityProfile}
+                            onChange={(e) => setSeasonalityProfile(e.target.value)}
+                            className="w-full px-3 py-1.5 bg-zinc-950 border border-white/10 rounded-lg text-xs text-white focus:outline-none focus:border-primary/50 transition-colors"
+                          >
+                            <option value="steady">Steady SaaS / Constant</option>
+                            <option value="holiday">Holiday/Q4 Surge (E-commerce)</option>
+                            <option value="quarterly">B2B Quarterly Spikes</option>
+                            <option value="summer">Summer Slump Profile</option>
+                          </select>
+                          <p className="text-[10px] text-white/30">Applies cyclical peaks and valleys.</p>
+                        </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-white/60 font-medium">Expense Growth Rate</span>
-                          <span className="text-secondary font-bold">{expGrowth >= 0 ? '+' : ''}{expGrowth}% MoM</span>
+                      <div className="border-t border-white/5 pt-4">
+                        <h4 className="text-xs uppercase tracking-widest font-black text-indigo-400 mb-4 flex items-center gap-1.5 font-bold">
+                          <Sparkles size={12} /> Baseline SaaS Setup (Saved to DB)
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                          <div>
+                            <label className="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1.5">Starting MRR ($)</label>
+                            <input 
+                              type="number"
+                              value={mrrInput || ''}
+                              onChange={(e) => setMrrInput(Number(e.target.value))}
+                              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500/50"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1.5">Monthly Churn (%)</label>
+                            <input 
+                              type="number"
+                              step="0.1"
+                              value={churnInput || ''}
+                              onChange={(e) => setChurnInput(Number(e.target.value))}
+                              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500/50"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1.5">Target CAC ($)</label>
+                            <input 
+                              type="number"
+                              value={cacInput || ''}
+                              onChange={(e) => setCacInput(Number(e.target.value))}
+                              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500/50"
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <div className="flex-1">
+                              <label className="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1.5">Target ARPU ($)</label>
+                              <input 
+                                type="number"
+                                value={arpuInput || ''}
+                                onChange={(e) => setArpuInput(Number(e.target.value))}
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500/50"
+                              />
+                            </div>
+                            <button
+                              onClick={() => {
+                                saasMutation.mutate({
+                                  startingMrr: mrrInput * 100,
+                                  churnRate: Math.round(churnInput * 100),
+                                  cac: cacInput * 100,
+                                  arpu: arpuInput * 100
+                                });
+                              }}
+                              disabled={saasMutation.isPending}
+                              className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3 py-2 rounded-lg shrink-0 cursor-pointer h-[32px] flex items-center justify-center transition-colors disabled:opacity-50"
+                            >
+                              {saasMutation.isPending ? 'Saving...' : 'Save'}
+                            </button>
+                          </div>
                         </div>
-                        <input 
-                          type="range"
-                          min="-10"
-                          max="20"
-                          step="0.5"
-                          value={expGrowth}
-                          onChange={(e) => setExpGrowth(parseFloat(e.target.value))}
-                          className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-secondary"
-                        />
-                        <p className="text-[10px] text-white/30">Compounds variable operating costs.</p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="block text-xs text-white/60 font-medium">Seasonality Profile</label>
-                        <select 
-                          value={seasonalityProfile}
-                          onChange={(e) => setSeasonalityProfile(e.target.value)}
-                          className="w-full px-3 py-1.5 bg-zinc-950 border border-white/10 rounded-lg text-xs text-white focus:outline-none focus:border-primary/50 transition-colors"
-                        >
-                          <option value="steady">Steady SaaS / Constant</option>
-                          <option value="holiday">Holiday/Q4 Surge (E-commerce)</option>
-                          <option value="quarterly">B2B Quarterly Spikes</option>
-                          <option value="summer">Summer Slump Profile</option>
-                        </select>
-                        <p className="text-[10px] text-white/30">Applies cyclical peaks and valleys.</p>
                       </div>
                     </div>
                   )}
@@ -248,6 +360,56 @@ function App() {
               </div>
 
               <div className="space-y-8">
+                {/* SaaS Unit Economics & Metrics Card */}
+                <div className="glass-card p-6 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border-indigo-500/20">
+                  <h3 className="text-base font-bold mb-4 flex items-center gap-2">
+                    <Sparkles className="text-indigo-400 shrink-0" size={16} />
+                    <span>SaaS Unit Economics</span>
+                  </h3>
+                  {runwayLoading ? (
+                    <div className="h-24 rounded-xl bg-white/5 animate-pulse flex items-center justify-center text-xs opacity-50 text-white/50">
+                      Analyzing SaaS metrics...
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                        <p className="text-white/40 text-[9px] font-bold uppercase tracking-wider mb-1">MRR</p>
+                        <p className="text-base font-black text-white">
+                          ${Math.round((runwayData?.startingMrr ?? 0) / 100).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                        <p className="text-white/40 text-[9px] font-bold uppercase tracking-wider mb-1">ARR</p>
+                        <p className="text-base font-black text-white">
+                          ${Math.round(((runwayData?.startingMrr ?? 0) * 12) / 100).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                        <p className="text-white/40 text-[9px] font-bold uppercase tracking-wider mb-1">Monthly Churn</p>
+                        <p className="text-base font-black text-rose-400">
+                          {((runwayData?.churnRate ?? 0) / 100).toFixed(1)}%
+                        </p>
+                      </div>
+                      <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                        <p className="text-white/40 text-[9px] font-bold uppercase tracking-wider mb-1">LTV : CAC</p>
+                        <p className="text-base font-black text-emerald-400">
+                          {runwayData && runwayData.cac > 0 && runwayData.churnRate > 0 ? (
+                            ((runwayData.arpu * 10000) / (runwayData.churnRate * runwayData.cac)).toFixed(1) + 'x'
+                          ) : (
+                            'N/A'
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {runwayData && runwayData.cac > 0 && (
+                    <div className="mt-3 pt-3 border-t border-white/5 flex justify-between text-[9px] text-white/50">
+                      <span>CAC: ${Math.round(runwayData.cac / 100)}</span>
+                      <span>ARPU: ${Math.round(runwayData.arpu / 100)}</span>
+                    </div>
+                  )}
+                </div>
+
                 <div className="glass-card p-8">
                   <h3 className="text-xl font-bold mb-6">Budget Tracker</h3>
                   <BudgetTracker />
