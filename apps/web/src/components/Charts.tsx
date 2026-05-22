@@ -1,18 +1,40 @@
 import { useTransactions } from '../hooks/useTransactions';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend
+  PieChart, Pie, Cell
 } from 'recharts';
 
 const COLORS = [
-  '#8b5cf6', '#06b6d4', '#f59e0b', '#10b981', '#f43f5e',
-  '#6366f1', '#ec4899', '#14b8a6', '#f97316', '#a855f7',
+  '#00E5FF', // Cyber Cyan
+  '#9D4EDD', // Amethyst Purple
+  '#FF5E36', // Hyper Coral
+  '#00FF87', // Emerald Mint
+  '#FF007F', // Neon Hot Pink
+  '#00E5FF', // Cyber Teal
+  '#FFB703', // Solar Gold
+  '#6366F1', // Indigo
+  '#8B5CF6', // Purple
+  '#A855F7', // Lavender
 ];
 
 const categoryIcons: Record<string, string> = {
   Food: '🍔', Transport: '🚗', Housing: '🏠', Utilities: '💡',
   Entertainment: '🎮', Healthcare: '🏥', Savings: '💰',
   Personal: '👤', Insurance: '🛡️', Income: '💵', Other: '📦',
+};
+
+const customTooltipStyle: React.CSSProperties = {
+  background: 'rgba(8, 7, 16, 0.75)',
+  border: '1px solid rgba(255, 255, 255, 0.08)',
+  borderRadius: '16px',
+  color: 'white',
+  fontSize: '11px',
+  fontFamily: 'Outfit, sans-serif',
+  fontWeight: 600,
+  backdropFilter: 'blur(16px)',
+  WebkitBackdropFilter: 'blur(16px)',
+  boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.5)',
+  padding: '12px 16px',
 };
 
 export function SpendingTrendChart() {
@@ -47,40 +69,34 @@ export function SpendingTrendChart() {
 
   return (
     <ResponsiveContainer width="100%" height={240}>
-      <AreaChart data={displayData}>
+      <AreaChart data={displayData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
         <defs>
           <linearGradient id="spendGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.4} />
-            <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
+            <stop offset="0%" stopColor="#00E5FF" stopOpacity={0.25} />
+            <stop offset="100%" stopColor="#9D4EDD" stopOpacity={0} />
           </linearGradient>
         </defs>
         <XAxis 
           dataKey="date" 
           axisLine={false} 
           tickLine={false}
-          tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }}
+          tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10, fontFamily: 'Outfit' }}
         />
         <YAxis 
           axisLine={false} 
           tickLine={false}
-          tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }}
+          tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10, fontFamily: 'Outfit' }}
           tickFormatter={(v) => `$${v}`}
         />
         <Tooltip 
-          contentStyle={{ 
-            background: 'rgba(15,15,25,0.95)', 
-            border: '1px solid rgba(255,255,255,0.1)', 
-            borderRadius: '12px',
-            color: 'white',
-            fontSize: '13px',
-          }}
+          contentStyle={customTooltipStyle}
           formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Spending']}
         />
         <Area 
           type="monotone" 
           dataKey="amount" 
-          stroke="#8b5cf6" 
-          strokeWidth={2.5}
+          stroke="#00E5FF" 
+          strokeWidth={2}
           fill="url(#spendGradient)" 
         />
       </AreaChart>
@@ -114,16 +130,16 @@ export function CategoryBreakdownChart() {
 
   return (
     <div className="flex items-center gap-6">
-      <div className="w-40 h-40 shrink-0">
+      <div className="w-36 h-36 shrink-0 relative flex items-center justify-center">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={displayData}
               cx="50%"
               cy="50%"
-              innerRadius={45}
-              outerRadius={70}
-              paddingAngle={3}
+              innerRadius={42}
+              outerRadius={62}
+              paddingAngle={4}
               dataKey="value"
               strokeWidth={0}
             >
@@ -132,29 +148,30 @@ export function CategoryBreakdownChart() {
               ))}
             </Pie>
             <Tooltip
-              contentStyle={{ 
-                background: 'rgba(15,15,25,0.95)', 
-                border: '1px solid rgba(255,255,255,0.1)', 
-                borderRadius: '12px',
-                color: 'white',
-                fontSize: '13px',
-              }}
+              contentStyle={customTooltipStyle}
               formatter={(value: any) => [`$${Number(value).toFixed(2)}`, '']}
             />
           </PieChart>
         </ResponsiveContainer>
+        {/* Center label */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <span className="text-[10px] text-white/35 font-bold uppercase tracking-wider">Total</span>
+          <span className="text-sm font-black text-white/90 leading-tight">
+            ${displayData.reduce((sum, item) => sum + item.value, 0).toFixed(0)}
+          </span>
+        </div>
       </div>
-      <div className="flex-1 space-y-2">
+      <div className="flex-1 space-y-2 max-h-[144px] overflow-y-auto pr-1">
         {displayData.slice(0, 5).map((item, i) => (
           <div key={item.name} className="flex items-center gap-3">
             <div 
-              className="w-2.5 h-2.5 rounded-full shrink-0" 
+              className="w-2.5 h-2.5 rounded-full shrink-0 shadow-[0_0_6px_rgba(255,255,255,0.05)]" 
               style={{ background: COLORS[i % COLORS.length] }} 
             />
-            <span className="text-sm text-white/60 flex-1">
+            <span className="text-xs text-white/50 flex-1 font-semibold">
               {categoryIcons[item.name] || '📦'} {item.name}
             </span>
-            <span className="text-sm font-semibold">${item.value.toFixed(0)}</span>
+            <span className="text-xs font-bold text-white/80">${item.value.toFixed(0)}</span>
           </div>
         ))}
       </div>
@@ -181,40 +198,34 @@ export function RunwayProjectionChart({ projections = [] }: { projections: { mon
 
   return (
     <ResponsiveContainer width="100%" height={240}>
-      <AreaChart data={displayData}>
+      <AreaChart data={displayData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
         <defs>
           <linearGradient id="runwayGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.4} />
-            <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
+            <stop offset="0%" stopColor="#9D4EDD" stopOpacity={0.25} />
+            <stop offset="100%" stopColor="#9D4EDD" stopOpacity={0} />
           </linearGradient>
         </defs>
         <XAxis 
           dataKey="month" 
           axisLine={false} 
           tickLine={false}
-          tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }}
+          tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10, fontFamily: 'Outfit' }}
         />
         <YAxis 
           axisLine={false} 
           tickLine={false}
-          tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }}
+          tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10, fontFamily: 'Outfit' }}
           tickFormatter={(v) => `$${v.toLocaleString()}`}
         />
         <Tooltip 
-          contentStyle={{ 
-            background: 'rgba(15,15,25,0.95)', 
-            border: '1px solid rgba(255,255,255,0.1)', 
-            borderRadius: '12px',
-            color: 'white',
-            fontSize: '13px',
-          }}
+          contentStyle={customTooltipStyle}
           formatter={(value: any) => [`$${Number(value).toLocaleString()}`, 'Projected Cash']}
         />
         <Area 
           type="monotone" 
           dataKey="balance" 
-          stroke="#f59e0b" 
-          strokeWidth={2.5}
+          stroke="#9D4EDD" 
+          strokeWidth={2}
           fill="url(#runwayGradient)" 
         />
       </AreaChart>
@@ -241,54 +252,41 @@ export function ComparativeRunwayChart({
 
   return (
     <ResponsiveContainer width="100%" height={320}>
-      <AreaChart data={chartData}>
+      <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -5, bottom: 0 }}>
         <defs>
           <linearGradient id="baselineGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.15} />
-            <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
+            <stop offset="0%" stopColor="#FF5E36" stopOpacity={0.12} />
+            <stop offset="100%" stopColor="#FF5E36" stopOpacity={0} />
           </linearGradient>
           <linearGradient id="scenarioGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#10b981" stopOpacity={0.3} />
-            <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+            <stop offset="0%" stopColor="#00FF87" stopOpacity={0.25} />
+            <stop offset="100%" stopColor="#00FF87" stopOpacity={0} />
           </linearGradient>
         </defs>
         <XAxis 
           dataKey="month" 
           axisLine={false} 
           tickLine={false}
-          tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }}
+          tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10, fontFamily: 'Outfit' }}
         />
         <YAxis 
           axisLine={false} 
           tickLine={false}
-          tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }}
+          tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10, fontFamily: 'Outfit' }}
           tickFormatter={(v) => `$${v.toLocaleString()}`}
         />
         <Tooltip 
-          contentStyle={{ 
-            background: 'rgba(15,15,25,0.95)', 
-            border: '1px solid rgba(255,255,255,0.1)', 
-            borderRadius: '12px',
-            color: 'white',
-            fontSize: '13px',
-          }}
+          contentStyle={customTooltipStyle}
           formatter={(value: any, name: any) => [
             `$${Number(value).toLocaleString()}`, 
-            name === 'baseline' ? 'Baseline Cash Balance' : 'Simulated Cash Balance'
+            name === 'baseline' ? 'Baseline Cash' : 'Simulated Cash'
           ]}
-        />
-        <Legend 
-          verticalAlign="top"
-          height={36}
-          iconType="circle"
-          iconSize={8}
-          wrapperStyle={{ fontSize: 12, opacity: 0.8, color: '#fff' }}
         />
         <Area 
           name="baseline"
           type="monotone" 
           dataKey="baseline" 
-          stroke="#f59e0b" 
+          stroke="#FF5E36" 
           strokeWidth={2}
           strokeDasharray="4 4"
           fill="url(#baselineGrad)" 
@@ -297,8 +295,8 @@ export function ComparativeRunwayChart({
           name="scenario"
           type="monotone" 
           dataKey="scenario" 
-          stroke="#10b981" 
-          strokeWidth={3}
+          stroke="#00FF87" 
+          strokeWidth={2.5}
           fill="url(#scenarioGrad)" 
         />
       </AreaChart>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, Plus, Play, Pause, TrendingUp, BarChart3, 
-  DollarSign, Target, Percent, Loader2, AlertCircle
+  DollarSign, Target, Percent, Loader2, AlertCircle, RefreshCw, Copy, Check
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend
@@ -27,6 +27,7 @@ export const MarketingDashboard: React.FC = () => {
   const [targetAudience, setTargetAudience] = useState('');
   const [generatedIdeas, setGeneratedIdeas] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // New Campaign Form State
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -66,7 +67,6 @@ export const MarketingDashboard: React.FC = () => {
         })
       });
       if (res.ok) {
-        // Optimistically update status
         setCampaigns(prev => prev.map(c => c.id === campaign.id ? { ...c, status: updatedStatus } : c));
       }
     } catch (err) {
@@ -122,33 +122,36 @@ export const MarketingDashboard: React.FC = () => {
       const data = await res.json();
       setGeneratedIdeas(data.ideas || 'No concept ideas returned.');
     } catch (err: any) {
-      setGeneratedIdeas(`### Error\nFailed to generate ideas: ${err.message}. Please verify your network connection and Gemini API Key configuration.`);
+      setGeneratedIdeas(`### Concept Ideas Generation Failure\nFailed to generate campaign concepts: ${err.message}. Please verify Gemini API settings.`);
     } finally {
       setIsGenerating(false);
     }
   };
 
-  // Pre-seed some inputs for convenience
   const handleTryDemoInput = () => {
     setProductDescription("A premium subscription box delivering customized single-origin coffee beans roasted on demand, complete with flavor profile cards.");
     setTargetAudience("Millennial coffee enthusiasts, home-brewers, and busy professionals who value premium craft beverages and micro-batch quality.");
+  };
+
+  const handleCopy = () => {
+    if (!generatedIdeas) return;
+    navigator.clipboard.writeText(generatedIdeas);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   // Calculations
   const totalSpend = campaigns.reduce((acc, c) => acc + (c.spend || 0), 0) / 100;
   const totalBudget = campaigns.reduce((acc, c) => acc + (c.budget || 0), 0) / 100;
   
-  // Hardcoded premium marketing stats based on target specs
   const blendedCAC = 42.80;
   const ltvToCac = 3.8;
 
-  // Dynamically calculated ROAS based on active campaigns
   const activeCampaigns = campaigns.filter(c => c.status === 'active');
   const avgRoasVal = activeCampaigns.length > 0 
     ? (activeCampaigns.reduce((acc, c) => acc + (c.roas || 0), 0) / activeCampaigns.length) / 100
     : 4.2;
 
-  // Chart data based on campaign list
   const chartData = campaigns.map(c => ({
     name: c.name,
     Spend: c.spend / 100,
@@ -160,38 +163,43 @@ export const MarketingDashboard: React.FC = () => {
     <div className="space-y-8">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-4xl font-black mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent italic">
-            CMO Marketing Room
+          <h2 className="text-3xl font-black mb-1.5 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent italic tracking-tight">
+            CMO Growth Room
           </h2>
-          <p className="text-white/50 text-lg">Brainstorm concepts, track returns, and align growth strategies with Gemini AI.</p>
+          <p className="text-white/40 text-sm font-medium">Brainstorm concepts, track returns, and align growth strategies with Gemini AI.</p>
         </div>
         <button 
           onClick={() => setIsFormOpen(!isFormOpen)}
-          className="btn-primary flex items-center gap-2 cursor-pointer self-start md:self-auto"
+          className="btn-primary h-12 text-sm font-extrabold flex items-center gap-2 cursor-pointer self-start md:self-auto"
         >
-          <Plus size={18} />
+          <Plus size={16} />
           <span>New Campaign</span>
         </button>
       </header>
 
       {/* New Campaign Modal / Form Panel */}
       {isFormOpen && (
-        <div className="glass-card p-6 border-primary/20 bg-primary/5 animate-in fade-in duration-200">
-          <h3 className="text-lg font-bold mb-4">Create New Campaign</h3>
+        <div className="glass-card p-6 border-primary/20 bg-gradient-to-b from-primary/5 to-transparent animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center gap-2 mb-5">
+            <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
+              <Sparkles size={14} className="text-primary animate-pulse" />
+            </div>
+            <h3 className="text-base font-extrabold text-white">Create New Marketing Campaign</h3>
+          </div>
           <form onSubmit={handleCreateCampaign} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-            <div>
-              <label className="block text-xs font-bold text-white/40 uppercase tracking-widest mb-2">Campaign Name</label>
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Campaign Name</label>
               <input 
                 type="text"
                 required
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="e.g. Meta Retargeting"
-                className="w-full bg-white/5 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary/50 text-white"
+                className="glass-input"
               />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-white/40 uppercase tracking-widest mb-2">Budget ($ USD)</label>
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Budget ($ USD)</label>
               <input 
                 type="number"
                 required
@@ -199,33 +207,38 @@ export const MarketingDashboard: React.FC = () => {
                 value={newBudget}
                 onChange={(e) => setNewBudget(e.target.value)}
                 placeholder="e.g. 5000"
-                className="w-full bg-white/5 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary/50 text-white"
+                className="glass-input"
               />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-white/40 uppercase tracking-widest mb-2">Initial Status</label>
-              <select
-                value={newStatus}
-                onChange={(e) => setNewStatus(e.target.value as 'active' | 'paused')}
-                className="w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary/50 text-white"
-              >
-                <option value="active">Active</option>
-                <option value="paused">Paused</option>
-              </select>
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Initial Status</label>
+              <div className="relative">
+                <select
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value as 'active' | 'paused')}
+                  className="glass-input appearance-none pr-8 cursor-pointer"
+                >
+                  <option value="active">Active</option>
+                  <option value="paused">Paused</option>
+                </select>
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-white/30 text-xs">
+                  ▼
+                </div>
+              </div>
             </div>
             <div className="flex gap-2">
               <button 
                 type="submit" 
                 disabled={isSaving}
-                className="btn-primary flex-1 justify-center flex items-center gap-1.5 cursor-pointer"
+                className="btn-primary flex-1 h-[46px] justify-center flex items-center gap-1.5 cursor-pointer text-xs font-bold"
               >
-                {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
                 <span>Create</span>
               </button>
               <button 
                 type="button"
                 onClick={() => setIsFormOpen(false)}
-                className="px-4 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl font-semibold text-white transition-colors cursor-pointer text-sm"
+                className="btn-secondary h-[46px] text-xs font-bold"
               >
                 Cancel
               </button>
@@ -235,119 +248,121 @@ export const MarketingDashboard: React.FC = () => {
       )}
 
       {/* High-Fidelity Marketing Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="glass-card p-6 group hover:border-primary/50 transition-all cursor-default relative overflow-hidden">
-          <div className="absolute right-4 top-4 text-primary/10 group-hover:scale-110 transition-transform">
-            <DollarSign size={40} />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="glass-card p-5 group hover:border-primary/20 transition-all cursor-default relative overflow-hidden">
+          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-primary/5 group-hover:scale-110 transition-transform flex items-center justify-center border border-white/5">
+            <DollarSign size={20} className="text-primary/40" />
           </div>
-          <p className="text-white/50 text-sm font-medium mb-1">Marketing Spend</p>
-          <div className="space-y-1">
-            <h4 className="text-2xl font-black">${totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
-            <div className="flex items-center gap-2 text-xs text-white/40">
-              <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
-                <div 
-                  className="bg-primary h-full transition-all duration-1000" 
-                  style={{ width: `${Math.min((totalSpend / totalBudget) * 100, 100)}%` }}
-                />
-              </div>
-              <span className="shrink-0">{Math.round((totalSpend / totalBudget) * 100)}% of limit</span>
+          <p className="text-white/40 text-xs font-bold uppercase tracking-wider mb-2">Growth Spend</p>
+          <h4 className="text-2xl font-black tracking-tight">${totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
+          <div className="flex items-center gap-2 text-[10px] text-white/40 mt-3.5">
+            <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden border border-white/5">
+              <div 
+                className="bg-gradient-to-r from-primary to-secondary h-full transition-all duration-1000 shadow-[0_0_8px_var(--glow-color)]" 
+                style={{ width: `${Math.min((totalSpend / (totalBudget || 1)) * 100, 100)}%` }}
+              />
             </div>
+            <span className="shrink-0 font-bold">{Math.round((totalSpend / (totalBudget || 1)) * 100)}% of limit</span>
           </div>
-          <p className="text-[10px] text-white/30 mt-2 uppercase tracking-widest">Cap: ${totalBudget.toLocaleString()}</p>
+          <p className="text-[9px] text-white/30 mt-2 uppercase tracking-widest font-black">Limit: ${totalBudget.toLocaleString()}</p>
         </div>
 
-        <div className="glass-card p-6 group hover:border-primary/50 transition-all cursor-default relative overflow-hidden">
-          <div className="absolute right-4 top-4 text-primary/10 group-hover:scale-110 transition-transform">
-            <Target size={40} />
+        <div className="glass-card p-5 group hover:border-primary/20 transition-all cursor-default relative overflow-hidden">
+          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-primary/5 group-hover:scale-110 transition-transform flex items-center justify-center border border-white/5">
+            <Target size={20} className="text-primary/40" />
           </div>
-          <p className="text-white/50 text-sm font-medium mb-1">Blended CAC</p>
-          <h4 className="text-2xl font-black">${blendedCAC.toFixed(2)}</h4>
-          <span className="text-xs font-bold px-2 py-0.5 rounded-lg bg-green-400/10 text-green-400 inline-block mt-2">
+          <p className="text-white/40 text-xs font-bold uppercase tracking-wider mb-2">Blended CAC</p>
+          <h4 className="text-2xl font-black tracking-tight">${blendedCAC.toFixed(2)}</h4>
+          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/5 border border-emerald-500/10 text-emerald-400 inline-block mt-3.5">
             Target &lt; $45.00
           </span>
-          <p className="text-[10px] text-white/30 mt-2 uppercase tracking-widest">Optimized last 30d</p>
+          <p className="text-[9px] text-white/30 mt-2.5 uppercase tracking-widest font-black">Optimized dynamically</p>
         </div>
 
-        <div className="glass-card p-6 group hover:border-primary/50 transition-all cursor-default relative overflow-hidden">
-          <div className="absolute right-4 top-4 text-primary/10 group-hover:scale-110 transition-transform">
-            <TrendingUp size={40} />
+        <div className="glass-card p-5 group hover:border-primary/20 transition-all cursor-default relative overflow-hidden">
+          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-primary/5 group-hover:scale-110 transition-transform flex items-center justify-center border border-white/5">
+            <TrendingUp size={20} className="text-primary/40" />
           </div>
-          <p className="text-white/50 text-sm font-medium mb-1">Blended ROAS</p>
-          <h4 className="text-2xl font-black">{avgRoasVal.toFixed(1)}x</h4>
-          <span className="text-xs font-bold px-2 py-0.5 rounded-lg bg-green-400/10 text-green-400 inline-block mt-2">
-            Excellent ROI
+          <p className="text-white/40 text-xs font-bold uppercase tracking-wider mb-2">Blended ROAS</p>
+          <h4 className="text-2xl font-black tracking-tight">{avgRoasVal.toFixed(1)}x</h4>
+          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/5 border border-emerald-500/10 text-emerald-400 inline-block mt-3.5">
+            Excellent Efficiency
           </span>
-          <p className="text-[10px] text-white/30 mt-2 uppercase tracking-widest">Calculated dynamically</p>
+          <p className="text-[9px] text-white/30 mt-2.5 uppercase tracking-widest font-black">Calculated last 30d</p>
         </div>
 
-        <div className="glass-card p-6 group hover:border-primary/50 transition-all cursor-default relative overflow-hidden">
-          <div className="absolute right-4 top-4 text-primary/10 group-hover:scale-110 transition-transform">
-            <Percent size={40} />
+        <div className="glass-card p-5 group hover:border-primary/20 transition-all cursor-default relative overflow-hidden">
+          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-primary/5 group-hover:scale-110 transition-transform flex items-center justify-center border border-white/5">
+            <Percent size={20} className="text-primary/40" />
           </div>
-          <p className="text-white/50 text-sm font-medium mb-1">LTV / CAC Ratio</p>
-          <h4 className="text-2xl font-black">{ltvToCac.toFixed(1)}x</h4>
-          <span className="text-xs font-bold px-2 py-0.5 rounded-lg bg-green-400/10 text-green-400 inline-block mt-2">
-            Strong Health
+          <p className="text-white/40 text-xs font-bold uppercase tracking-wider mb-2">LTV / CAC Ratio</p>
+          <h4 className="text-2xl font-black tracking-tight">{ltvToCac.toFixed(1)}x</h4>
+          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/5 border border-emerald-500/10 text-emerald-400 inline-block mt-3.5">
+            Healthy Unit Model
           </span>
-          <p className="text-[10px] text-white/30 mt-2 uppercase tracking-widest">Industry standard: 3.0x</p>
+          <p className="text-[9px] text-white/30 mt-2.5 uppercase tracking-widest font-black">Benchmark: 3.0x</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Table & Chart */}
-        <div className="lg:col-span-2 space-y-8">
+        <div className="lg:col-span-2 space-y-6">
           {/* Ad Channels Spend Chart */}
-          <div className="glass-card p-8">
+          <div className="glass-card p-6 relative overflow-hidden">
+            <div className="absolute -right-16 -top-16 w-36 h-36 rounded-full bg-primary/5 blur-2xl pointer-events-none" />
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="text-xl font-bold">Channel Spend & Value ROI</h3>
-                <p className="text-white/40 text-xs mt-1">Comparing budget spend against estimated campaign return value.</p>
+                <h3 className="text-base font-extrabold text-white">Channel Allocations & Return (ROI)</h3>
+                <p className="text-white/40 text-[10px] uppercase tracking-widest font-black mt-0.5">Performance visualizer</p>
               </div>
-              <BarChart3 className="text-primary shrink-0" size={20} />
+              <BarChart3 className="text-primary shrink-0" size={18} />
             </div>
 
             {loading ? (
               <div className="h-64 flex items-center justify-center">
-                <Loader2 className="animate-spin text-primary" size={28} />
+                <Loader2 className="animate-spin text-primary" size={24} />
               </div>
             ) : chartData.length === 0 ? (
-              <div className="h-64 flex items-center justify-center text-white/40 text-sm">
-                No campaign data available. Create one to visualize.
+              <div className="h-64 flex items-center justify-center text-white/30 text-xs font-medium">
+                No active campaign channels found. Setup campaigns to construct charts.
               </div>
             ) : (
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="spendBar" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#f97316" stopOpacity={0.8} />
-                        <stop offset="100%" stopColor="#f97316" stopOpacity={0.2} />
+                        <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.8} />
+                        <stop offset="100%" stopColor="var(--primary)" stopOpacity={0.15} />
                       </linearGradient>
                       <linearGradient id="roiBar" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#ec4899" stopOpacity={0.8} />
-                        <stop offset="100%" stopColor="#ec4899" stopOpacity={0.2} />
+                        <stop offset="0%" stopColor="var(--secondary)" stopOpacity={0.8} />
+                        <stop offset="100%" stopColor="var(--secondary)" stopOpacity={0.15} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <CartesianGrid stroke="rgba(255,255,255,0.03)" vertical={false} />
                     <XAxis 
                       dataKey="name" 
                       axisLine={false} 
                       tickLine={false}
-                      tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }}
+                      tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10, fontFamily: 'Outfit' }}
                     />
                     <YAxis 
                       axisLine={false} 
                       tickLine={false}
-                      tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }}
+                      tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10, fontFamily: 'Outfit' }}
                       tickFormatter={(v) => `$${v}`}
                     />
                     <Tooltip 
                       contentStyle={{ 
-                        background: 'rgba(15,15,25,0.95)', 
-                        border: '1px solid rgba(255,255,255,0.1)', 
-                        borderRadius: '12px',
+                        background: 'rgba(8,7,16,0.85)', 
+                        border: '1px solid rgba(255,255,255,0.08)', 
+                        borderRadius: '16px',
                         color: 'white',
-                        fontSize: '12px',
+                        fontSize: '11px',
+                        fontFamily: 'Outfit, sans-serif',
+                        backdropFilter: 'blur(16px)',
+                        boxShadow: '0 8px 32px 0 rgba(0,0,0,0.5)'
                       }}
                       formatter={(v) => [`$${Number(v).toFixed(2)}`]}
                     />
@@ -355,11 +370,11 @@ export const MarketingDashboard: React.FC = () => {
                       verticalAlign="top" 
                       height={36}
                       iconType="circle"
-                      iconSize={8}
-                      wrapperStyle={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}
+                      iconSize={6}
+                      wrapperStyle={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', fontFamily: 'Outfit' }}
                     />
-                    <Bar name="Direct Spend" dataKey="Spend" fill="url(#spendBar)" radius={[4, 4, 0, 0]} />
-                    <Bar name="Value Generated (ROI)" dataKey="ROI" fill="url(#roiBar)" radius={[4, 4, 0, 0]} />
+                    <Bar name="Direct Capital Spend" dataKey="Spend" fill="url(#spendBar)" radius={[4, 4, 0, 0]} />
+                    <Bar name="Est. Value Generated" dataKey="ROI" fill="url(#roiBar)" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -368,21 +383,33 @@ export const MarketingDashboard: React.FC = () => {
 
           {/* Interactive Campaigns Grid */}
           <div className="glass-card p-6 overflow-hidden">
-            <h3 className="text-xl font-bold mb-4">Marketing Campaign Dashboard</h3>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="text-base font-extrabold text-white">Growth Operations Dashboard</h3>
+                <p className="text-white/40 text-[10px] uppercase tracking-widest font-black mt-0.5">Individual campaigns monitor</p>
+              </div>
+              <button 
+                onClick={fetchCampaigns}
+                className="w-8 h-8 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-all cursor-pointer"
+                title="Synchronize Campaigns"
+              >
+                <RefreshCw size={14} />
+              </button>
+            </div>
             {loading ? (
               <div className="h-48 flex items-center justify-center">
-                <Loader2 className="animate-spin text-primary" size={28} />
+                <Loader2 className="animate-spin text-primary" size={24} />
               </div>
             ) : error ? (
-              <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/5 text-red-400 flex items-center gap-2">
-                <AlertCircle size={18} />
+              <div className="p-4 rounded-xl border border-rose-500/10 bg-rose-500/5 text-rose-400 flex items-center gap-2 text-xs font-semibold">
+                <AlertCircle size={16} />
                 <span>{error}</span>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto custom-scrollbar">
                 <table className="w-full text-left text-sm border-collapse">
                   <thead>
-                    <tr className="border-b border-white/5 text-[10px] uppercase font-bold text-white/30 tracking-widest pb-4">
+                    <tr className="border-b border-white/[0.06] text-[9px] uppercase font-black text-white/30 tracking-widest pb-4">
                       <th className="py-3 px-4">Campaign Name</th>
                       <th className="py-3 px-4">Status</th>
                       <th className="py-3 px-4 text-right">Budget Limit</th>
@@ -393,40 +420,40 @@ export const MarketingDashboard: React.FC = () => {
                   </thead>
                   <tbody>
                     {campaigns.map((camp) => (
-                      <tr key={camp.id} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
-                        <td className="py-4 px-4 font-bold text-white group-hover:text-primary transition-colors">
+                      <tr key={camp.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors group">
+                        <td className="py-3.5 px-4 font-bold text-white group-hover:text-primary transition-colors text-xs">
                           {camp.name}
                         </td>
-                        <td className="py-4 px-4">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
+                        <td className="py-3.5 px-4">
+                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border ${
                             camp.status === 'active' 
-                              ? 'bg-green-500/10 text-green-400' 
-                              : 'bg-white/5 text-white/40'
+                              ? 'bg-emerald-500/5 border-emerald-500/10 text-emerald-400' 
+                              : 'bg-white/5 border-white/5 text-white/40'
                           }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${camp.status === 'active' ? 'bg-green-400' : 'bg-white/20'}`} />
+                            <span className={`w-1.5 h-1.5 rounded-full ${camp.status === 'active' ? 'bg-emerald-400 animate-pulse' : 'bg-white/20'}`} />
                             {camp.status}
                           </span>
                         </td>
-                        <td className="py-4 px-4 text-right font-semibold text-white/70">
+                        <td className="py-3.5 px-4 text-right font-black text-white/80 text-xs">
                           ${(camp.budget / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                         </td>
-                        <td className="py-4 px-4 text-right font-semibold text-white/70">
+                        <td className="py-3.5 px-4 text-right font-black text-white/80 text-xs">
                           ${(camp.spend / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                         </td>
-                        <td className="py-4 px-4 text-center font-black text-white/90">
+                        <td className="py-3.5 px-4 text-center font-black text-primary text-xs">
                           {camp.roas ? `${(camp.roas / 100).toFixed(1)}x` : '-'}
                         </td>
-                        <td className="py-4 px-4 text-center">
+                        <td className="py-3.5 px-4 text-center">
                           <button 
                             onClick={() => toggleCampaignStatus(camp)}
                             title={camp.status === 'active' ? "Pause Campaign" : "Resume Campaign"}
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer inline-block ${
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer inline-flex border ${
                               camp.status === 'active' 
-                                ? 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-400' 
-                                : 'bg-green-500/10 hover:bg-green-500/20 text-green-400'
+                                ? 'bg-amber-500/5 border-amber-500/10 text-amber-400 hover:bg-amber-500/15' 
+                                : 'bg-emerald-500/5 border-emerald-500/10 text-emerald-400 hover:bg-emerald-500/15'
                             }`}
                           >
-                            {camp.status === 'active' ? <Pause size={14} /> : <Play size={14} />}
+                            {camp.status === 'active' ? <Pause size={12} /> : <Play size={12} />}
                           </button>
                         </td>
                       </tr>
@@ -439,66 +466,68 @@ export const MarketingDashboard: React.FC = () => {
         </div>
 
         {/* Campaign Ideas Brainstormer */}
-        <div className="space-y-8">
-          <div className="glass-card p-6 space-y-6">
-            <div className="flex items-center gap-2 border-b border-white/5 pb-4">
-              <div className="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center">
-                <Sparkles size={16} />
+        <div className="space-y-6">
+          <div className="glass-card p-6 space-y-5 relative overflow-hidden">
+            <div className="absolute -right-16 -top-16 w-36 h-36 rounded-full bg-secondary/5 blur-2xl pointer-events-none" />
+            
+            <div className="flex items-center gap-2.5 border-b border-white/5 pb-4">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-inner">
+                <Sparkles size={16} className="text-white" />
               </div>
               <div>
-                <h3 className="font-bold text-base">AI Campaign Brainstormer</h3>
-                <p className="text-white/40 text-[10px] uppercase tracking-widest font-black">AI CMO Engine</p>
+                <h3 className="font-extrabold text-sm text-white">AI Creative Studio</h3>
+                <p className="text-white/40 text-[9px] uppercase tracking-widest font-black mt-0.5">Gemini Campaign Brainstormer</p>
               </div>
             </div>
 
             <form onSubmit={handleGenerateIdeas} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-white/50 mb-2">Product Description</label>
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Product Description</label>
                 <textarea 
                   required
                   rows={4}
                   value={productDescription}
                   onChange={(e) => setProductDescription(e.target.value)}
-                  placeholder="Describe your product, its value proposition, pricing..."
-                  className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary/50 text-white placeholder-white/20 custom-scrollbar resize-none"
+                  placeholder="Describe your product, its values, pricing, roasted coffee box model..."
+                  className="glass-input custom-scrollbar resize-none h-[96px]"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-white/50 mb-2">Target Audience</label>
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Target Audience</label>
                 <input 
                   type="text"
                   required
                   value={targetAudience}
                   onChange={(e) => setTargetAudience(e.target.value)}
-                  placeholder="e.g. Freelancers, Small business owners"
-                  className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary/50 text-white placeholder-white/20"
+                  placeholder="e.g. Specialty coffee hobbyists, professionals"
+                  className="glass-input"
                 />
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 pt-1">
                 <button 
                   type="submit" 
                   disabled={isGenerating}
-                  className="btn-primary flex-1 py-3 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="btn-primary flex-1 h-[42px] text-xs font-extrabold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   {isGenerating ? (
                     <>
-                      <Loader2 size={16} className="animate-spin" />
-                      <span>Brainstorming...</span>
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>Conceptualizing...</span>
                     </>
                   ) : (
                     <>
-                      <Sparkles size={16} />
-                      <span>Generate Concepts</span>
+                      <Sparkles size={14} />
+                      <span>Brainstorm Concepts</span>
                     </>
                   )}
                 </button>
                 <button 
                   type="button" 
                   onClick={handleTryDemoInput}
-                  title="Try Coffee Box Demo"
-                  className="px-3 bg-white/5 hover:bg-white/10 rounded-xl text-white/60 hover:text-white transition-colors cursor-pointer"
+                  title="Inject Specialty Coffee Demo"
+                  className="btn-secondary h-[42px] px-3.5 text-xs font-bold"
                 >
                   Demo
                 </button>
@@ -506,18 +535,28 @@ export const MarketingDashboard: React.FC = () => {
             </form>
 
             {generatedIdeas && (
-              <div className="mt-6 border-t border-white/5 pt-6 space-y-4">
+              <div className="mt-6 border-t border-white/[0.06] pt-5 space-y-3.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs uppercase tracking-widest font-black text-primary">Generated Concepts</h4>
-                  <button 
-                    onClick={() => setGeneratedIdeas('')}
-                    className="text-[10px] text-white/40 hover:text-white transition-colors uppercase font-bold"
-                  >
-                    Clear
-                  </button>
+                  <span className="text-[10px] uppercase tracking-widest font-black text-primary">Generated Brand Blueprint</span>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={handleCopy}
+                      className="w-7 h-7 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all cursor-pointer"
+                      title="Copy to clipboard"
+                    >
+                      {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                    </button>
+                    <button 
+                      onClick={() => setGeneratedIdeas('')}
+                      className="w-7 h-7 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all cursor-pointer font-bold text-xs"
+                      title="Clear ideas"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
                 
-                <div className="bg-white/5 border border-white/5 p-5 rounded-2xl max-h-[350px] overflow-y-auto custom-scrollbar">
+                <div className="bg-[#080710]/50 border border-white/[0.04] p-4.5 rounded-2xl max-h-[350px] overflow-y-auto custom-scrollbar shadow-inner">
                   <MarkdownRenderer text={generatedIdeas} />
                 </div>
               </div>
@@ -534,7 +573,7 @@ const MarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
   if (!text) return null;
   const lines = text.split('\n');
   return (
-    <div className="space-y-3 text-white/80 text-xs leading-relaxed">
+    <div className="space-y-3 text-white/80 text-xs leading-relaxed font-medium">
       {lines.map((line, i) => {
         const content = line.trim();
         if (!content) return <div key={i} className="h-2" />;
@@ -544,18 +583,18 @@ const MarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
           return <h5 key={i} className="text-xs font-bold text-primary mt-4 mb-1 uppercase tracking-wide">{content.slice(4)}</h5>;
         }
         if (content.startsWith('## ')) {
-          return <h4 key={i} className="text-sm font-extrabold text-white mt-5 mb-2">{content.slice(3)}</h4>;
+          return <h4 key={i} className="text-xs font-black text-white mt-5 mb-2 border-l-2 border-primary pl-2">{content.slice(3)}</h4>;
         }
         if (content.startsWith('# ')) {
-          return <h3 key={i} className="text-base font-black text-white mt-6 mb-3 border-b border-white/10 pb-1">{content.slice(2)}</h3>;
+          return <h3 key={i} className="text-sm font-black text-white mt-6 mb-3 border-b border-white/10 pb-1.5">{content.slice(2)}</h3>;
         }
 
         // Bullet points
         if (content.startsWith('* ') || content.startsWith('- ')) {
           const formatted = parseBoldText(content.slice(2));
           return (
-            <div key={i} className="flex gap-2 items-start pl-2 my-1">
-              <span className="text-primary mt-1.5 shrink-0 w-1 h-1 rounded-full bg-primary" />
+            <div key={i} className="flex gap-2 items-start pl-1.5 my-1">
+              <span className="text-primary mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_var(--glow-color)]" />
               <span>{formatted}</span>
             </div>
           );
@@ -566,8 +605,8 @@ const MarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
         if (numMatch) {
           const formatted = parseBoldText(numMatch[2]);
           return (
-            <div key={i} className="flex gap-2 items-start pl-2 my-1">
-              <span className="text-primary font-bold shrink-0">{numMatch[1]}.</span>
+            <div key={i} className="flex gap-2 items-start pl-1.5 my-1">
+              <span className="text-primary font-black shrink-0">{numMatch[1]}.</span>
               <span>{formatted}</span>
             </div>
           );
@@ -584,7 +623,7 @@ const parseBoldText = (text: string) => {
   const parts = text.split(/\*\*(.*?)\*\*/g);
   return parts.map((part, index) => {
     if (index % 2 === 1) {
-      return <strong key={index} className="font-extrabold text-white">{part}</strong>;
+      return <strong key={index} className="font-black text-white">{part}</strong>;
     }
     return part;
   });

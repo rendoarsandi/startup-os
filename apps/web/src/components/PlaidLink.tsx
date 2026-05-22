@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
+import { Landmark, Rocket, Building, Zap, CheckCircle2, ShieldAlert, Sparkles, Link2 } from 'lucide-react';
 
 interface PlaidLinkProps {
   onSuccess?: () => void;
@@ -10,29 +11,45 @@ const INSTITUTIONS = [
     key: 'chase',
     name: 'Chase Bank',
     desc: 'Chase Business Checking, Savings & Ink Credit Card',
-    bgColor: 'bg-blue-600/10 hover:bg-blue-600/20 border-blue-500/30 hover:border-blue-500/60 text-blue-400',
-    icon: '🏦',
+    colors: {
+      border: 'border-blue-500/20 hover:border-blue-500/50',
+      bg: 'bg-blue-500/5 hover:bg-blue-500/10',
+      icon: 'text-blue-400',
+    },
+    icon: <Landmark size={22} />,
   },
   {
     key: 'svb',
     name: 'Silicon Valley Bank',
     desc: 'SVB Operating Checking & MM Savings',
-    bgColor: 'bg-emerald-600/10 hover:bg-emerald-600/20 border-emerald-500/30 hover:border-emerald-500/60 text-emerald-400',
-    icon: '🚀',
+    colors: {
+      border: 'border-emerald-500/20 hover:border-emerald-500/50',
+      bg: 'bg-emerald-500/5 hover:bg-emerald-500/10',
+      icon: 'text-emerald-400',
+    },
+    icon: <Rocket size={22} />,
   },
   {
     key: 'bofa',
     name: 'Bank of America',
     desc: 'BofA Business Checking & Business Credit Card',
-    bgColor: 'bg-red-600/10 hover:bg-red-600/20 border-red-500/30 hover:border-red-500/60 text-red-400',
-    icon: '🏢',
+    colors: {
+      border: 'border-rose-500/20 hover:border-rose-500/50',
+      bg: 'bg-rose-500/5 hover:bg-rose-500/10',
+      icon: 'text-rose-400',
+    },
+    icon: <Building size={22} />,
   },
   {
     key: 'mercury',
     name: 'Mercury',
     desc: 'Mercury Modern Startup Checking & Treasury',
-    bgColor: 'bg-zinc-800 hover:bg-zinc-700/50 border-zinc-700 hover:border-zinc-500 text-zinc-300',
-    icon: '⚡',
+    colors: {
+      border: 'border-amber-500/20 hover:border-amber-500/50',
+      bg: 'bg-amber-500/5 hover:bg-amber-500/10',
+      icon: 'text-amber-400',
+    },
+    icon: <Zap size={22} />,
   },
 ];
 
@@ -63,7 +80,7 @@ export function PlaidLinkButton({ onSuccess }: PlaidLinkProps) {
         // Reset state
         setSelectedInst(null);
         setAuthStep('idle');
-      }, 1000);
+      }, 1200);
     },
     onError: () => {
       setAuthStep('idle');
@@ -75,7 +92,7 @@ export function PlaidLinkButton({ onSuccess }: PlaidLinkProps) {
     setSelectedInst(inst);
     setAuthStep('authenticating');
 
-    // Micro-animated auth simulation steps
+    // Simulate Plaid integration flow
     setTimeout(() => {
       setAuthStep('exchanging');
       setTimeout(() => {
@@ -89,17 +106,19 @@ export function PlaidLinkButton({ onSuccess }: PlaidLinkProps) {
 
   if (linked) {
     return (
-      <div className="text-center py-4 bg-green-500/5 border border-green-500/20 rounded-xl p-4">
-        <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-3 animate-bounce">
-          <span className="text-green-400 text-xl font-bold">✓</span>
+      <div className="text-center py-6 px-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 shadow-[0_4px_24px_rgba(16,185,129,0.06)] animate-in fade-in duration-300">
+        <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-3 shadow-inner">
+          <CheckCircle2 size={24} className="text-emerald-400 animate-pulse" />
         </div>
-        <p className="text-green-400 font-semibold text-sm">Bank Connected Successfully</p>
-        <p className="text-white/30 text-xs mt-1">Simulated sandbox credentials active</p>
+        <p className="text-emerald-400 font-bold text-sm">Bank Pipeline Connected</p>
+        <p className="text-white/30 text-[10px] mt-1 max-w-[200px] mx-auto uppercase tracking-wider font-semibold">
+          Active Sandbox Synchronization
+        </p>
         <button 
           onClick={() => setLinked(false)}
-          className="mt-3 text-xs text-blue-400 hover:text-blue-300 underline"
+          className="mt-4 text-xs font-bold text-primary hover:text-white transition-colors cursor-pointer"
         >
-          Link another account
+          Disconnect & Connect New Bank
         </button>
       </div>
     );
@@ -109,29 +128,37 @@ export function PlaidLinkButton({ onSuccess }: PlaidLinkProps) {
     <div className="space-y-3">
       <button
         onClick={() => setIsOpen(true)}
-        className="btn-primary w-full flex items-center justify-center gap-2"
+        className="btn-primary w-full h-12 text-sm font-extrabold flex items-center justify-center gap-2 cursor-pointer"
       >
-        🏦 Link Bank Account
+        <Link2 size={16} /> Link Business Accounts
       </button>
-      <p className="text-white/20 text-[10px] text-center">
-        Powered by Plaid • Interactive Sandbox Mode
+      <p className="text-white/20 text-[10px] text-center font-semibold tracking-wider uppercase">
+        Secured by Plaid Link Sandbox
       </p>
 
       {/* Modal backdrop */}
       {isOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl relative animate-in fade-in zoom-in duration-200">
-            
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
+          <div className="glass-card w-full max-w-lg overflow-hidden shadow-[0_24px_60px_rgba(0,0,0,0.8)] relative animate-in zoom-in-95 duration-300">
+            {/* Ambient gradients */}
+            <div className="absolute -top-12 -left-12 w-28 h-28 rounded-full bg-primary/10 blur-xl pointer-events-none" />
+            <div className="absolute -bottom-12 -right-12 w-28 h-28 rounded-full bg-secondary/10 blur-xl pointer-events-none" />
+
             {/* Header */}
-            <div className="p-6 border-b border-zinc-800 flex justify-between items-center">
-              <div>
-                <h3 className="text-lg font-bold text-white">Link Bank via Plaid</h3>
-                <p className="text-xs text-zinc-400 mt-1">Select an institution to simulate connection</p>
+            <div className="p-6 border-b border-white/[0.06] flex justify-between items-center relative z-10">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-inner">
+                  <Sparkles size={16} className="text-white" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-white">Link Bank Account</h3>
+                  <p className="text-[10px] text-white/40 uppercase tracking-widest font-black mt-0.5">Plaid Sandbox Portal</p>
+                </div>
               </div>
               {authStep === 'idle' && (
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="text-zinc-500 hover:text-white text-lg font-semibold"
+                  className="w-8 h-8 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all cursor-pointer font-bold"
                 >
                   ✕
                 </button>
@@ -139,19 +166,21 @@ export function PlaidLinkButton({ onSuccess }: PlaidLinkProps) {
             </div>
 
             {/* Content */}
-            <div className="p-6">
+            <div className="p-6 relative z-10">
               {authStep === 'idle' && (
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 gap-2.5">
                   {INSTITUTIONS.map((inst) => (
                     <button
                       key={inst.key}
                       onClick={() => handleSelectInstitution(inst)}
-                      className={`flex items-start gap-4 p-4 border rounded-xl transition-all duration-200 text-left ${inst.bgColor}`}
+                      className={`flex items-start gap-4 p-4 border rounded-xl transition-all duration-300 text-left cursor-pointer ${inst.colors.bg} ${inst.colors.border}`}
                     >
-                      <span className="text-3xl mt-1">{inst.icon}</span>
-                      <div>
-                        <h4 className="font-semibold text-white text-sm">{inst.name}</h4>
-                        <p className="text-xs text-zinc-400 mt-1">{inst.desc}</p>
+                      <div className={`w-10 h-10 rounded-xl border border-white/5 bg-white/5 flex items-center justify-center shadow-inner ${inst.colors.icon}`}>
+                        {inst.icon}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-extrabold text-white text-sm tracking-tight">{inst.name}</h4>
+                        <p className="text-xs text-white/40 mt-0.5 font-medium leading-relaxed">{inst.desc}</p>
                       </div>
                     </button>
                   ))}
@@ -161,29 +190,30 @@ export function PlaidLinkButton({ onSuccess }: PlaidLinkProps) {
               {authStep !== 'idle' && selectedInst && (
                 <div className="py-12 flex flex-col items-center justify-center text-center">
                   <div className="relative mb-6">
-                    <div className="w-16 h-16 rounded-full border-4 border-zinc-800 border-t-blue-500 animate-spin"></div>
-                    <span className="absolute inset-0 flex items-center justify-center text-2xl">
+                    <div className="w-20 h-20 rounded-full border-2 border-white/5 border-t-primary animate-spin" />
+                    <div className="absolute inset-0 flex items-center justify-center text-2xl text-white">
                       {selectedInst.icon}
-                    </span>
+                    </div>
                   </div>
 
-                  <h4 className="font-bold text-white text-base mb-1">
+                  <h4 className="font-extrabold text-white text-base mb-1.5">
                     {authStep === 'authenticating' && `Connecting to ${selectedInst.name}...`}
-                    {authStep === 'exchanging' && `Securely exchanging sandbox credentials...`}
-                    {authStep === 'success' && `Connected!`}
+                    {authStep === 'exchanging' && `Exchanging secure keys...`}
+                    {authStep === 'success' && `Authentication Successful!`}
                   </h4>
 
-                  <p className="text-xs text-zinc-400 max-w-xs">
-                    {authStep === 'authenticating' && 'Establishing secure handshake via simulated Plaid Link environment.'}
-                    {authStep === 'exchanging' && 'Configuring financial account mapping and auto-importing historical transactions.'}
-                    {authStep === 'success' && 'Your banking data has been linked and categorized.'}
+                  <p className="text-xs text-white/40 max-w-xs font-medium leading-relaxed">
+                    {authStep === 'authenticating' && 'Setting up secure tokens inside simulated sandbox. This simulates true Plaid OAuth protocol.'}
+                    {authStep === 'exchanging' && 'Importing ledger items, credit facilities, and initializing live account feeds.'}
+                    {authStep === 'success' && 'Connection built. Instantiating AI model indexing for new transactions.'}
                   </p>
                 </div>
               )}
 
               {exchangeMutation.error && (
-                <div className="mt-4 p-3 bg-red-950/20 border border-red-900/30 rounded-lg text-center">
-                  <p className="text-xs text-red-400">{(exchangeMutation.error as Error).message}</p>
+                <div className="mt-4 p-3 bg-rose-500/5 border border-rose-500/10 rounded-xl flex items-center gap-2.5 text-rose-400">
+                  <ShieldAlert size={16} />
+                  <p className="text-xs font-semibold">{(exchangeMutation.error as Error).message}</p>
                 </div>
               )}
             </div>

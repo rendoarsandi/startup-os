@@ -22,6 +22,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeRole, setActiveR
       root.classList.add('theme-marketer');
     } else if (activeRole === 'hr') {
       root.classList.add('theme-hr');
+    } else {
+      root.classList.add('theme-cfo');
     }
   }, [activeRole]);
 
@@ -40,120 +42,136 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeRole, setActiveR
     hr: "Ask AI CHRO about headcount, job descriptions, employee policies..."
   };
 
-  const currentTitle = {
-    cfo: "AI CFO",
-    marketer: "AI CMO",
-    hr: "AI CHRO"
+  const departmentLabel = {
+    cfo: "Finance & Accounting",
+    marketer: "Growth & Campaigns",
+    hr: "People Ops & Talent"
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-[#080710] font-sans">
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-background/60 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
+          className="fixed inset-0 bg-black/60 backdrop-blur-md z-40 lg:hidden transition-opacity duration-300 animate-in fade-in"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <aside className={`w-64 glass-card fixed lg:relative inset-y-0 left-0 z-50 m-0 rounded-none border-y-0 border-l-0 lg:m-4 lg:mr-0 lg:rounded-2xl lg:border flex flex-col shrink-0 transition-transform duration-300 lg:translate-x-0 ${
+      <aside className={`w-64 glass-card fixed lg:relative inset-y-0 left-0 z-50 m-0 rounded-none border-y-0 border-l-0 lg:m-4 lg:mr-0 lg:rounded-2xl lg:border flex flex-col shrink-0 transition-transform duration-300 lg:translate-x-0 bg-background/50 backdrop-blur-2xl ${
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
-        <div className="p-6 border-b border-border/50">
-          <h1 className="text-2xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent italic tracking-wider">
-            {currentTitle[activeRole]}
-          </h1>
-          <p className="text-[10px] text-white/30 uppercase tracking-widest font-black mt-1">C-Suite Workspace</p>
+        {/* Sidebar Header with scaled high-end logo */}
+        <div className="p-5 border-b border-white/5 flex items-center gap-3.5 bg-white/[0.01]">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/30 to-secondary/30 p-[1px] flex items-center justify-center shadow-lg shadow-primary/5">
+            <div className="h-full w-full rounded-[9px] bg-[#0c0b16] overflow-hidden flex items-center justify-center">
+              <img 
+                src="/logo.png" 
+                alt="Startup OS" 
+                className="w-[130%] h-[130%] object-cover scale-110" 
+              />
+            </div>
+          </div>
+          <div>
+            <h1 className="text-sm font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent italic tracking-wider leading-none">
+              STARTUP OS
+            </h1>
+            <p className="text-[9px] text-white/30 uppercase tracking-widest font-extrabold mt-1">C-Suite Workspace</p>
+          </div>
         </div>
 
-        {/* Office Switcher */}
-        <div className="p-4 space-y-1.5 border-b border-border/50 bg-white/5">
-          <div className="px-2 pb-1 text-[10px] font-semibold text-white/30 uppercase tracking-wider">
-            Select Department
+        {/* Department / Office Switcher */}
+        <div className="p-4 space-y-2 border-b border-white/5 bg-white/[0.01]">
+          <div className="px-2 pb-1.5 text-[9px] font-bold text-white/30 uppercase tracking-widest">
+            ACTIVE OFFICE
           </div>
+          
           <button 
-            onClick={() => setActiveRole('cfo')}
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            onClick={() => { setActiveRole('cfo'); setIsSidebarOpen(false); }}
+            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeRole === 'cfo' 
-                ? 'bg-primary/20 text-primary border border-primary/20 shadow-md shadow-primary/10' 
-                : 'text-white/50 hover:bg-white/5 hover:text-white border border-transparent'
+                ? 'bg-primary/20 text-white border border-primary/20 shadow-lg shadow-primary/5 font-extrabold' 
+                : 'text-white/40 hover:bg-white/5 hover:text-white/80 border border-transparent'
             }`}
           >
-            <div className="flex items-center gap-2">
-              <Briefcase size={14} />
+            <div className="flex items-center gap-2.5">
+              <Briefcase size={14} className={activeRole === 'cfo' ? 'text-primary' : ''} />
               <span>Finance (CFO)</span>
             </div>
             {activeRole === 'cfo' && <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
           </button>
           
           <button 
-            onClick={() => setActiveRole('marketer')}
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            onClick={() => { setActiveRole('marketer'); setIsSidebarOpen(false); }}
+            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeRole === 'marketer' 
-                ? 'bg-primary/20 text-primary border border-primary/20 shadow-md shadow-primary/10' 
-                : 'text-white/50 hover:bg-white/5 hover:text-white border border-transparent'
+                ? 'bg-primary/20 text-white border border-primary/20 shadow-lg shadow-primary/5 font-extrabold' 
+                : 'text-white/40 hover:bg-white/5 hover:text-white/80 border border-transparent'
             }`}
           >
-            <div className="flex items-center gap-2">
-              <Sparkles size={14} />
+            <div className="flex items-center gap-2.5">
+              <Sparkles size={14} className={activeRole === 'marketer' ? 'text-primary' : ''} />
               <span>Marketing (CMO)</span>
             </div>
             {activeRole === 'marketer' && <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
           </button>
 
           <button 
-            onClick={() => setActiveRole('hr')}
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            onClick={() => { setActiveRole('hr'); setIsSidebarOpen(false); }}
+            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeRole === 'hr' 
-                ? 'bg-primary/20 text-primary border border-primary/20 shadow-md shadow-primary/10' 
-                : 'text-white/50 hover:bg-white/5 hover:text-white border border-transparent'
+                ? 'bg-primary/20 text-white border border-primary/20 shadow-lg shadow-primary/5 font-extrabold' 
+                : 'text-white/40 hover:bg-white/5 hover:text-white/80 border border-transparent'
             }`}
           >
-            <div className="flex items-center gap-2">
-              <Users size={14} />
+            <div className="flex items-center gap-2.5">
+              <Users size={14} className={activeRole === 'hr' ? 'text-primary' : ''} />
               <span>People Ops (CHRO)</span>
             </div>
             {activeRole === 'hr' && <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
           </button>
         </div>
 
-        <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto custom-scrollbar">
-          <div className="px-4 pb-2 text-[10px] font-semibold text-white/30 uppercase tracking-wider">
-            Workspace
+        <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto custom-scrollbar">
+          <div className="px-3 pb-2 text-[9px] font-bold text-white/30 uppercase tracking-widest">
+            WORKSPACE
           </div>
-          <NavLink icon={<LayoutDashboard size={20} />} label="Dashboard" active />
+          <NavLink icon={<LayoutDashboard size={18} />} label="Dashboard" active />
+          
           {activeRole === 'cfo' && (
             <>
-              <NavLink icon={<Wallet size={20} />} label="Transactions" />
-              <NavLink icon={<PieChart size={20} />} label="Budgeting" />
-              <NavLink icon={<TrendingUp size={20} />} label="Investments" />
+              <NavLink icon={<Wallet size={18} />} label="Transactions" />
+              <NavLink icon={<PieChart size={18} />} label="Budgeting" />
+              <NavLink icon={<TrendingUp size={18} />} label="Investments" />
             </>
           )}
           {activeRole === 'marketer' && (
             <>
-              <NavLink icon={<Sparkles size={20} />} label="Campaign Ideas" />
-              <NavLink icon={<TrendingUp size={20} />} label="Funnel Analysis" />
+              <NavLink icon={<Sparkles size={18} />} label="Campaign Ideas" />
+              <NavLink icon={<TrendingUp size={18} />} label="Funnel Analysis" />
             </>
           )}
           {activeRole === 'hr' && (
             <>
-              <NavLink icon={<Users size={20} />} label="Employees" />
-              <NavLink icon={<Award size={20} />} label="Documents" />
+              <NavLink icon={<Users size={18} />} label="Employees" />
+              <NavLink icon={<Award size={18} />} label="Documents" />
             </>
           )}
-          <div className="pt-6 pb-2 px-4 text-[10px] font-semibold text-white/30 uppercase tracking-wider">
-            System
+          
+          <div className="pt-6 pb-2 px-3 text-[9px] font-bold text-white/30 uppercase tracking-widest">
+            SYSTEM
           </div>
-          <NavLink icon={<Settings size={20} />} label="Settings" />
+          <NavLink icon={<Settings size={18} />} label="Settings" />
         </nav>
 
-        <div className="p-4 border-t border-border">
+        {/* Sidebar Footer with Sign Out */}
+        <div className="p-4 border-t border-white/5 bg-white/[0.005]">
           <button 
             onClick={onSignOut}
-            className="nav-link w-full text-red-400 hover:bg-red-400/10 justify-center cursor-pointer"
+            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-red-500/10 text-red-400 hover:text-red-300 font-bold text-xs tracking-wider uppercase transition-all cursor-pointer justify-center border border-transparent hover:border-red-500/10"
           >
-            <LogOut size={20} />
+            <LogOut size={16} />
             <span>Sign Out</span>
           </button>
         </div>
@@ -161,36 +179,42 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeRole, setActiveR
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
-        {/* Background blobs */}
-        <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full -z-10 animate-pulse" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[30%] h-[30%] bg-secondary/20 blur-[100px] rounded-full -z-10" />
+        {/* Dynamic premium backdrop blurs */}
+        <div className="nebula-glow top-[-10%] right-[-10%] w-[50%] h-[50%] bg-primary/20 animate-pulse duration-[10000ms]" />
+        <div className="nebula-glow bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-secondary/15" />
 
         {/* Header */}
-        <header className="h-20 flex items-center justify-between px-4 sm:px-8 shrink-0 border-b border-border/10 bg-background/50 backdrop-blur-md">
-          <div className="flex items-center gap-3 sm:gap-4 flex-1">
+        <header className="h-20 flex items-center justify-between px-6 sm:px-10 shrink-0 border-b border-white/5 bg-[#080710]/40 backdrop-blur-2xl z-30">
+          <div className="flex items-center gap-4 flex-1">
             <button 
               onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden text-white/60 hover:text-white p-2 rounded-xl hover:bg-white/5 cursor-pointer transition-colors"
+              className="lg:hidden text-white/60 hover:text-white p-2.5 rounded-xl hover:bg-white/5 cursor-pointer transition-colors border border-transparent hover:border-white/5"
             >
-              <Menu size={22} />
+              <Menu size={20} />
             </button>
             <div className="relative max-w-md w-full">
-              <Search className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-white/30" size={18} />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
               <input 
                 type="text" 
                 placeholder={searchPlaceholder[activeRole]} 
-                className="w-full bg-white/5 border border-border rounded-xl py-2 sm:py-2.5 pl-9 sm:pl-12 pr-4 focus:outline-none focus:border-primary/50 transition-all text-xs sm:text-sm"
+                className="glass-input pl-11 py-2.5 text-xs focus:border-primary/40"
               />
             </div>
           </div>
 
-          <div className="flex items-center gap-4 sm:gap-6">
-            <button className="relative text-white/60 hover:text-white transition-colors cursor-pointer">
-              <Bell size={22} />
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full shadow-[0_0_10px_rgba(var(--color-primary),0.5)]" />
+          <div className="flex items-center gap-5 sm:gap-6">
+            <div className="hidden sm:block text-right">
+              <div className="text-xs font-bold text-white/90">{departmentLabel[activeRole]}</div>
+              <div className="text-[9px] text-white/30 uppercase tracking-widest font-extrabold mt-0.5">Autonomous Agent</div>
+            </div>
+            
+            <button className="relative text-white/50 hover:text-white transition-colors cursor-pointer p-2.5 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/5">
+              <Bell size={18} />
+              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-primary rounded-full shadow-[0_0_10px_rgba(var(--primary-rgb),0.6)]" />
             </button>
-            <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-br from-primary to-secondary p-[2px]">
-              <div className="h-full w-full rounded-[10px] bg-background flex items-center justify-center font-bold text-xs sm:text-sm">
+            
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/30 to-secondary/30 p-[1.5px] shadow-lg shadow-primary/5">
+              <div className="h-full w-full rounded-[9px] bg-[#0c0b16] flex items-center justify-center font-black text-xs text-white/90">
                 {getInitials(userName)}
               </div>
             </div>
@@ -198,8 +222,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeRole, setActiveR
         </header>
 
         {/* Scrollable Area */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar">
-          {children}
+        <div className="flex-1 overflow-y-auto p-5 sm:p-10 custom-scrollbar z-20">
+          <div className="max-w-7xl mx-auto w-full">
+            {children}
+          </div>
         </div>
       </main>
     </div>
@@ -213,9 +239,9 @@ interface NavLinkProps {
 }
 
 const NavLink: React.FC<NavLinkProps> = ({ icon, label, active }) => (
-  <a href="#" className={`nav-link ${active ? 'active' : ''}`}>
+  <a href="#" className={`nav-link ${active ? 'active' : ''}`} onClick={(e) => e.preventDefault()}>
     {icon}
-    <span className="font-medium">{label}</span>
+    <span className="font-semibold">{label}</span>
   </a>
 );
 
