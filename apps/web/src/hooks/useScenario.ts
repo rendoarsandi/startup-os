@@ -304,7 +304,7 @@ export const useScenario = (baseline: BaselineRunwayData | undefined) => {
   const baseVariable = baseline.variableExpenses || 0;
 
   const baseMrr = baseline.startingMrr !== undefined ? baseline.startingMrr : 0;
-  const baseChurnRate = baseline.churnRate !== undefined ? baseline.churnRate : 200; // basis points
+
 
   const baselineRevGrowth = baseline.baselineRevenueGrowth ?? 0;
   const baselineExpGrowth = baseline.baselineExpenseGrowth ?? 0;

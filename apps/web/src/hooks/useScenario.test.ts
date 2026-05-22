@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { calculateCustomProjections, SEASONALITY_PROFILES } from './useScenario';
+import { calculateCustomProjections } from './useScenario';
 
 describe('calculateCustomProjections', () => {
   const mockBaseline = {
@@ -35,7 +35,6 @@ describe('calculateCustomProjections', () => {
 
   test('applies seasonality profiles correctly', () => {
     const result = calculateCustomProjections(mockBaseline, 0, 0, 'holiday');
-    const currentMonthIdx = new Date().getMonth();
     
     // Find the projection for "Dec" calendar month
     const decProjIndex = result.projections.findIndex((p, idx) => p.month === 'Dec' && idx > 0);

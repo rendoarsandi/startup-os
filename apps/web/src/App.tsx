@@ -393,7 +393,7 @@ function App() {
                       <div className="p-3 bg-white/5 rounded-xl border border-white/5">
                         <p className="text-white/40 text-[9px] font-bold uppercase tracking-wider mb-1">LTV : CAC</p>
                         <p className="text-base font-black text-emerald-400">
-                          {runwayData && runwayData.cac > 0 && runwayData.churnRate > 0 ? (
+                          {runwayData && runwayData.cac !== undefined && runwayData.cac > 0 && runwayData.churnRate !== undefined && runwayData.churnRate > 0 && runwayData.arpu !== undefined ? (
                             ((runwayData.arpu * 10000) / (runwayData.churnRate * runwayData.cac)).toFixed(1) + 'x'
                           ) : (
                             'N/A'
@@ -402,10 +402,10 @@ function App() {
                       </div>
                     </div>
                   )}
-                  {runwayData && runwayData.cac > 0 && (
+                  {runwayData && runwayData.cac !== undefined && runwayData.cac > 0 && (
                     <div className="mt-3 pt-3 border-t border-white/5 flex justify-between text-[9px] text-white/50">
                       <span>CAC: ${Math.round(runwayData.cac / 100)}</span>
-                      <span>ARPU: ${Math.round(runwayData.arpu / 100)}</span>
+                      <span>ARPU: ${runwayData.arpu !== undefined ? Math.round(runwayData.arpu / 100) : 0}</span>
                     </div>
                   )}
                 </div>
