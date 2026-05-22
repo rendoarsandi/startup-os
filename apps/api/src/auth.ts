@@ -48,6 +48,7 @@ export const getAuth = (db: D1Database, url: string, secret?: string) => {
       "https://ai-cfo-web.pages.dev",
       "https://*.pages.dev",
       "http://localhost:5173",
+      url,
     ],
   });
 };
