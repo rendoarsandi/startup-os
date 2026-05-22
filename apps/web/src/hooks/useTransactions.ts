@@ -10,7 +10,7 @@ export interface Transaction {
   date: string;
 }
 
-export const useTransactions = () => {
+export const useTransactions = (enabled = true) => {
   const { data: transactions = [], isLoading, refetch } = useQuery<Transaction[]>({
     queryKey: ['transactions'],
     queryFn: async () => {
@@ -18,6 +18,7 @@ export const useTransactions = () => {
       if (!response.ok) throw new Error('Failed to fetch transactions');
       return response.json();
     },
+    enabled,
   });
 
   return { transactions, isLoading, refetch };

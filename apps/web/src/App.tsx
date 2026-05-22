@@ -1,4 +1,5 @@
 import { Layout } from './components/Layout'
+import { AuthPage } from './components/AuthPage'
 import { Chat } from './components/Chat'
 import { TransactionList } from './components/TransactionList'
 import { TransactionModal } from './components/TransactionModal'
@@ -21,33 +22,72 @@ function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [chatSeedPrompt, setChatSeedPrompt] = useState<string | undefined>(undefined);
 
+  // Session state
+  const [session, setSession] = useState<{ user: { id: string, email: string, name: string } } | null>(null);
+  const [loadingSession, setLoadingSession] = useState(true);
+
   // Custom Runway Projection growth and seasonality parameters
   const [revGrowth, setRevGrowth] = useState<number>(0);
   const [expGrowth, setExpGrowth] = useState<number>(0);
   const [seasonalityProfile, setSeasonalityProfile] = useState<string>('steady');
   const [isParamsOpen, setIsParamsOpen] = useState<boolean>(false);
 
+  const checkSession = async () => {
+    try {
+      const res = await fetch('/api/auth/get-session');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.user) {
+          setSession(data);
+        } else {
+          setSession(null);
+        }
+      } else {
+        setSession(null);
+      }
+    } catch (err) {
+      console.error("Session check failed", err);
+      setSession(null);
+    } finally {
+      setLoadingSession(false);
+    }
+  };
 
-  const { transactions } = useTransactions();
+  useEffect(() => {
+    checkSession();
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      await fetch('/api/auth/sign-out', { method: 'POST' });
+    } catch (err) {
+      console.error("Sign out failed", err);
+    }
+    setSession(null);
+  };
+
+  const { transactions } = useTransactions(!!session);
 
   // Query for bank accounts
   const { data: accounts = [] } = useQuery<{ id: string, name: string, balance: number, type: string }[]>({
-    queryKey: ['accounts', refreshKey],
+    queryKey: ['accounts', refreshKey, session?.user?.id],
     queryFn: async () => {
       const res = await fetch('/api/accounts');
       if (!res.ok) throw new Error('Failed to fetch accounts');
       return res.json();
-    }
+    },
+    enabled: !!session,
   });
 
   // Query for AI CFO Insights
   const { data: insightsData, isLoading: insightsLoading } = useQuery<{ advice: string, items?: any[] }>({
-    queryKey: ['insights', refreshKey],
+    queryKey: ['insights', refreshKey, session?.user?.id],
     queryFn: async () => {
       const res = await fetch('/api/insights');
       if (!res.ok) throw new Error('Failed to fetch insights');
       return res.json();
-    }
+    },
+    enabled: !!session,
   });
 
   // Query for Cash Runway and Burn Rate details
@@ -64,12 +104,13 @@ function App() {
     cac?: number;
     arpu?: number;
   }>({
-    queryKey: ['runway', refreshKey],
+    queryKey: ['runway', refreshKey, session?.user?.id],
     queryFn: async () => {
       const res = await fetch('/api/cfo/runway');
       if (!res.ok) throw new Error('Failed to fetch runway data');
       return res.json();
-    }
+    },
+    enabled: !!session,
   });
 
   // Query for SaaS config
@@ -79,12 +120,13 @@ function App() {
     cac: number;
     arpu: number;
   }>({
-    queryKey: ['saasConfig', refreshKey],
+    queryKey: ['saasConfig', refreshKey, session?.user?.id],
     queryFn: async () => {
       const res = await fetch('/api/cfo/saas-config');
       if (!res.ok) throw new Error('Failed to fetch SaaS config');
       return res.json();
-    }
+    },
+    enabled: !!session,
   });
 
   const [mrrInput, setMrrInput] = useState<number>(0);
@@ -134,8 +176,30 @@ function App() {
   const formattedBalance = `$${(totalBalanceCents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const formattedSpending = `$${(monthlySpendingCents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+  if (loadingSession) {
+    return (
+      <div className="min-h-screen w-screen flex flex-col items-center justify-center bg-background relative overflow-hidden">
+        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-primary/20 blur-[130px] rounded-full -z-10 animate-pulse" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-secondary/20 blur-[120px] rounded-full -z-10" />
+        <div className="glass-card p-8 flex flex-col items-center gap-4 max-w-xs w-full border border-white/10 shadow-2xl">
+          <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-semibold text-white/60">Securing environment...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <AuthPage onAuthSuccess={checkSession} />;
+  }
+
   return (
-    <Layout activeRole={activeRole} setActiveRole={setActiveRole}>
+    <Layout 
+      activeRole={activeRole} 
+      setActiveRole={setActiveRole}
+      userName={session.user.name}
+      onSignOut={handleSignOut}
+    >
       <div className="space-y-8">
         {activeRole === 'cfo' && (
           <>

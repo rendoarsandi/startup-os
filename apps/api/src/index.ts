@@ -20,6 +20,282 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>()
 
+async function seedUser(db: any, userId: string) {
+  // Check if financial accounts already exist
+  const existingAccounts = await db.select().from(financialAccounts).where(eq(financialAccounts.userId, userId)).limit(1).all();
+  if (existingAccounts.length > 0) {
+    return; // Already seeded
+  }
+
+  const now = new Date();
+  
+  // 1. Create Financial Accounts
+  const checkingId = uuidv4();
+  const savingsId = uuidv4();
+  const creditId = uuidv4();
+
+  await db.insert(financialAccounts).values([
+    {
+      id: checkingId,
+      userId,
+      name: "SVB Checking",
+      type: "checking",
+      balance: 4259020, // $42,590.20
+      currency: "USD",
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: savingsId,
+      userId,
+      name: "Chase Savings",
+      type: "savings",
+      balance: 15000000, // $150,000.00
+      currency: "USD",
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: creditId,
+      userId,
+      name: "Brex Corporate Card",
+      type: "credit",
+      balance: -1245030, // -$12,450.30
+      currency: "USD",
+      createdAt: now,
+      updatedAt: now,
+    }
+  ]).run();
+
+  // 2. Create SaaS Config
+  await db.insert(saasConfigs).values({
+    id: uuidv4(),
+    userId,
+    startingMrr: 1500000, // $15,000.00
+    churnRate: 200, // 2.0%
+    cac: 10000, // $100
+    arpu: 5000, // $50
+    createdAt: now,
+    updatedAt: now,
+  }).run();
+
+  // 3. Create Budgets
+  await db.insert(budgets).values([
+    {
+      id: uuidv4(),
+      userId,
+      category: "Marketing",
+      amount: 500000, // $5,000.00
+      period: "monthly",
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: uuidv4(),
+      userId,
+      category: "Utilities", // SaaS / Cloud hosting
+      amount: 200000, // $2,000.00
+      period: "monthly",
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: uuidv4(),
+      userId,
+      category: "Other", // General office
+      amount: 100000, // $1,000.00
+      period: "monthly",
+      createdAt: now,
+      updatedAt: now,
+    }
+  ]).run();
+
+  // 4. Create Marketing Campaigns
+  await db.insert(marketingCampaigns).values([
+    { id: uuidv4(), userId, name: 'Google Ads Q2', status: 'active', budget: 500000, spend: 320000, conversions: 240, roas: 420, createdAt: now, updatedAt: now },
+    { id: uuidv4(), userId, name: 'Meta Retargeting', status: 'active', budget: 400000, spend: 380000, conversions: 310, roas: 380, createdAt: now, updatedAt: now },
+    { id: uuidv4(), userId, name: 'TikTok Product Launch', status: 'active', budget: 600000, spend: 450000, conversions: 180, roas: 290, createdAt: now, updatedAt: now },
+    { id: uuidv4(), userId, name: 'LinkedIn Enterprise', status: 'paused', budget: 500000, spend: 95000, conversions: 12, roas: 180, createdAt: now, updatedAt: now }
+  ]).run();
+
+  // 5. Create Employees
+  await db.insert(employees).values([
+    { id: uuidv4(), userId, name: 'Alice Vance', role: 'Engineering Lead', department: 'Engineering', salary: 14500000, status: 'active', startDate: new Date('2024-03-15'), createdAt: now, updatedAt: now },
+    { id: uuidv4(), userId, name: 'Bob Sterling', role: 'Senior Designer', department: 'Product', salary: 11000000, status: 'active', startDate: new Date('2024-09-01'), createdAt: now, updatedAt: now },
+    { id: uuidv4(), userId, name: 'Clara Hayes', role: 'Growth Marketer', department: 'Marketing', salary: 9500000, status: 'active', startDate: new Date('2025-01-10'), createdAt: now, updatedAt: now },
+    { id: uuidv4(), userId, name: 'David Miller', role: 'HR Specialist', department: 'People & Culture', salary: 8500000, status: 'active', startDate: new Date('2025-04-01'), createdAt: now, updatedAt: now },
+    { id: uuidv4(), userId, name: 'Emily Rose', role: 'Frontend Engineer', department: 'Engineering', salary: 10500000, status: 'onboarding', startDate: new Date('2026-06-01'), createdAt: now, updatedAt: now }
+  ]).run();
+
+  // 6. Generate 90 days of transactions
+  const transactionsToInsert: any[] = [];
+  const totalDays = 90;
+  
+  for (let i = totalDays; i >= 0; i--) {
+    const txDate = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+    const dayOfWeek = txDate.getDay();
+    const dayOfMonth = txDate.getDate();
+
+    // 1st of month: Rent
+    if (dayOfMonth === 1) {
+      transactionsToInsert.push({
+        id: uuidv4(),
+        userId,
+        accountId: checkingId,
+        amount: -250000, // -$2,500.00
+        category: "Housing",
+        merchant: "WeWork Office",
+        description: "Monthly Rent",
+        date: txDate,
+        createdAt: now
+      });
+    }
+
+    // 5th of month: Cloud hosting & SaaS subscriptions
+    if (dayOfMonth === 5) {
+      transactionsToInsert.push({
+        id: uuidv4(),
+        userId,
+        accountId: creditId,
+        amount: -85000, // -$850.00
+        category: "Utilities",
+        merchant: "Amazon Web Services",
+        description: "AWS Cloud Infrastructure",
+        date: txDate,
+        createdAt: now
+      });
+      transactionsToInsert.push({
+        id: uuidv4(),
+        userId,
+        accountId: creditId,
+        amount: -12000, // -$120.00
+        category: "Utilities",
+        merchant: "GitHub",
+        description: "Organization seats",
+        date: txDate,
+        createdAt: now
+      });
+      transactionsToInsert.push({
+        id: uuidv4(),
+        userId,
+        accountId: creditId,
+        amount: -32000, // -$320.00
+        category: "Utilities",
+        merchant: "Slack",
+        description: "Pro plan subscription",
+        date: txDate,
+        createdAt: now
+      });
+    }
+
+    // 15th and 30th of month: Payroll payouts
+    if (dayOfMonth === 15 || dayOfMonth === 30) {
+      const payrollAmount = Math.round((14500000 + 11000000 + 9500000 + 8500000) / 24);
+      transactionsToInsert.push({
+        id: uuidv4(),
+        userId,
+        accountId: checkingId,
+        amount: -payrollAmount,
+        category: "Other",
+        merchant: "Gusto Payroll",
+        description: "Semi-monthly payroll",
+        date: txDate,
+        createdAt: now
+      });
+    }
+
+    // Every Friday: Stripe Deposit (Revenue)
+    if (dayOfWeek === 5) {
+      const depositAmt = Math.round((3500 + Math.random() * 2500) * 100);
+      transactionsToInsert.push({
+        id: uuidv4(),
+        userId,
+        accountId: checkingId,
+        amount: depositAmt,
+        category: "Income",
+        merchant: "Stripe",
+        description: "Stripe payout payout_weekly",
+        date: txDate,
+        createdAt: now
+      });
+    }
+
+    // Every Monday: Ads marketing expenses
+    if (dayOfWeek === 1) {
+      transactionsToInsert.push({
+        id: uuidv4(),
+        userId,
+        accountId: creditId,
+        amount: -120000, // -$1,200.00
+        category: "Other",
+        merchant: "Google Ads",
+        description: "Google Search Ads campaign",
+        date: txDate,
+        createdAt: now
+      });
+      transactionsToInsert.push({
+        id: uuidv4(),
+        userId,
+        accountId: creditId,
+        amount: -80000, // -$800.00
+        category: "Other",
+        merchant: "Meta Ads",
+        description: "Meta Social Retargeting",
+        date: txDate,
+        createdAt: now
+      });
+    }
+
+    // Regular random food/office supplies
+    if (Math.random() < 0.3) {
+      const foodAmt = Math.round((15 + Math.random() * 85) * 100);
+      transactionsToInsert.push({
+        id: uuidv4(),
+        userId,
+        accountId: creditId,
+        amount: -foodAmt,
+        category: "Food",
+        merchant: Math.random() > 0.5 ? "UberEats" : "Whole Foods",
+        description: "Team lunch",
+        date: txDate,
+        createdAt: now
+      });
+    }
+  }
+
+  if (transactionsToInsert.length > 0) {
+    await db.insert(transactions).values(transactionsToInsert).run();
+  }
+}
+
+async function getUserId(c: any): Promise<string | null> {
+  if (typeof process !== 'undefined' && process.env && process.env.VITEST) {
+    return "test-user";
+  }
+
+  try {
+    const auth = getAuth(c.env.DB, c.env.BETTER_AUTH_URL);
+    const session = await auth.api.getSession({
+      headers: c.req.raw.headers
+    });
+
+    if (!session || !session.user) {
+      return null;
+    }
+
+    const userId = session.user.id;
+
+    // Automatically seed data for new users
+    const db = drizzle(c.env.DB);
+    await seedUser(db, userId);
+
+    return userId;
+  } catch (error) {
+    console.error("Error in getUserId session retrieval:", error);
+    return null;
+  }
+}
+
 // Resilient Mock Data Seeds
 const DEFAULT_CAMPAIGNS = [
   { id: 'mc-1', name: 'Google Ads Q2', status: 'active', budget: 500000, spend: 320000, conversions: 240, roas: 420 },
@@ -50,13 +326,13 @@ app.on(['POST', 'GET'], '/api/auth/*', (c) => {
 });
 
 app.post("/api/chat", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
   const db = drizzle(c.env.DB);
   const gemini = new GeminiService(c.env.GEMINI_API_KEY);
   const analysis = new AnalysisService(db);
   const { message, history, role, activeScenario } = await c.req.json();
-  
-  // Mocking userId for now
-  const userId = "test-user";
   
   try {
     let context = "";
@@ -98,8 +374,10 @@ app.post("/api/chat", async (c) => {
 
 // Marketing campaigns API
 app.get("/api/marketing/campaigns", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
   const db = drizzle(c.env.DB);
-  const userId = "test-user";
   try {
     const results = await db.select().from(marketingCampaigns).where(eq(marketingCampaigns.userId, userId)).all();
     return c.json(results.length > 0 ? results : campaignsStore);
@@ -110,8 +388,10 @@ app.get("/api/marketing/campaigns", async (c) => {
 });
 
 app.post("/api/marketing/campaigns", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
   const db = drizzle(c.env.DB);
-  const userId = "test-user";
   
   try {
     const body = await c.req.json();
@@ -184,8 +464,10 @@ app.post("/api/marketing/generate-ideas", async (c) => {
 
 // HR Employees API
 app.get("/api/hr/employees", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
   const db = drizzle(c.env.DB);
-  const userId = "test-user";
   try {
     const results = await db.select().from(employees).where(eq(employees.userId, userId)).all();
     return c.json(results.length > 0 ? results : employeesStore);
@@ -196,8 +478,10 @@ app.get("/api/hr/employees", async (c) => {
 });
 
 app.post("/api/hr/employees", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
   const db = drizzle(c.env.DB);
-  const userId = "test-user";
   
   try {
     const body = await c.req.json();
@@ -282,8 +566,10 @@ app.post("/api/hr/generate-doc", async (c) => {
 });
 
 app.get("/api/cfo/saas-config", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
   const db = drizzle(c.env.DB);
-  const userId = "test-user";
   try {
     const config = await db.select().from(saasConfigs).where(eq(saasConfigs.userId, userId)).get();
     if (!config) {
@@ -302,8 +588,10 @@ app.get("/api/cfo/saas-config", async (c) => {
 });
 
 app.post("/api/cfo/saas-config", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
   const db = drizzle(c.env.DB);
-  const userId = "test-user";
   try {
     const { startingMrr, churnRate, cac, arpu } = await c.req.json();
     const existing = await db.select().from(saasConfigs).where(eq(saasConfigs.userId, userId)).get();
@@ -342,9 +630,11 @@ app.post("/api/cfo/saas-config", async (c) => {
 });
 
 app.get("/api/cfo/runway", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
   const db = drizzle(c.env.DB);
   const analysis = new AnalysisService(db);
-  const userId = "test-user";
   try {
     const runwayData = await analysis.calculateRunwayAndBurn(userId);
     return c.json(runwayData);
@@ -355,10 +645,12 @@ app.get("/api/cfo/runway", async (c) => {
 });
 
 app.get("/api/insights", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
   const db = drizzle(c.env.DB);
   const gemini = new GeminiService(c.env.GEMINI_API_KEY);
   const analysis = new AnalysisService(db);
-  const userId = "test-user";
   
   try {
     const advice = await analysis.getFinancialAdvice(userId, gemini);
@@ -392,15 +684,19 @@ app.get("/api/insights", async (c) => {
 });
 
 app.get("/api/accounts", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
   const db = drizzle(c.env.DB);
-  const userId = "test-user";
   const results = await db.select().from(financialAccounts).where(eq(financialAccounts.userId, userId)).all();
   return c.json(results);
 });
 
 app.post("/api/accounts", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
   const db = drizzle(c.env.DB);
-  const userId = "test-user";
   const body = await c.req.json();
   
   const newAccount = {
@@ -419,17 +715,21 @@ app.post("/api/accounts", async (c) => {
 });
 
 app.get("/api/transactions", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
   const db = drizzle(c.env.DB);
-  const userId = "test-user";
   const results = await db.select().from(transactions).where(eq(transactions.userId, userId)).all();
   return c.json(results);
 });
 
 app.post("/api/transactions", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
   const db = drizzle(c.env.DB);
   const gemini = new GeminiService(c.env.GEMINI_API_KEY);
   const analysis = new AnalysisService(db);
-  const userId = "test-user";
   const body = await c.req.json();
   
   let category = body.category;
@@ -459,14 +759,19 @@ app.post("/api/transactions", async (c) => {
 });
 
 app.get('/api/users', async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
   const db = drizzle(c.env.DB)
   const allUsers = await db.select().from(users).all()
   return c.json(allUsers)
 })
 
 app.get("/api/budgets", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
   const db = drizzle(c.env.DB);
-  const userId = "test-user";
   try {
     const results = await db.select().from(budgets).where(eq(budgets.userId, userId)).all();
     return c.json(results);
@@ -477,8 +782,10 @@ app.get("/api/budgets", async (c) => {
 });
 
 app.post("/api/budgets", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
   const db = drizzle(c.env.DB);
-  const userId = "test-user";
   const body = await c.req.json();
   
   const newBudget = {
@@ -497,13 +804,15 @@ app.post("/api/budgets", async (c) => {
 
 // Plaid endpoints
 app.post("/api/plaid/create-link-token", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
   try {
     const plaid = new PlaidService({
       clientId: c.env.PLAID_CLIENT_ID,
       secret: c.env.PLAID_SECRET,
       environment: c.env.PLAID_ENV || 'sandbox',
     });
-    const userId = "test-user";
     const linkToken = await plaid.createLinkToken(userId);
     return c.json({ linkToken });
   } catch (error: any) {
@@ -512,8 +821,10 @@ app.post("/api/plaid/create-link-token", async (c) => {
 });
 
 app.post("/api/plaid/exchange-token", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
   const db = drizzle(c.env.DB);
-  const userId = "test-user";
   
   try {
     const plaid = new PlaidService({
@@ -627,8 +938,10 @@ app.post("/api/plaid/exchange-token", async (c) => {
 });
 
 app.post("/api/plaid/sync-transactions", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
   const db = drizzle(c.env.DB);
-  const userId = "test-user";
   
   try {
     const plaid = new PlaidService({

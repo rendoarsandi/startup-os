@@ -74,21 +74,21 @@ export const Chat: React.FC<ChatProps> = ({ activeRole, seedPrompt, setSeedPromp
   ] : [];
 
   return (
-    <div className="fixed bottom-8 right-8 z-50">
+    <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-50">
       {/* Toggle Button */}
       {!isOpen && (
         <button 
           onClick={() => setIsOpen(true)}
-          className="w-16 h-16 rounded-2xl bg-primary shadow-2xl shadow-primary/40 flex items-center justify-center text-white transition-all duration-300 hover:scale-110 active:scale-95 group cursor-pointer"
+          className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-primary shadow-2xl shadow-primary/40 flex items-center justify-center text-white transition-all duration-300 hover:scale-110 active:scale-95 group cursor-pointer"
         >
-          <MessageCircle size={28} className="group-hover:rotate-12 transition-transform" />
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-secondary rounded-full border-2 border-background animate-bounce" />
+          <MessageCircle className="w-6 h-6 sm:w-7 sm:h-7 group-hover:rotate-12 transition-transform" />
+          <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-secondary rounded-full border-2 border-background animate-bounce" />
         </button>
       )}
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="w-[400px] h-[600px] glass-card flex flex-col shadow-[0_32px_64px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-bottom-8 duration-300">
+        <div className="w-[calc(100vw-2rem)] sm:w-[400px] h-[calc(100vh-6rem)] sm:h-[600px] glass-card flex flex-col shadow-[0_32px_64px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-bottom-8 duration-300">
           {/* Header */}
           <div className="p-6 border-b border-border flex items-center justify-between bg-white/5 rounded-t-2xl">
             <div className="flex items-center gap-3">
@@ -159,7 +159,7 @@ export const Chat: React.FC<ChatProps> = ({ activeRole, seedPrompt, setSeedPromp
                 }`}>
                   {msg.role === 'user' ? <User size={16} /> : <RoleIcon />}
                 </div>
-                <div className={`max-w-[80%] p-3 rounded-2xl text-sm leading-relaxed ${
+                <div className={`max-w-[85%] p-3 rounded-2xl text-sm leading-relaxed break-words whitespace-pre-wrap ${
                   msg.role === 'user' 
                     ? 'bg-secondary/10 text-white rounded-tr-none' 
                     : 'bg-white/5 text-white/90 rounded-tl-none border border-white/5'
