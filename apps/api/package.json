@@ -2,9 +2,9 @@
   "name": "api",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy --minify",
-    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "dev": "wrangler dev --config ../../wrangler.jsonc",
+    "deploy": "wrangler deploy --config ../../wrangler.jsonc --minify",
+    "cf-typegen": "wrangler types --config ../../wrangler.jsonc --env-interface CloudflareBindings",
     "test": "vitest run"
   },
   "dependencies": {
