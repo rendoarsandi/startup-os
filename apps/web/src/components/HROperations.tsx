@@ -62,9 +62,15 @@ interface ExpenseClaim {
   date: string;
 }
 
-export const HROperations: React.FC = () => {
+export const HROperations: React.FC<{
+  activeTab?: 'attendance' | 'leaves' | 'expenses';
+  onTabChange?: (tab: 'attendance' | 'leaves' | 'expenses') => void;
+}> = ({ activeTab: propActiveTab, onTabChange }) => {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'attendance' | 'leaves' | 'expenses'>('attendance');
+  const [localActiveTab, setLocalActiveTab] = useState<'attendance' | 'leaves' | 'expenses'>('attendance');
+  
+  const activeTab = propActiveTab || localActiveTab;
+  const setActiveTab = onTabChange || setLocalActiveTab;
   const [selectedEmpId, setSelectedEmpId] = useState('');
 
   // Leaves & Expense Form State

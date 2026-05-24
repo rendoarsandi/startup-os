@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { 
   LayoutDashboard, Wallet, PieChart, TrendingUp, Settings, LogOut, Bell, Search, 
-  Users, Sparkles, Briefcase, Award, Menu, Package, FileText, CheckSquare, Ticket, ChevronDown
+  Users, Sparkles, Briefcase, Award, Menu, Package, FileText, CheckSquare, Ticket, ChevronDown, Calendar
 } from 'lucide-react';
 import { Button } from './ui/button';
 import {
@@ -26,9 +26,11 @@ interface LayoutProps {
   setActiveRole: (role: 'cfo' | 'marketer' | 'hr' | 'operations') => void;
   userName?: string;
   onSignOut?: () => void;
+  currentView: string;
+  onViewChange: (view: string) => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, activeRole, setActiveRole, userName, onSignOut }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, activeRole, setActiveRole, userName, onSignOut, currentView, onViewChange }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -168,42 +170,129 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeRole, setActiveR
             <div className="px-3 pb-2 text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
               ERP WORKSPACE MODULES
             </div>
-            <NavLink icon={<LayoutDashboard size={16} />} label="Operational Hub" active />
+            <NavLink 
+              icon={<LayoutDashboard size={16} />} 
+              label="Operational Hub" 
+              active={currentView === 'dashboard'} 
+              onClick={() => onViewChange('dashboard')}
+            />
             
             {activeRole === 'cfo' && (
               <>
-                <NavLink icon={<FileText size={16} />} label="Sales & Bills" />
-                <NavLink icon={<Wallet size={16} />} label="Ledger Logs" />
-                <NavLink icon={<PieChart size={16} />} label="Budget Limits" />
-                <NavLink icon={<TrendingUp size={16} />} label="Forecasting" />
+                <NavLink 
+                  icon={<FileText size={16} />} 
+                  label="Sales & Bills" 
+                  active={currentView === 'invoices'}
+                  onClick={() => onViewChange('invoices')}
+                />
+                <NavLink 
+                  icon={<Wallet size={16} />} 
+                  label="Ledger Logs" 
+                  active={currentView === 'ledger'}
+                  onClick={() => onViewChange('ledger')}
+                />
+                <NavLink 
+                  icon={<PieChart size={16} />} 
+                  label="Budget Limits" 
+                  active={currentView === 'budgets'}
+                  onClick={() => onViewChange('budgets')}
+                />
+                <NavLink 
+                  icon={<TrendingUp size={16} />} 
+                  label="Forecasting" 
+                  active={currentView === 'forecasting'}
+                  onClick={() => onViewChange('forecasting')}
+                />
               </>
             )}
             {activeRole === 'marketer' && (
               <>
-                <NavLink icon={<Users size={16} />} label="CRM Pipeline" />
-                <NavLink icon={<Sparkles size={16} />} label="Campaign Ideas" />
-                <NavLink icon={<TrendingUp size={16} />} label="Funnel Analysis" />
+                <NavLink 
+                  icon={<Users size={16} />} 
+                  label="CRM Pipeline" 
+                  active={currentView === 'crm'}
+                  onClick={() => onViewChange('crm')}
+                />
+                <NavLink 
+                  icon={<Sparkles size={16} />} 
+                  label="Campaign Ideas" 
+                  active={currentView === 'campaigns'}
+                  onClick={() => onViewChange('campaigns')}
+                />
+                <NavLink 
+                  icon={<TrendingUp size={16} />} 
+                  label="Funnel Analysis" 
+                  active={currentView === 'funnel'}
+                  onClick={() => onViewChange('funnel')}
+                />
               </>
             )}
             {activeRole === 'hr' && (
               <>
-                <NavLink icon={<CheckSquare size={16} />} label="HR Boardroom" />
-                <NavLink icon={<Users size={16} />} label="Roster logs" />
-                <NavLink icon={<Award size={16} />} label="AI Document Suite" />
+                <NavLink 
+                  icon={<CheckSquare size={16} />} 
+                  label="HR Boardroom" 
+                  active={currentView === 'boardroom'}
+                  onClick={() => onViewChange('boardroom')}
+                />
+                <NavLink 
+                  icon={<Users size={16} />} 
+                  label="Roster Logs" 
+                  active={currentView === 'roster'}
+                  onClick={() => onViewChange('roster')}
+                />
+                <NavLink 
+                  icon={<Award size={16} />} 
+                  label="AI Document Suite" 
+                  active={currentView === 'documents'}
+                  onClick={() => onViewChange('documents')}
+                />
+                <NavLink 
+                  icon={<Calendar size={16} />} 
+                  label="Attendance & Leaves" 
+                  active={currentView === 'attendance'}
+                  onClick={() => onViewChange('attendance')}
+                />
+                <NavLink 
+                  icon={<FileText size={16} />} 
+                  label="Expense Claims" 
+                  active={currentView === 'expenses'}
+                  onClick={() => onViewChange('expenses')}
+                />
               </>
             )}
             {activeRole === 'operations' && (
               <>
-                <NavLink icon={<Package size={16} />} label="Inventory & Stock" />
-                <NavLink icon={<Briefcase size={16} />} label="Projects & Tasks" />
-                <NavLink icon={<Ticket size={16} />} label="Support Helpdesk" />
+                <NavLink 
+                  icon={<Package size={16} />} 
+                  label="Inventory & Stock" 
+                  active={currentView === 'inventory'}
+                  onClick={() => onViewChange('inventory')}
+                />
+                <NavLink 
+                  icon={<Briefcase size={16} />} 
+                  label="Projects & Tasks" 
+                  active={currentView === 'projects'}
+                  onClick={() => onViewChange('projects')}
+                />
+                <NavLink 
+                  icon={<Ticket size={16} />} 
+                  label="Support Helpdesk" 
+                  active={currentView === 'tickets'}
+                  onClick={() => onViewChange('tickets')}
+                />
               </>
             )}
             
             <div className="pt-6 pb-2 px-3 text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
               SYSTEM
             </div>
-            <NavLink icon={<Settings size={16} />} label="System Settings" />
+            <NavLink 
+              icon={<Settings size={16} />} 
+              label="System Settings" 
+              active={currentView === 'settings'}
+              onClick={() => onViewChange('settings')}
+            />
           </nav>
 
           {/* Sidebar Footer with Sign Out */}
@@ -315,10 +404,18 @@ interface NavLinkProps {
   icon: React.ReactNode;
   label: string;
   active?: boolean;
+  onClick?: () => void;
 }
 
-const NavLink: React.FC<NavLinkProps> = ({ icon, label, active }) => (
-  <a href="#" className={cn("nav-link", active && "active")} onClick={(e) => e.preventDefault()}>
+const NavLink: React.FC<NavLinkProps> = ({ icon, label, active, onClick }) => (
+  <a 
+    href="#" 
+    className={cn("nav-link", active && "active")} 
+    onClick={(e) => {
+      e.preventDefault();
+      if (onClick) onClick();
+    }}
+  >
     {icon}
     <span>{label}</span>
   </a>

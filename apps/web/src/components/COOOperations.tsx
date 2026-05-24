@@ -69,9 +69,15 @@ interface SupportTicket {
   createdAt: string;
 }
 
-export const COOOperations: React.FC = () => {
+export const COOOperations: React.FC<{
+  activeTab?: 'inventory' | 'projects' | 'tickets';
+  onTabChange?: (tab: 'inventory' | 'projects' | 'tickets') => void;
+}> = ({ activeTab: propActiveTab, onTabChange }) => {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'inventory' | 'projects' | 'tickets'>('inventory');
+  const [localActiveTab, setLocalActiveTab] = useState<'inventory' | 'projects' | 'tickets'>('inventory');
+  
+  const activeTab = propActiveTab || localActiveTab;
+  const setActiveTab = onTabChange || setLocalActiveTab;
   
   // Selection
   const [selectedProjId, setSelectedProjId] = useState('');

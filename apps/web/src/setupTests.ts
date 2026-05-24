@@ -20,4 +20,11 @@ beforeAll(() => {
       json: () => Promise.resolve({}),
     });
   }) as any;
+
+  class ResizeObserverMock {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  globalThis.ResizeObserver = ResizeObserverMock;
 });
