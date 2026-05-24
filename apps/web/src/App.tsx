@@ -13,10 +13,25 @@ import { CRMPipeline } from './components/CRMPipeline'
 import { HROperations } from './components/HROperations'
 import { COOOperations } from './components/COOOperations'
 import { useState, useEffect } from 'react'
+import { Loader2 } from 'lucide-react'
 
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useTransactions } from './hooks/useTransactions'
 import { calculateCustomProjections } from './hooks/useScenario'
+
+import { Card } from './components/ui/card'
+import { Button } from './components/ui/button'
+import { Input } from './components/ui/input'
+import { Badge } from './components/ui/badge'
+import { Slider } from './components/ui/slider'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './components/ui/select'
+import { Tabs, TabsList, TabsTrigger } from './components/ui/tabs'
 
 function App() {
   const [activeRole, setActiveRole] = useState<'cfo' | 'marketer' | 'hr' | 'operations'>('cfo');
@@ -164,7 +179,7 @@ function App() {
   // Calculate dynamic stats
   const totalBalanceCents = accounts.length > 0
     ? accounts.reduce((sum, acc) => sum + acc.balance, 0)
-    : 4259020; // fallback default cents
+    : 0;
 
   const monthlySpendingCents = transactions
     .filter(t => t.amount < 0)
@@ -175,13 +190,13 @@ function App() {
 
   if (loadingSession) {
     return (
-      <div className="min-h-screen w-screen flex flex-col items-center justify-center bg-background relative overflow-hidden">
-        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-primary/20 blur-[130px] rounded-full -z-10 animate-pulse" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-secondary/20 blur-[120px] rounded-full -z-10" />
-        <div className="glass-card p-8 flex flex-col items-center gap-4 max-w-xs w-full border border-white/10 shadow-2xl">
-          <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-semibold text-white/60">Securing environment...</p>
-        </div>
+      <div className="min-h-screen w-screen flex flex-col items-center justify-center bg-background relative overflow-hidden text-foreground">
+        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-primary/10 blur-[130px] rounded-full -z-10 animate-pulse" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-secondary/10 blur-[120px] rounded-full -z-10" />
+        <Card className="p-8 border border-border bg-card/60 backdrop-blur-md flex flex-col items-center gap-4 max-w-xs w-full shadow-2xl">
+          <Loader2 className="h-8 w-8 text-primary animate-spin" />
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Securing environment...</p>
+        </Card>
       </div>
     );
   }
@@ -197,45 +212,41 @@ function App() {
       userName={session.user.name}
       onSignOut={handleSignOut}
     >
-      <div className="space-y-8">
+      <div className="space-y-6">
         {activeRole === 'cfo' && (
           <div className="space-y-6">
             {/* View toggles */}
-            <div className="flex border border-white/5 rounded-lg overflow-hidden bg-white/[0.02] p-[2px] w-full sm:w-auto self-start">
-              <button 
-                onClick={() => setCfoView('overview')}
-                className={`px-4 py-2 text-xs font-bold uppercase rounded-md tracking-wider transition-all cursor-pointer ${cfoView === 'overview' ? 'bg-white/10 text-white font-extrabold' : 'text-white/40 hover:text-white/70'}`}
-              >
-                Financial Analytics
-              </button>
-              <button 
-                onClick={() => setCfoView('invoices')}
-                className={`px-4 py-2 text-xs font-bold uppercase rounded-md tracking-wider transition-all cursor-pointer ${cfoView === 'invoices' ? 'bg-white/10 text-white font-extrabold' : 'text-white/40 hover:text-white/70'}`}
-              >
-                Invoices & Billing Register
-              </button>
-            </div>
+            <Tabs 
+              value={cfoView} 
+              onValueChange={(val) => setCfoView(val as any)} 
+              className="w-full sm:w-auto self-start"
+            >
+              <TabsList className="grid grid-cols-2 w-full sm:w-80 h-9 bg-black/10">
+                <TabsTrigger value="overview" className="py-1 text-[10px]">Financial Analytics</TabsTrigger>
+                <TabsTrigger value="invoices" className="py-1 text-[10px]">Invoices & Billing</TabsTrigger>
+              </TabsList>
+            </Tabs>
 
             {cfoView === 'overview' ? (
               <>
                 <header>
-                  <h2 className="text-3xl font-bold mb-2 text-white">
+                  <h2 className="text-2xl font-bold mb-1 text-foreground tracking-tight">
                     CFO Financial Dashboard
                   </h2>
-                  <p className="text-slate-400 text-sm">Your AI CFO has analyzed 12 new transactions today.</p>
+                  <p className="text-muted-foreground text-xs font-semibold">Your AI CFO has analyzed {transactions.length} transactions.</p>
                 </header>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <StatCard 
                     title="Total Balance" 
                     value={formattedBalance} 
-                    change={accounts.length > 0 ? "Live" : "+2.5%"} 
+                    change={accounts.length > 0 ? "Live" : "No Accounts"} 
                     isPositive={true} 
                   />
                   <StatCard 
                     title="Monthly Spending" 
                     value={formattedSpending} 
-                    change={transactions.length > 0 ? "Calculated" : "-12%"} 
+                    change={transactions.length > 0 ? "Calculated" : "No Spend"} 
                     isPositive={true} 
                   />
                   <StatCard 
@@ -246,158 +257,146 @@ function App() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  <div className="lg:col-span-2 space-y-8">
-                    <div className="glass-card p-8 min-h-[400px]">
-                      <h3 className="text-xl font-bold mb-6">Spending Trends</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2 space-y-6">
+                    <Card className="p-6 min-h-[400px]">
+                      <h3 className="text-base font-bold mb-5 text-foreground/90">Spending Trends</h3>
                       <SpendingTrendChart />
-                    </div>
+                    </Card>
 
-                    <div className="glass-card p-8 min-h-[400px]">
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-xl font-bold">Cash Runway Projections</h3>
-                        <div className="flex items-center gap-3">
-                          <button 
+                    <Card className="p-6 min-h-[400px]">
+                      <div className="flex items-center justify-between mb-5">
+                        <h3 className="text-base font-bold text-foreground/90">Cash Runway Projections</h3>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="outline"
                             onClick={() => setIsParamsOpen(!isParamsOpen)}
-                            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-white/10 hover:border-white/20 bg-white/5 text-white/70 hover:text-white transition-all cursor-pointer animate-pulse"
+                            className="h-8 text-[10px] font-bold px-3 uppercase tracking-wider gap-1.5"
                           >
                             ⚙️ Model Parameters {isParamsOpen ? '▲' : '▼'}
-                          </button>
+                          </Button>
                           {!runwayLoading && customRunway && (
-                            <span className={`text-xs px-2.5 py-1 rounded-md font-bold ${
-                              customRunway.runwayMonths === 'Infinite' 
-                                ? 'bg-green-500/10 text-green-400' 
-                                : customRunway.runwayMonths < 6 
-                                  ? 'bg-red-500/10 text-red-400 animate-pulse' 
-                                  : 'bg-amber-500/10 text-amber-400'
-                            }`}>
+                            <Badge variant={customRunway.runwayMonths === 'Infinite' ? 'success' : customRunway.runwayMonths < 6 ? 'destructive' : 'warning'} className="text-[9px] font-black uppercase tracking-wider py-0.5">
                               {customRunway.runwayMonths === 'Infinite' 
                                 ? 'Profitable' 
                                 : `${customRunway.runwayMonths} Mo. Runway`}
-                            </span>
+                            </Badge>
                           )}
                         </div>
                       </div>
 
                       {isParamsOpen && (
-                        <div className="mb-6 p-6 rounded-xl border border-white/5 bg-white/[0.02] space-y-6 animate-in slide-in-from-top duration-200">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="mb-5 p-5 rounded-xl border border-border bg-black/15 space-y-5 animate-in slide-in-from-top duration-200">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                             <div className="space-y-2">
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-white/60 font-medium">Revenue Growth Rate</span>
-                                <span className="text-primary font-bold">{revGrowth >= 0 ? '+' : ''}{revGrowth}% MoM</span>
+                              <div className="flex justify-between items-center text-[10px] font-bold">
+                                <span className="text-muted-foreground uppercase">Revenue Growth Rate</span>
+                                <span className="text-primary font-black">{revGrowth >= 0 ? '+' : ''}{revGrowth}% MoM</span>
                               </div>
-                              <input 
-                                type="range"
-                                min="-10"
-                                max="20"
-                                step="0.5"
-                                value={revGrowth}
-                                onChange={(e) => setRevGrowth(parseFloat(e.target.value))}
-                                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
+                              <Slider 
+                                min={-10}
+                                max={20}
+                                step={0.5}
+                                value={[revGrowth]}
+                                onValueChange={(val) => setRevGrowth(val[0])}
+                                className="py-2"
                               />
-                              <p className="text-[10px] text-white/30">Compounds baseline monthly revenue.</p>
+                              <p className="text-[9px] text-muted-foreground/60 font-semibold">Compounds baseline monthly revenue.</p>
                             </div>
 
                             <div className="space-y-2">
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-white/60 font-medium">Expense Growth Rate</span>
-                                <span className="text-secondary font-bold">{expGrowth >= 0 ? '+' : ''}{expGrowth}% MoM</span>
+                              <div className="flex justify-between items-center text-[10px] font-bold">
+                                <span className="text-muted-foreground uppercase">Expense Growth Rate</span>
+                                <span className="text-foreground/80 font-black">{expGrowth >= 0 ? '+' : ''}{expGrowth}% MoM</span>
                               </div>
-                              <input 
-                                type="range"
-                                min="-10"
-                                max="20"
-                                step="0.5"
-                                value={expGrowth}
-                                onChange={(e) => setExpGrowth(parseFloat(e.target.value))}
-                                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-secondary"
+                              <Slider 
+                                min={-10}
+                                max={20}
+                                step={0.5}
+                                value={[expGrowth]}
+                                onValueChange={(val) => setExpGrowth(val[0])}
+                                className="py-2"
                               />
-                              <p className="text-[10px] text-white/30">Compounds baseline monthly expenses.</p>
+                              <p className="text-[9px] text-muted-foreground/60 font-semibold">Compounds baseline monthly expenses.</p>
                             </div>
 
                             <div className="space-y-2">
-                              <label className="block text-xs text-white/60 font-medium mb-2.5">Seasonality Profile</label>
-                              <div className="relative">
-                                <select 
-                                  value={seasonalityProfile}
-                                  onChange={(e) => setSeasonalityProfile(e.target.value)}
-                                  className="w-full h-9 bg-black/40 border border-white/10 rounded-lg px-3.5 text-xs text-white/80 focus:outline-none focus:border-primary cursor-pointer appearance-none"
-                                >
-                                  <option value="steady">Steady state (No seasonality)</option>
-                                  <option value="growth">Hyper growth (Q3 surge)</option>
-                                  <option value="summer-dip">Summer Dip (August slump)</option>
-                                </select>
-                                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-white/40 text-[9px]">
-                                  ▼
-                                </div>
-                              </div>
+                              <label className="block text-[10px] text-muted-foreground font-bold uppercase tracking-widest pl-0.5">Seasonality Profile</label>
+                              <Select 
+                                value={seasonalityProfile} 
+                                onValueChange={(val) => setSeasonalityProfile(val)}
+                              >
+                                <SelectTrigger className="w-full text-xs h-9 uppercase font-bold tracking-wider">
+                                  <SelectValue placeholder="Profile" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="steady">Steady state (No seasonality)</SelectItem>
+                                  <SelectItem value="growth">Hyper growth (Q3 surge)</SelectItem>
+                                  <SelectItem value="summer-dip">Summer Dip (August slump)</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
                           </div>
                         </div>
                       )}
 
                       <RunwayProjectionChart projections={customRunway?.projections || []} />
-                    </div>
+                    </Card>
 
-                    <div className="glass-card p-8 min-h-[400px]">
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-xl font-bold">Transaction History</h3>
-                        <button 
+                    <Card className="p-6 min-h-[400px]">
+                      <div className="flex items-center justify-between mb-5">
+                        <h3 className="text-base font-bold text-foreground/90">Transaction History</h3>
+                        <Button 
                           onClick={() => setIsModalOpen(true)}
-                          className="btn-primary flex items-center gap-1.5 text-xs font-bold px-4 py-2 cursor-pointer"
+                          className="h-8 text-[10px] font-bold px-3 uppercase tracking-wider gap-1"
                         >
-                          <span className="text-sm">+</span> Add Transaction
-                        </button>
+                          <span className="text-sm font-semibold">+</span> Add Transaction
+                        </Button>
                       </div>
                       <TransactionList />
-                    </div>
+                    </Card>
                   </div>
 
-                  <div className="space-y-8">
-                    <div className="glass-card p-8">
-                      <h3 className="text-xl font-bold mb-4">SaaS Valuation Metrics</h3>
-                      <div className="space-y-6">
-                        <div className="space-y-2">
-                          <label className="block text-xs text-white/60 font-medium">Starting MRR (USD)</label>
-                          <input 
+                  <div className="space-y-6">
+                    <Card className="p-6">
+                      <h3 className="text-base font-bold mb-4 text-foreground/90">SaaS Valuation Metrics</h3>
+                      <div className="space-y-4">
+                        <div className="space-y-1.5">
+                          <label className="block text-[10px] text-muted-foreground font-bold uppercase tracking-widest pl-0.5">Starting MRR (USD)</label>
+                          <Input 
                             type="number"
-                            value={mrrInput}
+                            value={mrrInput || ''}
                             onChange={(e) => setMrrInput(Number(e.target.value))}
-                            className="w-full h-10 bg-black/40 border border-white/10 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-primary"
                           />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <label className="block text-xs text-white/60 font-medium">Churn Rate (%)</label>
-                            <input 
+                          <div className="space-y-1.5">
+                            <label className="block text-[10px] text-muted-foreground font-bold uppercase tracking-widest pl-0.5">Churn Rate (%)</label>
+                            <Input 
                               type="number"
                               step="0.1"
-                              value={churnInput}
+                              value={churnInput || ''}
                               onChange={(e) => setChurnInput(Number(e.target.value))}
-                              className="w-full h-10 bg-black/40 border border-white/10 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-primary"
                             />
                           </div>
-                          <div className="space-y-2">
-                            <label className="block text-xs text-white/60 font-medium">CAC (USD)</label>
-                            <input 
+                          <div className="space-y-1.5">
+                            <label className="block text-[10px] text-muted-foreground font-bold uppercase tracking-widest pl-0.5">CAC (USD)</label>
+                            <Input 
                               type="number"
-                              value={cacInput}
+                              value={cacInput || ''}
                               onChange={(e) => setCacInput(Number(e.target.value))}
-                              className="w-full h-10 bg-black/40 border border-white/10 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-primary"
                             />
                           </div>
                         </div>
-                        <div className="space-y-2">
-                          <label className="block text-xs text-white/60 font-medium">ARPU (USD)</label>
-                          <input 
+                        <div className="space-y-1.5">
+                          <label className="block text-[10px] text-muted-foreground font-bold uppercase tracking-widest pl-0.5">ARPU (USD)</label>
+                          <Input 
                             type="number"
-                            value={arpuInput}
+                            value={arpuInput || ''}
                             onChange={(e) => setArpuInput(Number(e.target.value))}
-                            className="w-full h-10 bg-black/40 border border-white/10 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-primary"
                           />
                         </div>
-                        <button
+                        <Button
                           onClick={() => saasMutation.mutate({
                             startingMrr: mrrInput * 100,
                             churnRate: Math.round(churnInput * 100),
@@ -405,23 +404,24 @@ function App() {
                             arpu: arpuInput * 100
                           })}
                           disabled={saasMutation.isPending}
-                          className="w-full h-11 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl font-bold text-xs tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                          variant="outline"
+                          className="w-full h-10 text-xs font-bold"
                         >
                           {saasMutation.isPending ? "Updating..." : "Recalculate SaaS Model"}
-                        </button>
+                        </Button>
                       </div>
-                    </div>
+                    </Card>
 
-                    <div className="glass-card p-8">
-                      <h3 className="text-xl font-bold mb-4">Budget Limits</h3>
+                    <Card className="p-6">
+                      <h3 className="text-base font-bold mb-4 text-foreground/90">Budget Limits</h3>
                       <BudgetTracker />
-                    </div>
+                    </Card>
 
-                    <div className="glass-card p-8 space-y-6">
-                      <div className="flex justify-between items-center border-b border-white/5 pb-4">
+                    <Card className="p-6 space-y-4">
+                      <div className="flex justify-between items-center border-b border-border pb-3">
                         <div>
-                          <h3 className="text-xl font-bold">SVB Connected</h3>
-                          <p className="text-[10px] text-white/40 uppercase tracking-widest font-black mt-0.5">Plaid secure credential integration</p>
+                          <h3 className="text-sm font-bold text-foreground">SVB Connected</h3>
+                          <p className="text-[8px] text-muted-foreground uppercase tracking-widest font-black mt-0.5">Plaid secure credential integration</p>
                         </div>
                         {accounts.length > 0 && (
                           <SyncBankButton onSyncSuccess={() => setRefreshKey(prev => prev + 1)} />
@@ -429,25 +429,25 @@ function App() {
                       </div>
                       
                       {accounts.length > 0 ? (
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                           {accounts.map((acc: any) => (
-                            <div key={acc.id} className="flex justify-between items-center p-3 rounded-lg bg-white/5 border border-white/10">
+                            <div key={acc.id} className="flex justify-between items-center p-3 rounded-lg bg-black/10 border border-border/80">
                               <div>
-                                <p className="text-sm font-semibold text-white">{acc.name}</p>
-                                <p className="text-[10px] text-white/40 capitalize">{acc.type}</p>
+                                <p className="text-xs font-bold text-foreground">{acc.name}</p>
+                                <p className="text-[9px] text-muted-foreground capitalize mt-0.5 font-medium">{acc.type}</p>
                               </div>
-                              <p className="text-sm font-bold text-white">
+                              <p className="text-xs font-bold text-foreground font-mono">
                                 ${(acc.balance / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                               </p>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-zinc-500 text-xs">No bank accounts linked yet.</p>
+                        <p className="text-muted-foreground text-xs">No bank accounts linked yet.</p>
                       )}
                       
                       <PlaidLinkButton onSuccess={() => setRefreshKey(prev => prev + 1)} />
-                    </div>
+                    </Card>
                   </div>
                 </div>
               </>
@@ -459,40 +459,32 @@ function App() {
 
         {activeRole === 'marketer' && (
           <div className="space-y-6">
-            <div className="flex border border-white/5 rounded-lg overflow-hidden bg-white/[0.02] p-[2px] w-full sm:w-auto self-start mb-2">
-              <button 
-                onClick={() => setCmoView('crm')}
-                className={`px-4 py-2 text-xs font-bold uppercase rounded-md tracking-wider transition-all cursor-pointer ${cmoView === 'crm' ? 'bg-white/10 text-white font-extrabold' : 'text-white/40 hover:text-white/70'}`}
-              >
-                CRM Lead Pipeline
-              </button>
-              <button 
-                onClick={() => setCmoView('campaigns')}
-                className={`px-4 py-2 text-xs font-bold uppercase rounded-md tracking-wider transition-all cursor-pointer ${cmoView === 'campaigns' ? 'bg-white/10 text-white font-extrabold' : 'text-white/40 hover:text-white/70'}`}
-              >
-                AI Marketing Campaigns
-              </button>
-            </div>
+            <Tabs 
+              value={cmoView} 
+              onValueChange={(val) => setCmoView(val as any)} 
+              className="w-full sm:w-auto self-start"
+            >
+              <TabsList className="grid grid-cols-2 w-full sm:w-80 h-9 bg-black/10">
+                <TabsTrigger value="crm" className="py-1 text-[10px]">CRM Lead Pipeline</TabsTrigger>
+                <TabsTrigger value="campaigns" className="py-1 text-[10px]">AI Marketing Campaigns</TabsTrigger>
+              </TabsList>
+            </Tabs>
             {cmoView === 'crm' ? <CRMPipeline /> : <MarketingDashboard />}
           </div>
         )}
 
         {activeRole === 'hr' && (
           <div className="space-y-6">
-            <div className="flex border border-white/5 rounded-lg overflow-hidden bg-white/[0.02] p-[2px] w-full sm:w-auto self-start mb-2">
-              <button 
-                onClick={() => setChroView('operations')}
-                className={`px-4 py-2 text-xs font-bold uppercase rounded-md tracking-wider transition-all cursor-pointer ${chroView === 'operations' ? 'bg-white/10 text-white font-extrabold' : 'text-white/40 hover:text-white/70'}`}
-              >
-                HR Punch Card & Claims
-              </button>
-              <button 
-                onClick={() => setChroView('roster')}
-                className={`px-4 py-2 text-xs font-bold uppercase rounded-md tracking-wider transition-all cursor-pointer ${chroView === 'roster' ? 'bg-white/10 text-white font-extrabold' : 'text-white/40 hover:text-white/70'}`}
-              >
-                AI Job Desk Roster
-              </button>
-            </div>
+            <Tabs 
+              value={chroView} 
+              onValueChange={(val) => setChroView(val as any)} 
+              className="w-full sm:w-auto self-start"
+            >
+              <TabsList className="grid grid-cols-2 w-full sm:w-80 h-9 bg-black/10">
+                <TabsTrigger value="operations" className="py-1 text-[10px]">HR Punch Card & Claims</TabsTrigger>
+                <TabsTrigger value="roster" className="py-1 text-[10px]">AI Job Desk Roster</TabsTrigger>
+              </TabsList>
+            </Tabs>
             {chroView === 'operations' ? <HROperations /> : <HRDashboard />}
           </div>
         )}
@@ -512,28 +504,28 @@ function App() {
 }
 
 const StatCard = ({ title, value, change, isPositive }: { title: string, value: string, change: string, isPositive: boolean }) => (
-  <div className="glass-card p-6 group hover:border-primary/50 transition-all cursor-default">
-    <p className="text-white/50 text-sm font-medium mb-1">{title}</p>
+  <Card className="p-5 hover:border-primary/30 transition-all cursor-default">
+    <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-2">{title}</p>
     <div className="flex items-end justify-between">
-      <h4 className="text-2xl font-bold">{value}</h4>
-      <span className={`text-xs font-bold px-2 py-1 rounded-lg ${isPositive ? 'bg-green-400/10 text-green-400' : 'bg-red-400/10 text-red-400'}`}>
+      <h4 className="text-xl font-black text-foreground">{value}</h4>
+      <Badge variant={isPositive ? 'success' : 'destructive'} className="text-[9px] font-black py-0.5 tracking-wider">
         {change}
-      </span>
+      </Badge>
     </div>
-  </div>
+  </Card>
 )
 
 export const InsightItem = ({ type, message }: { type: 'opportunity' | 'warning' | 'success', message: string }) => {
-  const colors = {
-    opportunity: 'text-primary border-primary/20 bg-primary/5',
-    warning: 'text-orange-400 border-orange-400/20 bg-orange-400/5',
-    success: 'text-green-400 border-green-400/20 bg-green-400/5',
+  const badgeVariants = {
+    opportunity: 'success' as const,
+    warning: 'warning' as const,
+    success: 'success' as const,
   }
 
   return (
-    <div className={`p-4 rounded-xl border ${colors[type]} flex gap-4 items-center`}>
-      <div className={`w-2 h-2 rounded-full shrink-0 ${type === 'opportunity' ? 'bg-primary' : type === 'warning' ? 'bg-orange-400' : 'bg-green-400'}`} />
-      <p className="text-sm font-medium opacity-90">{message}</p>
+    <div className="p-4 rounded-xl border border-border bg-black/10 flex gap-4 items-center shadow-sm">
+      <Badge variant={badgeVariants[type]} className="w-2.5 h-2.5 rounded-full p-0 shrink-0" />
+      <p className="text-xs font-semibold text-foreground/80">{message}</p>
     </div>
   )
 }
@@ -565,7 +557,8 @@ function SyncBankButton({ onSyncSuccess }: { onSyncSuccess: () => void }) {
 
   return (
     <div className="relative">
-      <button
+      <Button
+        variant="outline"
         onClick={() => {
           if (syncStatus === 'idle') {
             setSyncStatus('syncing');
@@ -573,34 +566,34 @@ function SyncBankButton({ onSyncSuccess }: { onSyncSuccess: () => void }) {
           }
         }}
         disabled={syncStatus === 'syncing'}
-        className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] uppercase font-black bg-white/5 hover:bg-white/10 text-white rounded-md tracking-wider transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        className="h-7 text-[9px] font-bold uppercase tracking-wider"
       >
         <span className={`inline-block text-xs transition-transform duration-1000 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`}>
           🔄
         </span>
         {syncStatus === 'syncing' ? 'Syncing...' : 'Sync Bank'}
-      </button>
+      </Button>
 
       {syncStatus === 'success' && metrics && (
-        <div className="absolute right-0 top-8 z-30 w-56 p-3 bg-zinc-900 border border-green-500/30 rounded-xl shadow-xl text-left animate-in fade-in slide-in-from-top-2 duration-200 text-white">
-          <p className="text-green-400 font-bold text-xs flex items-center gap-1">
+        <Card className="absolute right-0 top-8 z-30 w-56 p-3.5 border border-emerald-500/25 bg-card text-left animate-in fade-in slide-in-from-top-2 duration-200">
+          <p className="text-emerald-400 font-bold text-xs flex items-center gap-1.5">
             <span>✓</span> Bank Sync Complete
           </p>
-          <p className="text-[10px] text-zinc-400 mt-1">
+          <p className="text-[9px] text-muted-foreground mt-1.5 leading-normal font-semibold">
             Successfully updated {metrics.accountsSynced} accounts. Imported {metrics.newTransactionsSynced} new transactions.
           </p>
-        </div>
+        </Card>
       )}
 
       {syncStatus === 'error' && (
-        <div className="absolute right-0 top-8 z-30 w-48 p-3 bg-zinc-900 border border-red-500/30 rounded-xl shadow-xl text-left animate-in fade-in slide-in-from-top-2 duration-200 text-white">
-          <p className="text-red-400 font-bold text-xs flex items-center gap-1">
+        <Card className="absolute right-0 top-8 z-30 w-48 p-3.5 border border-destructive/20 bg-card text-left animate-in fade-in slide-in-from-top-2 duration-200">
+          <p className="text-destructive font-bold text-xs flex items-center gap-1.5">
             <span>✕</span> Sync Failed
           </p>
-          <p className="text-[10px] text-zinc-400 mt-1">
+          <p className="text-[9px] text-muted-foreground mt-1.5 leading-normal font-semibold">
             Please check connection or try again.
           </p>
-        </div>
+        </Card>
       )}
     </div>
   );

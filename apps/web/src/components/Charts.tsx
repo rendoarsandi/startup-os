@@ -53,23 +53,18 @@ export function SpendingTrendChart() {
     .map(([date, amount]) => ({ date, amount }))
     .slice(-14); // Last 14 days
 
-  // If no data, show demo data
-  const displayData = chartData.length > 0 ? chartData : [
-    { date: 'May 1', amount: 120 },
-    { date: 'May 3', amount: 85 },
-    { date: 'May 5', amount: 200 },
-    { date: 'May 7', amount: 45 },
-    { date: 'May 9', amount: 160 },
-    { date: 'May 11', amount: 90 },
-    { date: 'May 13', amount: 240 },
-    { date: 'May 15', amount: 110 },
-    { date: 'May 17', amount: 75 },
-    { date: 'May 19', amount: 190 },
-  ];
+  if (chartData.length === 0) {
+    return (
+      <div className="h-[240px] flex flex-col items-center justify-center text-center p-6 border border-dashed border-border rounded-xl bg-black/5">
+        <p className="text-xs font-semibold text-muted-foreground">No recent transaction trends available.</p>
+        <p className="text-[10px] text-muted-foreground/60 mt-1">Trends will appear once debit transactions are recorded.</p>
+      </div>
+    );
+  }
 
   return (
     <ResponsiveContainer width="100%" height={240}>
-      <AreaChart data={displayData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+      <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
         <defs>
           <linearGradient id="spendGradient" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#00E5FF" stopOpacity={0.25} />
@@ -119,14 +114,16 @@ export function CategoryBreakdownChart() {
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value);
 
-  // Demo data if empty
-  const displayData = chartData.length > 0 ? chartData : [
-    { name: 'Food', value: 450 },
-    { name: 'Transport', value: 280 },
-    { name: 'Entertainment', value: 180 },
-    { name: 'Utilities', value: 150 },
-    { name: 'Healthcare', value: 90 },
-  ];
+  if (chartData.length === 0) {
+    return (
+      <div className="h-[144px] flex flex-col items-center justify-center text-center p-4 border border-dashed border-border rounded-xl bg-black/5">
+        <p className="text-xs font-semibold text-muted-foreground">No category expenses available.</p>
+        <p className="text-[10px] text-muted-foreground/60 mt-1">Expenses will be broken down by category here.</p>
+      </div>
+    );
+  }
+
+  const displayData = chartData;
 
   return (
     <div className="flex items-center gap-6">
@@ -185,20 +182,18 @@ export function RunwayProjectionChart({ projections = [] }: { projections: { mon
     balance: Math.round(p.balance / 100)
   }));
 
-  // Default demo projections if empty
-  const displayData = chartData.length > 0 ? chartData : [
-    { month: 'May', balance: 42590 },
-    { month: 'Jun', balance: 35000 },
-    { month: 'Jul', balance: 28000 },
-    { month: 'Aug', balance: 21000 },
-    { month: 'Sep', balance: 14000 },
-    { month: 'Oct', balance: 7000 },
-    { month: 'Nov', balance: 0 },
-  ];
+  if (chartData.length === 0) {
+    return (
+      <div className="h-[240px] flex flex-col items-center justify-center text-center p-6 border border-dashed border-border rounded-xl bg-black/5">
+        <p className="text-xs font-semibold text-muted-foreground">No runway projections available.</p>
+        <p className="text-[10px] text-muted-foreground/60 mt-1">Projections will appear once accounts are connected and transactions are recorded.</p>
+      </div>
+    );
+  }
 
   return (
     <ResponsiveContainer width="100%" height={240}>
-      <AreaChart data={displayData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+      <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
         <defs>
           <linearGradient id="runwayGradient" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#9D4EDD" stopOpacity={0.25} />

@@ -3,6 +3,21 @@ import {
   Users, Plus, Search, Loader2, AlertCircle, DollarSign, Calendar, ArrowRight, CheckCircle2, XCircle, Edit2
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
 
 interface CRMLead {
   id: string;
@@ -169,38 +184,38 @@ export const CRMPipeline: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-5">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-5">
         <div>
-          <h2 className="text-2xl font-extrabold text-white tracking-tight">Sales CRM & Pipeline</h2>
-          <p className="text-white/40 text-xs mt-1">Track pipeline deals, manage customer opportunities, and monitor conversion velocity.</p>
+          <h2 className="text-2xl font-bold text-foreground tracking-tight">Sales CRM & Pipeline</h2>
+          <p className="text-muted-foreground text-xs mt-1">Track pipeline deals, manage customer opportunities, and monitor conversion velocity.</p>
         </div>
-        <button 
+        <Button 
           onClick={() => { resetForm(); setIsCreateOpen(true); }}
-          className="btn-primary flex items-center gap-2 text-xs font-extrabold h-10 px-4 cursor-pointer self-start sm:self-auto"
+          className="flex items-center gap-2 self-start sm:self-auto"
         >
           <Plus size={14} />
           New Opportunity
-        </button>
+        </Button>
       </header>
 
       {/* CRM Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 border border-white/5 rounded-xl bg-white/[0.01] divide-y md:divide-y-0 md:divide-x divide-white/5 overflow-hidden">
-        <div className="p-5 space-y-1">
-          <p className="text-white/40 text-[10px] font-black uppercase tracking-wider">Combined Pipeline Value</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 border border-border rounded-xl bg-card divide-y md:divide-y-0 md:divide-x divide-border overflow-hidden shadow-md">
+        <div className="p-5 space-y-1 bg-black/10">
+          <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">Combined Pipeline Value</p>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-white">${pipelineValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+            <span className="text-2xl font-black text-foreground">${pipelineValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
             <span className="text-[10px] text-sky-400 font-bold flex items-center gap-0.5"><DollarSign size={10} /> Active Deals</span>
           </div>
         </div>
-        <div className="p-5 space-y-1">
-          <p className="text-white/40 text-[10px] font-black uppercase tracking-wider">Closed Won Revenue</p>
+        <div className="p-5 space-y-1 bg-black/10">
+          <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">Closed Won Revenue</p>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-black text-emerald-400">${wonValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
             <span className="text-[10px] text-emerald-400/70 font-bold flex items-center gap-0.5"><CheckCircle2 size={10} /> Revenue Booked</span>
           </div>
         </div>
-        <div className="p-5 space-y-1">
-          <p className="text-white/40 text-[10px] font-black uppercase tracking-wider">Win Rate Conversion</p>
+        <div className="p-5 space-y-1 bg-black/10">
+          <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">Win Rate Conversion</p>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-black text-indigo-400">
               {leads.length > 0 ? Math.round((leads.filter(l => l.status === 'won').length / leads.length) * 100) : 0}%
@@ -211,42 +226,42 @@ export const CRMPipeline: React.FC = () => {
       </div>
 
       {/* Pipeline Filter Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between border border-white/5 p-3 rounded-xl bg-[#080710]/40 backdrop-blur-md">
+      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between border border-border p-3 rounded-xl bg-card/60 backdrop-blur-md">
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <div className="relative flex-1 sm:flex-none">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={13} />
-            <input 
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={13} />
+            <Input 
               type="text"
               placeholder="Search client/company..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="glass-input pl-9 h-9 text-xs w-full sm:w-56 focus:border-primary/40 bg-white/[0.02]"
+              className="pl-8.5 h-9 text-xs w-full sm:w-56 bg-black/10"
             />
           </div>
 
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-xs">$</span>
-            <input 
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">$</span>
+            <Input 
               type="number"
               placeholder="Min value ($)"
               value={minValue}
               onChange={(e) => setMinValue(e.target.value)}
-              className="glass-input pl-6 h-9 text-xs w-full sm:w-32 focus:border-primary/40 bg-white/[0.02]"
+              className="pl-6 h-9 text-xs w-full sm:w-32 bg-black/10"
             />
           </div>
         </div>
-        <div className="text-right text-[10px] font-bold text-white/40 uppercase tracking-widest hidden sm:block">
+        <div className="text-right text-[10px] font-bold text-muted-foreground uppercase tracking-widest hidden sm:block">
           CRM Opportunity Board
         </div>
       </div>
 
       {/* Kanban Board columns */}
       {isLoading ? (
-        <div className="h-96 border border-white/5 rounded-xl bg-white/[0.01] flex items-center justify-center">
+        <div className="h-96 border border-border rounded-xl bg-card/40 flex items-center justify-center">
           <Loader2 className="animate-spin text-primary" size={24} />
         </div>
       ) : error ? (
-        <div className="p-4 border border-rose-500/10 bg-rose-500/5 text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2">
+        <div className="p-4 border border-destructive/20 bg-destructive/10 text-destructive rounded-xl text-xs font-semibold flex items-center gap-2">
           <AlertCircle size={16} />
           <span>Failed to fetch CRM pipelines records.</span>
         </div>
@@ -261,12 +276,12 @@ export const CRMPipeline: React.FC = () => {
                 className={`border ${stage.border} rounded-xl ${stage.bg} flex flex-col p-3 space-y-3 min-h-[450px] max-h-[600px] overflow-y-auto custom-scrollbar`}
               >
                 {/* Stage Header */}
-                <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                <div className="flex justify-between items-center border-b border-border/40 pb-2">
                   <div>
                     <h4 className={`font-black text-xs ${stage.color}`}>{stage.label}</h4>
-                    <p className="text-[9px] font-bold text-white/30 tracking-wider uppercase mt-0.5">{stageLeads.length} Opportunities</p>
+                    <p className="text-[9px] font-bold text-muted-foreground tracking-wider uppercase mt-0.5">{stageLeads.length} Deals</p>
                   </div>
-                  <span className="text-[10px] font-black text-white/70">${Math.round(totalStageValue).toLocaleString()}</span>
+                  <span className="text-[10px] font-bold text-foreground/80">${Math.round(totalStageValue).toLocaleString()}</span>
                 </div>
 
                 {/* Cards List */}
@@ -275,73 +290,72 @@ export const CRMPipeline: React.FC = () => {
                     <div 
                       key={lead.id}
                       onClick={() => handleOpenEdit(lead)}
-                      className="border border-white/5 p-3 rounded-lg bg-black/40 hover:bg-white/[0.03] hover:border-white/10 transition-all cursor-pointer group space-y-2.5 relative"
+                      className="border border-border/60 p-3 rounded-lg bg-card hover:bg-accent/40 hover:border-primary/20 transition-all cursor-pointer group space-y-2.5 relative shadow-sm"
                     >
                       <div className="flex justify-between items-start gap-1">
-                        <h5 className="font-extrabold text-xs text-white/90 group-hover:text-primary transition-colors leading-tight line-clamp-1">{lead.company}</h5>
-                        <button 
+                        <h5 className="font-extrabold text-xs text-foreground group-hover:text-primary transition-colors leading-tight line-clamp-1">{lead.company}</h5>
+                        <Button 
+                          variant="ghost"
+                          size="icon"
                           onClick={(e) => { e.stopPropagation(); handleOpenEdit(lead); }}
-                          className="w-5 h-5 rounded hover:bg-white/5 flex items-center justify-center text-white/20 hover:text-white transition-colors shrink-0"
+                          className="w-5 h-5 rounded text-muted-foreground hover:text-foreground hover:bg-accent/60"
                         >
                           <Edit2 size={10} />
-                        </button>
+                        </Button>
                       </div>
 
-                      <p className="text-[10px] font-medium text-white/50">{lead.name}</p>
+                      <p className="text-[10px] font-medium text-muted-foreground">{lead.name}</p>
 
-                      <div className="border-t border-white/[0.04] pt-2 flex justify-between items-center text-[10px]">
-                        <span className="font-black text-white">${(lead.value / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                      <div className="border-t border-border/40 pt-2 flex justify-between items-center text-[10px]">
+                        <span className="font-bold text-foreground">${(lead.value / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                         
-                        <div className="flex items-center gap-1.5 text-white/30 text-[9px] font-bold uppercase tracking-tight">
+                        <div className="flex items-center gap-1.5 text-muted-foreground text-[9px] font-bold uppercase tracking-tight">
                           <Calendar size={9} />
                           <span>{new Date(lead.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                         </div>
                       </div>
 
                       {/* Quick stage controls inside card */}
-                      <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity justify-end border-t border-white/[0.04] pt-2">
+                      <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity justify-end border-t border-border/40 pt-2" onClick={(e) => e.stopPropagation()}>
                         {stage.key !== 'won' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateLeadMutation.mutate({ id: lead.id, status: 'won' });
-                            }}
-                            className="p-1 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/10 cursor-pointer"
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => updateLeadMutation.mutate({ id: lead.id, status: 'won' })}
+                            className="p-0 w-6 h-6 rounded bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                             title="Mark Closed Won"
                           >
                             <CheckCircle2 size={10} />
-                          </button>
+                          </Button>
                         )}
                         {stage.key !== 'lost' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateLeadMutation.mutate({ id: lead.id, status: 'lost' });
-                            }}
-                            className="p-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/10 cursor-pointer"
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => updateLeadMutation.mutate({ id: lead.id, status: 'lost' })}
+                            className="p-0 w-6 h-6 rounded bg-rose-500/5 hover:bg-rose-500/10 text-rose-400 border-rose-500/20"
                             title="Mark Closed Lost"
                           >
                             <XCircle size={10} />
-                          </button>
+                          </Button>
                         )}
                         {stage.key !== 'proposal' && stage.key !== 'won' && stage.key !== 'lost' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateLeadMutation.mutate({ id: lead.id, status: 'proposal' });
-                            }}
-                            className="p-1 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/10 cursor-pointer"
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => updateLeadMutation.mutate({ id: lead.id, status: 'proposal' })}
+                            className="p-0 w-6 h-6 rounded bg-amber-500/5 hover:bg-amber-500/10 text-amber-400 border-amber-500/20"
                             title="Send Proposal"
                           >
                             <ArrowRight size={10} />
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </div>
                   ))}
                   {stageLeads.length === 0 && (
-                    <div className="h-32 border border-dashed border-white/5 rounded-lg flex items-center justify-center text-center text-[10px] text-white/20">
-                      Drag or move leads here
+                    <div className="h-28 border border-dashed border-border/60 rounded-lg flex items-center justify-center text-center text-[10px] text-muted-foreground/40 font-medium">
+                      No active leads
                     </div>
                   )}
                 </div>
@@ -352,127 +366,130 @@ export const CRMPipeline: React.FC = () => {
       )}
 
       {/* CRM Opportunity Creator & Editor Drawers */}
-      {(isCreateOpen || isEditOpen) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="glass-card max-w-md w-full border-primary/20 bg-gradient-to-b from-[#0e0c1b] to-[#080710] p-6 space-y-5 animate-in zoom-in-95 duration-200 shadow-2xl relative overflow-hidden">
-            
-            <header className="flex items-center justify-between border-b border-white/5 pb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                  <Users size={15} className="text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-white text-base">{isCreateOpen ? "Create Opportunity" : "Modify Opportunity"}</h3>
-                  <p className="text-[10px] text-white/40 uppercase tracking-widest font-black mt-0.5">Register customer pipeline lead</p>
-                </div>
+      <Dialog 
+        open={isCreateOpen || isEditOpen} 
+        onOpenChange={(open) => { 
+          if (!open) { 
+            setIsCreateOpen(false); 
+            setIsEditOpen(false); 
+            setSelectedLead(null); 
+            resetForm();
+          } 
+        }}
+      >
+        <DialogContent className="max-w-md w-full border-border bg-card p-6 shadow-2xl relative overflow-hidden">
+          <DialogHeader className="border-b border-border pb-4 mb-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                <Users size={15} />
               </div>
-              <button 
-                onClick={() => { setIsCreateOpen(false); setIsEditOpen(false); setSelectedLead(null); }}
-                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors cursor-pointer font-bold"
+              <div>
+                <DialogTitle className="text-base font-extrabold text-foreground">
+                  {isCreateOpen ? "Create Opportunity" : "Modify Opportunity"}
+                </DialogTitle>
+                <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-black mt-0.5">Register customer pipeline lead</p>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <form onSubmit={isCreateOpen ? handleCreateSubmit : handleEditSubmit} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Company Name</label>
+              <Input 
+                type="text"
+                required
+                value={leadCompany}
+                onChange={(e) => setLeadCompany(e.target.value)}
+                placeholder="e.g. Stark Industries"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Contact Name</label>
+              <Input 
+                type="text"
+                required
+                value={leadName}
+                onChange={(e) => setLeadName(e.target.value)}
+                placeholder="e.g. Tony Stark"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Email (Optional)</label>
+                <Input 
+                  type="email"
+                  value={leadEmail}
+                  onChange={(e) => setLeadEmail(e.target.value)}
+                  placeholder="e.g. tony@stark.io"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Phone (Optional)</label>
+                <Input 
+                  type="text"
+                  value={leadPhone}
+                  onChange={(e) => setLeadPhone(e.target.value)}
+                  placeholder="e.g. +1-555-1234"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Deal Value ($)</label>
+                <Input 
+                  type="number"
+                  required
+                  min="0"
+                  value={leadValue}
+                  onChange={(e) => setLeadValue(e.target.value)}
+                  placeholder="e.g. 50000"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Pipeline Stage</label>
+                <Select 
+                  value={leadStage} 
+                  onValueChange={(val) => setLeadStage(val as any)}
+                >
+                  <SelectTrigger className="w-full text-xs uppercase font-bold tracking-wider">
+                    <SelectValue placeholder="STAGE" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="lead">NEW LEAD</SelectItem>
+                    <SelectItem value="contacted">CONTACTED</SelectItem>
+                    <SelectItem value="proposal">PROPOSAL SENT</SelectItem>
+                    <SelectItem value="won">CLOSED WON</SelectItem>
+                    <SelectItem value="lost">CLOSED LOST</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button 
+                type="submit" 
+                disabled={isSaving}
+                className="flex-1 h-10 text-xs font-bold gap-1.5"
               >
-                ✕
-              </button>
-            </header>
-
-            <form onSubmit={isCreateOpen ? handleCreateSubmit : handleEditSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Company Name</label>
-                <input 
-                  type="text"
-                  required
-                  value={leadCompany}
-                  onChange={(e) => setLeadCompany(e.target.value)}
-                  placeholder="e.g. Stark Industries"
-                  className="glass-input bg-white/[0.01]"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Contact Name</label>
-                <input 
-                  type="text"
-                  required
-                  value={leadName}
-                  onChange={(e) => setLeadName(e.target.value)}
-                  placeholder="e.g. Tony Stark"
-                  className="glass-input bg-white/[0.01]"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Email (Optional)</label>
-                  <input 
-                    type="email"
-                    value={leadEmail}
-                    onChange={(e) => setLeadEmail(e.target.value)}
-                    placeholder="e.g. tony@stark.io"
-                    className="glass-input bg-white/[0.01] text-xs"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Phone (Optional)</label>
-                  <input 
-                    type="text"
-                    value={leadPhone}
-                    onChange={(e) => setLeadPhone(e.target.value)}
-                    placeholder="e.g. +1-555-1234"
-                    className="glass-input bg-white/[0.01] text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Deal Value ($)</label>
-                  <input 
-                    type="number"
-                    required
-                    min="0"
-                    value={leadValue}
-                    onChange={(e) => setLeadValue(e.target.value)}
-                    placeholder="e.g. 50000"
-                    className="glass-input bg-white/[0.01]"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Pipeline Stage</label>
-                  <select
-                    value={leadStage}
-                    onChange={(e) => setLeadStage(e.target.value as any)}
-                    className="glass-input bg-[#080710] pr-8 cursor-pointer uppercase font-bold text-xs"
-                  >
-                    <option value="lead">NEW LEAD</option>
-                    <option value="contacted">CONTACTED</option>
-                    <option value="proposal">PROPOSAL SENT</option>
-                    <option value="won">CLOSED WON</option>
-                    <option value="lost">CLOSED LOST</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <button 
-                  type="submit" 
-                  disabled={isSaving}
-                  className="btn-primary flex-1 h-11 text-xs font-extrabold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                >
-                  {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Users size={14} />}
-                  <span>{isCreateOpen ? "Create opportunity" : "Save changes"}</span>
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => { setIsCreateOpen(false); setIsEditOpen(false); setSelectedLead(null); }}
-                  className="btn-secondary h-11 px-4 text-xs font-bold"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Users size={13} />}
+                <span>{isCreateOpen ? "Create Opportunity" : "Save Changes"}</span>
+              </Button>
+              <Button 
+                type="button"
+                variant="outline"
+                onClick={() => { setIsCreateOpen(false); setIsEditOpen(false); setSelectedLead(null); resetForm(); }}
+                className="h-10 px-4 text-xs font-bold"
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

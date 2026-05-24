@@ -214,9 +214,9 @@ describe('STARTUP OS - Full Integration & End-to-End Test', () => {
     expect(await screen.findByText(/Finance & Accounting/i)).toBeInTheDocument();
 
     // 11. Open AI CFO Chat Drawer
-    const chatToggle = container.querySelector('button.bg-primary');
+    const chatToggle = screen.getByRole('button', { name: /Open chat/i });
     expect(chatToggle).toBeTruthy();
-    fireEvent.click(chatToggle!);
+    fireEvent.click(chatToggle);
 
     // Verify AI Chat greeting is shown
     const chatGreeting = await screen.findByText(/How can I help you manage your finances/i);

@@ -1,11 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, Plus, Play, Pause, TrendingUp, BarChart3, 
-  DollarSign, Target, Percent, Loader2, AlertCircle, RefreshCw, Copy, Check
+  DollarSign, Target, Percent, Loader2, AlertCircle, RefreshCw, Copy, Check, X
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend
 } from 'recharts';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Badge } from './ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './ui/table';
 
 interface Campaign {
   id: string;
@@ -163,157 +182,158 @@ export const MarketingDashboard: React.FC = () => {
     <div className="space-y-8">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold mb-1.5 text-white tracking-tight">
+          <h2 className="text-3xl font-bold mb-1.5 text-foreground tracking-tight">
             CMO Growth Room
           </h2>
-          <p className="text-slate-400 text-sm font-medium">Brainstorm concepts, track returns, and align growth strategies with Gemini AI.</p>
+          <p className="text-muted-foreground text-sm font-medium">Brainstorm concepts, track returns, and align growth strategies with Gemini AI.</p>
         </div>
-        <button 
+        <Button 
           onClick={() => setIsFormOpen(!isFormOpen)}
-          className="btn-primary h-12 text-sm font-extrabold flex items-center gap-2 cursor-pointer self-start md:self-auto"
+          className="h-10 text-xs font-bold gap-2 self-start md:self-auto"
         >
-          <Plus size={16} />
+          <Plus size={14} />
           <span>New Campaign</span>
-        </button>
+        </Button>
       </header>
 
       {/* New Campaign Modal / Form Panel */}
       {isFormOpen && (
-        <div className="glass-card p-6 border-primary/20 bg-gradient-to-b from-primary/5 to-transparent animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="flex items-center gap-2 mb-5">
-            <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
-              <Sparkles size={14} className="text-primary animate-pulse" />
-            </div>
-            <h3 className="text-base font-extrabold text-white">Create New Marketing Campaign</h3>
-          </div>
-          <form onSubmit={handleCreateCampaign} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Campaign Name</label>
-              <input 
-                type="text"
-                required
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="e.g. Meta Retargeting"
-                className="glass-input"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Budget ($ USD)</label>
-              <input 
-                type="number"
-                required
-                min="1"
-                value={newBudget}
-                onChange={(e) => setNewBudget(e.target.value)}
-                placeholder="e.g. 5000"
-                className="glass-input"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Initial Status</label>
-              <div className="relative">
-                <select
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value as 'active' | 'paused')}
-                  className="glass-input appearance-none pr-8 cursor-pointer"
-                >
-                  <option value="active">Active</option>
-                  <option value="paused">Paused</option>
-                </select>
-                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-white/30 text-xs">
-                  ▼
-                </div>
+        <Card className="border-primary/20 bg-card/60 backdrop-blur-md animate-in fade-in duration-300">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                <Sparkles size={14} />
               </div>
+              <CardTitle className="text-sm font-bold">Create New Marketing Campaign</CardTitle>
             </div>
-            <div className="flex gap-2">
-              <button 
-                type="submit" 
-                disabled={isSaving}
-                className="btn-primary flex-1 h-[46px] justify-center flex items-center gap-1.5 cursor-pointer text-xs font-bold"
-              >
-                {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                <span>Create</span>
-              </button>
-              <button 
-                type="button"
-                onClick={() => setIsFormOpen(false)}
-                className="btn-secondary h-[46px] text-xs font-bold"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleCreateCampaign} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Campaign Name</label>
+                <Input 
+                  type="text"
+                  required
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="e.g. Meta Retargeting"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Budget ($ USD)</label>
+                <Input 
+                  type="number"
+                  required
+                  min="1"
+                  value={newBudget}
+                  onChange={(e) => setNewBudget(e.target.value)}
+                  placeholder="e.g. 5000"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Initial Status</label>
+                <Select 
+                  value={newStatus} 
+                  onValueChange={(val) => setNewStatus(val as any)}
+                >
+                  <SelectTrigger className="w-full text-xs font-bold uppercase tracking-wider h-10">
+                    <SelectValue placeholder="STATUS" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">ACTIVE</SelectItem>
+                    <SelectItem value="paused">PAUSED</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  type="submit" 
+                  disabled={isSaving}
+                  className="flex-1 h-10 text-xs font-bold gap-1.5"
+                >
+                  {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                  <span>Create</span>
+                </Button>
+                <Button 
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsFormOpen(false)}
+                  className="h-10 px-4 text-xs font-bold"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       )}
 
-      {/* High-Fidelity Marketing Stat Cards */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="glass-card p-5 group hover:border-primary/20 transition-all cursor-default relative overflow-hidden">
-          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-primary/5 group-hover:scale-110 transition-transform flex items-center justify-center border border-white/5">
-            <DollarSign size={20} className="text-primary/40" />
+        <Card className="p-5 hover:border-primary/30 transition-all cursor-default relative overflow-hidden group">
+          <div className="absolute -right-3 -top-3 w-14 h-14 rounded-full bg-primary/5 group-hover:scale-105 transition-transform flex items-center justify-center border border-border/30">
+            <DollarSign size={18} className="text-primary" />
           </div>
-          <p className="text-white/40 text-xs font-bold uppercase tracking-wider mb-2">Growth Spend</p>
-          <h4 className="text-2xl font-black tracking-tight">${totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
-          <div className="flex items-center gap-2 text-[10px] text-white/40 mt-3.5">
-            <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden border border-white/5">
+          <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-2">Growth Spend</p>
+          <h4 className="text-2xl font-black tracking-tight text-foreground">${totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
+          <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-3.5">
+            <div className="w-full bg-black/30 h-1.5 rounded-full overflow-hidden border border-border/50">
               <div 
-                className="bg-gradient-to-r from-primary to-secondary h-full transition-all duration-1000 shadow-[0_0_8px_var(--glow-color)]" 
+                className="bg-primary h-full transition-all duration-1000" 
                 style={{ width: `${Math.min((totalSpend / (totalBudget || 1)) * 100, 100)}%` }}
               />
             </div>
-            <span className="shrink-0 font-bold">{Math.round((totalSpend / (totalBudget || 1)) * 100)}% of limit</span>
+            <span className="shrink-0 font-bold">{Math.round((totalSpend / (totalBudget || 1)) * 100)}%</span>
           </div>
-          <p className="text-[9px] text-white/30 mt-2 uppercase tracking-widest font-black">Limit: ${totalBudget.toLocaleString()}</p>
-        </div>
+          <p className="text-[9px] text-muted-foreground/60 mt-2 uppercase tracking-widest font-black">Limit: ${totalBudget.toLocaleString()}</p>
+        </Card>
 
-        <div className="glass-card p-5 group hover:border-primary/20 transition-all cursor-default relative overflow-hidden">
-          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-primary/5 group-hover:scale-110 transition-transform flex items-center justify-center border border-white/5">
-            <Target size={20} className="text-primary/40" />
+        <Card className="p-5 hover:border-primary/30 transition-all cursor-default relative overflow-hidden group">
+          <div className="absolute -right-3 -top-3 w-14 h-14 rounded-full bg-primary/5 group-hover:scale-105 transition-transform flex items-center justify-center border border-border/30">
+            <Target size={18} className="text-primary" />
           </div>
-          <p className="text-white/40 text-xs font-bold uppercase tracking-wider mb-2">Blended CAC</p>
-          <h4 className="text-2xl font-black tracking-tight">${blendedCAC.toFixed(2)}</h4>
-          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/5 border border-emerald-500/10 text-emerald-400 inline-block mt-3.5">
+          <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-2">Blended CAC</p>
+          <h4 className="text-2xl font-black tracking-tight text-foreground">${blendedCAC.toFixed(2)}</h4>
+          <Badge variant="success" className="text-[9px] font-black uppercase tracking-wider mt-3.5">
             Target &lt; $45.00
-          </span>
-          <p className="text-[9px] text-white/30 mt-2.5 uppercase tracking-widest font-black">Optimized dynamically</p>
-        </div>
+          </Badge>
+          <p className="text-[9px] text-muted-foreground/60 mt-2.5 uppercase tracking-widest font-black">Optimized dynamically</p>
+        </Card>
 
-        <div className="glass-card p-5 group hover:border-primary/20 transition-all cursor-default relative overflow-hidden">
-          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-primary/5 group-hover:scale-110 transition-transform flex items-center justify-center border border-white/5">
-            <TrendingUp size={20} className="text-primary/40" />
+        <Card className="p-5 hover:border-primary/30 transition-all cursor-default relative overflow-hidden group">
+          <div className="absolute -right-3 -top-3 w-14 h-14 rounded-full bg-primary/5 group-hover:scale-105 transition-transform flex items-center justify-center border border-border/30">
+            <TrendingUp size={18} className="text-primary" />
           </div>
-          <p className="text-white/40 text-xs font-bold uppercase tracking-wider mb-2">Blended ROAS</p>
-          <h4 className="text-2xl font-black tracking-tight">{avgRoasVal.toFixed(1)}x</h4>
-          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/5 border border-emerald-500/10 text-emerald-400 inline-block mt-3.5">
+          <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-2">Blended ROAS</p>
+          <h4 className="text-2xl font-black tracking-tight text-foreground">{avgRoasVal.toFixed(1)}x</h4>
+          <Badge variant="success" className="text-[9px] font-black uppercase tracking-wider mt-3.5">
             Excellent Efficiency
-          </span>
-          <p className="text-[9px] text-white/30 mt-2.5 uppercase tracking-widest font-black">Calculated last 30d</p>
-        </div>
+          </Badge>
+          <p className="text-[9px] text-muted-foreground/60 mt-2.5 uppercase tracking-widest font-black">Calculated last 30d</p>
+        </Card>
 
-        <div className="glass-card p-5 group hover:border-primary/20 transition-all cursor-default relative overflow-hidden">
-          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-primary/5 group-hover:scale-110 transition-transform flex items-center justify-center border border-white/5">
-            <Percent size={20} className="text-primary/40" />
+        <Card className="p-5 hover:border-primary/30 transition-all cursor-default relative overflow-hidden group">
+          <div className="absolute -right-3 -top-3 w-14 h-14 rounded-full bg-primary/5 group-hover:scale-105 transition-transform flex items-center justify-center border border-border/30">
+            <Percent size={18} className="text-primary" />
           </div>
-          <p className="text-white/40 text-xs font-bold uppercase tracking-wider mb-2">LTV / CAC Ratio</p>
-          <h4 className="text-2xl font-black tracking-tight">{ltvToCac.toFixed(1)}x</h4>
-          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/5 border border-emerald-500/10 text-emerald-400 inline-block mt-3.5">
+          <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-2">LTV / CAC Ratio</p>
+          <h4 className="text-2xl font-black tracking-tight text-foreground">{ltvToCac.toFixed(1)}x</h4>
+          <Badge variant="success" className="text-[9px] font-black uppercase tracking-wider mt-3.5">
             Healthy Unit Model
-          </span>
-          <p className="text-[9px] text-white/30 mt-2.5 uppercase tracking-widest font-black">Benchmark: 3.0x</p>
-        </div>
+          </Badge>
+          <p className="text-[9px] text-muted-foreground/60 mt-2.5 uppercase tracking-widest font-black">Benchmark: 3.0x</p>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Table & Chart */}
         <div className="lg:col-span-2 space-y-6">
           {/* Ad Channels Spend Chart */}
-          <div className="glass-card p-6 relative overflow-hidden">
-            <div className="absolute -right-16 -top-16 w-36 h-36 rounded-full bg-primary/5 blur-2xl pointer-events-none" />
+          <Card className="p-6 relative overflow-hidden shadow-md">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="text-base font-extrabold text-white">Channel Allocations & Return (ROI)</h3>
-                <p className="text-white/40 text-[10px] uppercase tracking-widest font-black mt-0.5">Performance visualizer</p>
+                <CardTitle className="text-sm font-bold">Channel Allocations & Return (ROI)</CardTitle>
+                <p className="text-muted-foreground text-[10px] uppercase tracking-widest font-black mt-0.5">Performance visualizer</p>
               </div>
               <BarChart3 className="text-primary shrink-0" size={18} />
             </div>
@@ -323,7 +343,7 @@ export const MarketingDashboard: React.FC = () => {
                 <Loader2 className="animate-spin text-primary" size={24} />
               </div>
             ) : chartData.length === 0 ? (
-              <div className="h-64 flex items-center justify-center text-white/30 text-xs font-medium">
+              <div className="h-64 flex items-center justify-center text-muted-foreground text-xs font-medium">
                 No active campaign channels found. Setup campaigns to construct charts.
               </div>
             ) : (
@@ -336,8 +356,8 @@ export const MarketingDashboard: React.FC = () => {
                         <stop offset="100%" stopColor="var(--primary)" stopOpacity={0.15} />
                       </linearGradient>
                       <linearGradient id="roiBar" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="var(--secondary)" stopOpacity={0.8} />
-                        <stop offset="100%" stopColor="var(--secondary)" stopOpacity={0.15} />
+                        <stop offset="0%" stopColor="hsl(210, 40%, 98%)" stopOpacity={0.8} />
+                        <stop offset="100%" stopColor="hsl(210, 40%, 98%)" stopOpacity={0.15} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid stroke="rgba(255,255,255,0.03)" vertical={false} />
@@ -357,12 +377,11 @@ export const MarketingDashboard: React.FC = () => {
                       contentStyle={{ 
                         background: 'rgba(8,7,16,0.85)', 
                         border: '1px solid rgba(255,255,255,0.08)', 
-                        borderRadius: '16px',
+                        borderRadius: '8px',
                         color: 'white',
                         fontSize: '11px',
                         fontFamily: 'Outfit, sans-serif',
                         backdropFilter: 'blur(16px)',
-                        boxShadow: '0 8px 32px 0 rgba(0,0,0,0.5)'
                       }}
                       formatter={(v) => [`$${Number(v).toFixed(2)}`]}
                     />
@@ -379,222 +398,225 @@ export const MarketingDashboard: React.FC = () => {
                 </ResponsiveContainer>
               </div>
             )}
-          </div>
+          </Card>
 
-          {/* Interactive Campaigns Grid */}
-          <div className="glass-card p-6 overflow-hidden">
+          {/* Individual Campaigns Table */}
+          <Card className="p-6 shadow-md">
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-base font-extrabold text-white">Growth Operations Dashboard</h3>
-                <p className="text-white/40 text-[10px] uppercase tracking-widest font-black mt-0.5">Individual campaigns monitor</p>
+                <CardTitle className="text-sm font-bold">Growth Operations Dashboard</CardTitle>
+                <p className="text-muted-foreground text-[10px] uppercase tracking-widest font-black mt-0.5">Individual campaigns monitor</p>
               </div>
-              <button 
+              <Button 
+                variant="outline"
+                size="icon"
                 onClick={fetchCampaigns}
-                className="w-8 h-8 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-all cursor-pointer"
+                className="w-8 h-8 rounded-full border-border/80"
                 title="Synchronize Campaigns"
               >
-                <RefreshCw size={14} />
-              </button>
+                <RefreshCw size={12} />
+              </Button>
             </div>
             {loading ? (
               <div className="h-48 flex items-center justify-center">
                 <Loader2 className="animate-spin text-primary" size={24} />
               </div>
             ) : error ? (
-              <div className="p-4 rounded-xl border border-rose-500/10 bg-rose-500/5 text-rose-400 flex items-center gap-2 text-xs font-semibold">
+              <div className="p-4 rounded-xl border border-destructive/20 bg-destructive/10 text-destructive flex items-center gap-2 text-xs font-semibold">
                 <AlertCircle size={16} />
                 <span>{error}</span>
               </div>
             ) : (
-              <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-left text-sm border-collapse">
-                  <thead>
-                    <tr className="border-b border-white/[0.06] text-[9px] uppercase font-black text-white/30 tracking-widest pb-4">
-                      <th className="py-3 px-4">Campaign Name</th>
-                      <th className="py-3 px-4">Status</th>
-                      <th className="py-3 px-4 text-right">Budget Limit</th>
-                      <th className="py-3 px-4 text-right">Actual Spend</th>
-                      <th className="py-3 px-4 text-center">ROAS</th>
-                      <th className="py-3 px-4 text-center">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              <div className="border border-border rounded-lg overflow-hidden bg-black/10">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="pl-4">Campaign Name</TableHead>
+                      <TableHead className="text-center w-28">Status</TableHead>
+                      <TableHead className="text-right w-32">Budget Limit</TableHead>
+                      <TableHead className="text-right w-32">Actual Spend</TableHead>
+                      <TableHead className="text-center w-24">ROAS</TableHead>
+                      <TableHead className="text-center w-20 pr-4">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {campaigns.map((camp) => (
-                      <tr key={camp.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors group">
-                        <td className="py-3.5 px-4 font-bold text-white group-hover:text-primary transition-colors text-xs">
+                      <TableRow key={camp.id}>
+                        <TableCell className="font-bold text-foreground pl-4 text-xs">
                           {camp.name}
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border ${
-                            camp.status === 'active' 
-                              ? 'bg-emerald-500/5 border-emerald-500/10 text-emerald-400' 
-                              : 'bg-white/5 border-white/5 text-white/40'
-                          }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${camp.status === 'active' ? 'bg-emerald-400 animate-pulse' : 'bg-white/20'}`} />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant={camp.status === 'active' ? 'success' : 'outline'} className="text-[9px] font-black uppercase tracking-wider gap-1 py-0.5">
+                            <span className={`w-1.5 h-1.5 rounded-full ${camp.status === 'active' ? 'bg-emerald-400 animate-pulse' : 'bg-muted-foreground'}`} />
                             {camp.status}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-black text-white/80 text-xs">
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-bold text-foreground text-xs">
                           ${(camp.budget / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-black text-white/80 text-xs">
+                        </TableCell>
+                        <TableCell className="text-right font-bold text-foreground text-xs">
                           ${(camp.spend / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-3.5 px-4 text-center font-black text-primary text-xs">
+                        </TableCell>
+                        <TableCell className="text-center font-bold text-primary text-xs">
                           {camp.roas ? `${(camp.roas / 100).toFixed(1)}x` : '-'}
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <button 
+                        </TableCell>
+                        <TableCell className="text-center pr-4">
+                          <Button 
+                            variant="outline"
+                            size="icon"
                             onClick={() => toggleCampaignStatus(camp)}
                             title={camp.status === 'active' ? "Pause Campaign" : "Resume Campaign"}
-                            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer inline-flex border ${
+                            className={`w-7 h-7 rounded-lg ${
                               camp.status === 'active' 
-                                ? 'bg-amber-500/5 border-amber-500/10 text-amber-400 hover:bg-amber-500/15' 
-                                : 'bg-emerald-500/5 border-emerald-500/10 text-emerald-400 hover:bg-emerald-500/15'
+                                ? 'bg-amber-500/5 border-amber-500/20 text-amber-400 hover:bg-amber-500/10' 
+                                : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10'
                             }`}
                           >
                             {camp.status === 'active' ? <Pause size={12} /> : <Play size={12} />}
-                          </button>
-                        </td>
-                      </tr>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             )}
-          </div>
+          </Card>
         </div>
 
         {/* Campaign Ideas Brainstormer */}
         <div className="space-y-6">
-          <div className="glass-card p-6 space-y-5 relative overflow-hidden">
-            <div className="absolute -right-16 -top-16 w-36 h-36 rounded-full bg-secondary/5 blur-2xl pointer-events-none" />
-            
-            <div className="flex items-center gap-2.5 border-b border-white/5 pb-4">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-inner">
-                <Sparkles size={16} className="text-white" />
+          <Card className="p-6 relative overflow-hidden shadow-md">
+            <div className="flex items-center gap-2.5 border-b border-border pb-4 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                <Sparkles size={16} />
               </div>
               <div>
-                <h3 className="font-extrabold text-sm text-white">AI Creative Studio</h3>
-                <p className="text-white/40 text-[9px] uppercase tracking-widest font-black mt-0.5">Gemini Campaign Brainstormer</p>
+                <CardTitle className="text-sm font-bold">AI Creative Studio</CardTitle>
+                <p className="text-muted-foreground text-[9px] uppercase tracking-widest font-black mt-0.5">Gemini Campaign Brainstormer</p>
               </div>
             </div>
 
             <form onSubmit={handleGenerateIdeas} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Product Description</label>
+                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Product Description</label>
                 <textarea 
                   required
                   rows={4}
                   value={productDescription}
                   onChange={(e) => setProductDescription(e.target.value)}
-                  placeholder="Describe your product, its values, pricing, roasted coffee box model..."
-                  className="glass-input custom-scrollbar resize-none h-[96px]"
+                  placeholder="Describe your product model..."
+                  className="glass-input custom-scrollbar resize-none h-[96px] bg-black/10"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Target Audience</label>
-                <input 
+                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Target Audience</label>
+                <Input 
                   type="text"
                   required
                   value={targetAudience}
                   onChange={(e) => setTargetAudience(e.target.value)}
-                  placeholder="e.g. Specialty coffee hobbyists, professionals"
-                  className="glass-input"
+                  placeholder="e.g. Specialty coffee hobbyists"
+                  className="bg-black/10"
                 />
               </div>
 
               <div className="flex gap-2 pt-1">
-                <button 
+                <Button 
                   type="submit" 
                   disabled={isGenerating}
-                  className="btn-primary flex-1 h-[42px] text-xs font-extrabold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="flex-1 h-10 text-xs font-bold gap-1.5"
                 >
                   {isGenerating ? (
                     <>
-                      <Loader2 size={14} className="animate-spin" />
-                      <span>Conceptualizing...</span>
+                      <Loader2 size={13} className="animate-spin" />
+                      <span>Drafting...</span>
                     </>
                   ) : (
                     <>
-                      <Sparkles size={14} />
+                      <Sparkles size={13} />
                       <span>Brainstorm Concepts</span>
                     </>
                   )}
-                </button>
-                <button 
+                </Button>
+                <Button 
                   type="button" 
+                  variant="outline"
                   onClick={handleTryDemoInput}
                   title="Inject Specialty Coffee Demo"
-                  className="btn-secondary h-[42px] px-3.5 text-xs font-bold"
+                  className="h-10 px-3.5 text-xs font-bold"
                 >
                   Demo
-                </button>
+                </Button>
               </div>
             </form>
 
             {generatedIdeas && (
-              <div className="mt-6 border-t border-white/[0.06] pt-5 space-y-3.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="mt-6 border-t border-border pt-5 space-y-3 animate-in fade-in duration-300">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] uppercase tracking-widest font-black text-primary">Generated Brand Blueprint</span>
                   <div className="flex gap-2">
-                    <button 
+                    <Button 
+                      variant="outline"
+                      size="icon"
                       onClick={handleCopy}
-                      className="w-7 h-7 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all cursor-pointer"
+                      className="w-7 h-7 rounded-lg text-muted-foreground hover:text-foreground"
                       title="Copy to clipboard"
                     >
                       {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                    </button>
-                    <button 
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      size="icon"
                       onClick={() => setGeneratedIdeas('')}
-                      className="w-7 h-7 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all cursor-pointer font-bold text-xs"
+                      className="w-7 h-7 rounded-lg text-muted-foreground hover:text-foreground"
                       title="Clear ideas"
                     >
-                      ✕
-                    </button>
+                      <X size={12} />
+                    </Button>
                   </div>
                 </div>
                 
-                <div className="bg-[#080710]/50 border border-white/[0.04] p-4.5 rounded-2xl max-h-[350px] overflow-y-auto custom-scrollbar shadow-inner">
+                <div className="bg-black/20 border border-border p-4 rounded-xl max-h-[350px] overflow-y-auto custom-scrollbar shadow-inner">
                   <MarkdownRenderer text={generatedIdeas} />
                 </div>
               </div>
             )}
-          </div>
+          </Card>
         </div>
       </div>
     </div>
   );
 };
 
-// Markdown rendering helper inside TSX
+// Markdown rendering helper
 const MarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
   if (!text) return null;
   const lines = text.split('\n');
   return (
-    <div className="space-y-3 text-white/80 text-xs leading-relaxed font-medium">
+    <div className="space-y-2 text-foreground/80 text-[11px] leading-relaxed font-medium">
       {lines.map((line, i) => {
         const content = line.trim();
-        if (!content) return <div key={i} className="h-2" />;
+        if (!content) return <div key={i} className="h-1.5" />;
         
         // Headers
         if (content.startsWith('### ')) {
-          return <h5 key={i} className="text-xs font-bold text-primary mt-4 mb-1 uppercase tracking-wide">{content.slice(4)}</h5>;
+          return <h5 key={i} className="text-[11px] font-bold text-primary mt-3 mb-1 uppercase tracking-wide">{content.slice(4)}</h5>;
         }
         if (content.startsWith('## ')) {
-          return <h4 key={i} className="text-xs font-black text-white mt-5 mb-2 border-l-2 border-primary pl-2">{content.slice(3)}</h4>;
+          return <h4 key={i} className="text-[11px] font-black text-foreground mt-4 mb-1.5 border-l-2 border-primary pl-2">{content.slice(3)}</h4>;
         }
         if (content.startsWith('# ')) {
-          return <h3 key={i} className="text-sm font-black text-white mt-6 mb-3 border-b border-white/10 pb-1.5">{content.slice(2)}</h3>;
+          return <h3 key={i} className="text-xs font-black text-foreground mt-5 mb-2 border-b border-border pb-1">{content.slice(2)}</h3>;
         }
 
         // Bullet points
         if (content.startsWith('* ') || content.startsWith('- ')) {
           const formatted = parseBoldText(content.slice(2));
           return (
-            <div key={i} className="flex gap-2 items-start pl-1.5 my-1">
-              <span className="text-primary mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_var(--glow-color)]" />
+            <div key={i} className="flex gap-2 items-start pl-1 my-1">
+              <span className="text-primary mt-1.5 shrink-0 w-1 h-1 rounded-full bg-primary" />
               <span>{formatted}</span>
             </div>
           );
@@ -605,7 +627,7 @@ const MarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
         if (numMatch) {
           const formatted = parseBoldText(numMatch[2]);
           return (
-            <div key={i} className="flex gap-2 items-start pl-1.5 my-1">
+            <div key={i} className="flex gap-2 items-start pl-1 my-1">
               <span className="text-primary font-black shrink-0">{numMatch[1]}.</span>
               <span>{formatted}</span>
             </div>
@@ -618,12 +640,11 @@ const MarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
-// Bold text highlighter
 const parseBoldText = (text: string) => {
-  const parts = text.split(/\*\*(.*?)\*\*/g);
+  const parts = text.split(/\*\*(.*?)\*\"/g);
   return parts.map((part, index) => {
     if (index % 2 === 1) {
-      return <strong key={index} className="font-black text-white">{part}</strong>;
+      return <strong key={index} className="font-bold text-foreground">{part}</strong>;
     }
     return part;
   });

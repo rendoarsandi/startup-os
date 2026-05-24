@@ -3,6 +3,26 @@ import {
   Users, CheckCircle2, XCircle, Plus, Loader2, LogIn, LogOut, DollarSign
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Badge } from './ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './ui/table';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 
 interface Employee {
   id: string;
@@ -266,412 +286,425 @@ export const HROperations: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Title & Actions */}
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-5">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-5">
         <div>
-          <h2 className="text-2xl font-extrabold text-white tracking-tight">HR Operations Board</h2>
-          <p className="text-white/40 text-xs mt-1">Manage employee daily clocking, log administrative leaves, and authorize corporate expense claims.</p>
+          <h2 className="text-2xl font-bold text-foreground tracking-tight">HR Operations Board</h2>
+          <p className="text-muted-foreground text-xs mt-1">Manage employee daily clocking, log administrative leaves, and authorize corporate expense claims.</p>
         </div>
         {/* Quick Employee Switcher */}
         <div className="flex items-center gap-2.5">
-          <span className="text-[10px] text-white/40 uppercase font-black tracking-widest shrink-0">Punch Card:</span>
-          <select
-            value={selectedEmpId}
-            onChange={(e) => setSelectedEmpId(e.target.value)}
-            className="glass-input h-9 px-3 py-1 font-bold text-xs cursor-pointer uppercase bg-white/[0.02] border-white/5 max-w-[200px]"
-          >
-            {employees.map(e => (
-              <option key={e.id} value={e.id}>{e.name.toUpperCase()}</option>
-            ))}
-          </select>
+          <span className="text-[10px] text-muted-foreground uppercase font-black tracking-widest shrink-0">Punch Card:</span>
+          {employees.length > 0 && (
+            <Select 
+              value={selectedEmpId} 
+              onValueChange={(val) => setSelectedEmpId(val)}
+            >
+              <SelectTrigger className="w-52 h-9 text-xs uppercase font-bold tracking-wider">
+                <SelectValue placeholder="EMPLOYEE" />
+              </SelectTrigger>
+              <SelectContent>
+                {employees.map(e => (
+                  <SelectItem key={e.id} value={e.id}>{e.name.toUpperCase()}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </header>
 
-      {/* Tab bar - Clean ERP styled buttons */}
-      <div className="flex border-b border-white/5">
-        <button
-          onClick={() => setActiveTab('attendance')}
-          className={`px-5 py-3.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all ${activeTab === 'attendance' ? 'border-primary text-white font-extrabold' : 'border-transparent text-white/40 hover:text-white/70'}`}
-        >
-          Attendance
-        </button>
-        <button
-          onClick={() => setActiveTab('leaves')}
-          className={`px-5 py-3.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all ${activeTab === 'leaves' ? 'border-primary text-white font-extrabold' : 'border-transparent text-white/40 hover:text-white/70'}`}
-        >
-          Leaves
-        </button>
-        <button
-          onClick={() => setActiveTab('expenses')}
-          className={`px-5 py-3.5 text-xs font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all ${activeTab === 'expenses' ? 'border-primary text-white font-extrabold' : 'border-transparent text-white/40 hover:text-white/70'}`}
-        >
-          Expense Claims
-        </button>
-      </div>
+      {/* Tab bar */}
+      <Tabs 
+        value={activeTab} 
+        onValueChange={(val) => setActiveTab(val as any)} 
+        className="w-full space-y-6"
+      >
+        <TabsList className="grid grid-cols-3 w-full sm:w-[480px] h-10 bg-black/10">
+          <TabsTrigger value="attendance" className="py-2 text-[10px]">Attendance</TabsTrigger>
+          <TabsTrigger value="leaves" className="py-2 text-[10px]">Leaves</TabsTrigger>
+          <TabsTrigger value="expenses" className="py-2 text-[10px]">Expense Claims</TabsTrigger>
+        </TabsList>
 
-      {/* Tab Contents */}
-      {activeTab === 'attendance' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          
-          {/* Punch Card Controls - 4 Columns */}
-          <div className="lg:col-span-4 glass-card p-6 border-white/5 space-y-5 bg-white/[0.01]">
-            <div className="flex items-center gap-2 border-b border-white/5 pb-3">
-              <Users size={16} className="text-primary animate-pulse" />
-              <h3 className="font-extrabold text-sm text-white">Roster Punch Card</h3>
-            </div>
+        <TabsContent value="attendance" className="focus-visible:outline-none">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-in fade-in duration-200">
+            {/* Punch Card Controls */}
+            <Card className="lg:col-span-4 border-border bg-card/60 space-y-5">
+              <CardHeader className="pb-3 border-b border-border/60">
+                <div className="flex items-center gap-2">
+                  <Users size={16} className="text-primary" />
+                  <CardTitle className="text-sm font-bold text-foreground">Roster Punch Card</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-5 pt-4">
+                <div className="text-center py-2 space-y-2 bg-black/10 rounded-lg border border-border/40 p-4">
+                  <p className="text-muted-foreground text-[9px] font-bold uppercase tracking-wider">Active Staff Punching</p>
+                  <h4 className="text-base font-black text-foreground">{getEmpName(selectedEmpId)}</h4>
+                  <Badge variant={isClockedIn ? 'success' : 'outline'} className="text-[9px] font-black uppercase mt-1">
+                    {isClockedIn ? "Punch Active" : "Off-Duty"}
+                  </Badge>
+                </div>
 
-            <div className="text-center py-4 space-y-2">
-              <p className="text-white/40 text-[10px] font-bold uppercase tracking-wider">Active Staff Punching</p>
-              <h4 className="text-base font-black text-white">{getEmpName(selectedEmpId)}</h4>
-              <p className="text-white/30 text-[10px] mt-1">Status: {isClockedIn ? "Punch Active" : "Off-Duty"}</p>
-            </div>
+                <div className="flex flex-col gap-2">
+                  {!isClockedIn ? (
+                    <Button
+                      onClick={handleClockIn}
+                      className="w-full text-xs font-bold gap-2 h-10"
+                    >
+                      <LogIn size={14} />
+                      Clock In for Today
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleClockOut}
+                      className="w-full text-xs font-bold gap-2 h-10 bg-amber-500/10 hover:bg-amber-500/15 text-amber-400 border border-amber-500/20 active:scale-[0.98]"
+                    >
+                      <LogOut size={14} />
+                      Clock Out (Sign Off)
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
-            <div className="flex flex-col gap-2">
-              {!isClockedIn ? (
-                <button
-                  onClick={handleClockIn}
-                  className="btn-primary h-11 w-full flex items-center justify-center gap-2 text-xs font-extrabold cursor-pointer"
-                >
-                  <LogIn size={14} />
-                  Clock In for Today
-                </button>
+            {/* Attendance logs List */}
+            <div className="lg:col-span-8 space-y-4">
+              <h4 className="font-bold text-sm text-foreground border-b border-border pb-2.5">Roster Attendance Log</h4>
+
+              {attLoading ? (
+                <div className="h-64 flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={24} /></div>
+              ) : attendanceLogs.length === 0 ? (
+                <div className="h-48 border border-dashed border-border rounded-xl flex items-center justify-center text-center p-6 text-muted-foreground text-xs font-medium">
+                  No attendance logs found. Clock in above to start logs.
+                </div>
               ) : (
-                <button
-                  onClick={handleClockOut}
-                  className="btn-secondary h-11 w-full flex items-center justify-center gap-2 text-xs font-extrabold cursor-pointer bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20"
-                >
-                  <LogOut size={14} />
-                  Clock Out (Sign Off)
-                </button>
+                <div className="border border-border rounded-xl bg-card/40 overflow-hidden shadow-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="pl-4">Employee</TableHead>
+                        <TableHead className="text-center w-32">Date</TableHead>
+                        <TableHead className="text-center w-28">Clock In</TableHead>
+                        <TableHead className="text-center w-28">Clock Out</TableHead>
+                        <TableHead className="text-center w-24 pr-4">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {attendanceLogs.map((log) => (
+                        <TableRow key={log.id}>
+                          <TableCell className="font-bold text-foreground pl-4">{getEmpName(log.employeeId)}</TableCell>
+                          <TableCell className="text-center text-muted-foreground">{new Date(log.date).toLocaleDateString('en-US')}</TableCell>
+                          <TableCell className="text-center font-bold text-emerald-400 font-mono">{log.clockIn || '—'}</TableCell>
+                          <TableCell className="text-center font-bold text-amber-500 font-mono">{log.clockOut || '—'}</TableCell>
+                          <TableCell className="text-center pr-4">
+                            <Badge variant={log.status === 'present' ? 'success' : 'warning'} className="text-[9px] font-black uppercase py-0.5">
+                              {log.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </div>
           </div>
+        </TabsContent>
 
-          {/* Attendance logs List - 8 Columns */}
-          <div className="lg:col-span-8 space-y-4">
-            <h4 className="font-extrabold text-sm text-white border-b border-white/5 pb-2">Roster Attendance Log</h4>
+        <TabsContent value="leaves" className="focus-visible:outline-none">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-in fade-in duration-200">
+            {/* Leaves Submission Form */}
+            <Card className="lg:col-span-4 border-border bg-card/60 space-y-4 p-5">
+              <h3 className="font-bold text-sm text-foreground border-b border-border pb-2.5">Leave Application</h3>
 
-            {attLoading ? (
-              <div className="h-64 flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={24} /></div>
-            ) : attendanceLogs.length === 0 ? (
-              <div className="h-48 border border-white/5 rounded-xl bg-white/[0.01] flex items-center justify-center text-center p-6 text-white/30 text-xs">
-                No attendance logs found. Clock in above to start logs.
-              </div>
-            ) : (
-              <div className="border border-white/5 rounded-xl bg-[#080710]/40 backdrop-blur-md overflow-hidden">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-white/5 text-[9px] uppercase font-black text-white/30 tracking-widest pb-3 bg-white/[0.01]">
-                      <th className="py-3 px-4">Employee</th>
-                      <th className="py-3 px-4 text-center">Date</th>
-                      <th className="py-3 px-4 text-center">Clock In</th>
-                      <th className="py-3 px-4 text-center">Clock Out</th>
-                      <th className="py-3 px-4 text-center">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {attendanceLogs.map((log) => (
-                      <tr key={log.id} className="border-b border-white/[0.03] hover:bg-white/[0.01]">
-                        <td className="py-3 px-4 font-bold text-white">{getEmpName(log.employeeId)}</td>
-                        <td className="py-3 px-4 text-center text-white/50">{new Date(log.date).toLocaleDateString('en-US')}</td>
-                        <td className="py-3 px-4 text-center font-black text-emerald-400">{log.clockIn || '—'}</td>
-                        <td className="py-3 px-4 text-center font-black text-amber-500">{log.clockOut || '—'}</td>
-                        <td className="py-3 px-4 text-center">
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border ${log.status === 'present' ? 'bg-emerald-500/5 border-emerald-500/10 text-emerald-400' : 'bg-amber-500/5 border-amber-500/10 text-amber-400'}`}>{log.status}</span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+              <form onSubmit={handleLeaveSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Leave Category</label>
+                  <Select 
+                    value={leaveType} 
+                    onValueChange={(val) => setLeaveType(val)}
+                  >
+                    <SelectTrigger className="w-full text-xs font-bold uppercase tracking-wider h-10">
+                      <SelectValue placeholder="CATEGORY" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="vacation">VACATION LEAVE</SelectItem>
+                      <SelectItem value="sick">SICK LEAVE</SelectItem>
+                      <SelectItem value="unpaid">UNPAID ABSENCE</SelectItem>
+                      <SelectItem value="maternity">MATERNITY/PATERNITY</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-        </div>
-      )}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Start Date</label>
+                    <Input
+                      type="date"
+                      required
+                      value={leaveStart}
+                      onChange={(e) => setLeaveStart(e.target.value)}
+                      className="text-xs cursor-pointer"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">End Date</label>
+                    <Input
+                      type="date"
+                      required
+                      value={leaveEnd}
+                      onChange={(e) => setLeaveEnd(e.target.value)}
+                      className="text-xs cursor-pointer"
+                    />
+                  </div>
+                </div>
 
-      {/* Leaves Tab */}
-      {activeTab === 'leaves' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          
-          {/* Leaves Submission Form - 4 Columns */}
-          <div className="lg:col-span-4 glass-card p-6 border-white/5 space-y-4 bg-white/[0.01]">
-            <h3 className="font-extrabold text-sm text-white border-b border-white/5 pb-2.5">Leave Application</h3>
+                <div className="space-y-1.5">
+                  <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Leave Reason</label>
+                  <textarea
+                    rows={3}
+                    required
+                    value={leaveReason}
+                    onChange={(e) => setLeaveReason(e.target.value)}
+                    placeholder="Provide brief details regarding request..."
+                    className="glass-input text-xs h-16 resize-none bg-black/10"
+                  />
+                </div>
 
-            <form onSubmit={handleLeaveSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="block text-[9px] font-bold text-white/40 uppercase tracking-widest">Leave Category</label>
-                <select
-                  value={leaveType}
-                  onChange={(e) => setLeaveType(e.target.value)}
-                  className="glass-input bg-[#080710] pr-8 cursor-pointer uppercase font-bold text-xs"
+                <Button
+                  type="submit"
+                  disabled={isSaving}
+                  className="w-full text-xs font-bold gap-1.5 h-10"
                 >
-                  <option value="vacation">VACATION LEAVE</option>
-                  <option value="sick">SICK LEAVE</option>
-                  <option value="unpaid">UNPAID ABSENCE</option>
-                  <option value="maternity">MATERNITY/PATERNITY</option>
-                </select>
-              </div>
+                  {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                  Apply for Leave
+                </Button>
+              </form>
+            </Card>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="block text-[9px] font-bold text-white/40 uppercase tracking-widest">Start Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={leaveStart}
-                    onChange={(e) => setLeaveStart(e.target.value)}
-                    className="glass-input text-xs"
-                  />
+            {/* Leaves Requests List */}
+            <div className="lg:col-span-8 space-y-4">
+              <h4 className="font-bold text-sm text-foreground border-b border-border pb-2.5">Roster Leaves Ledger</h4>
+
+              {leavesLoading ? (
+                <div className="h-64 flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={24} /></div>
+              ) : leaves.length === 0 ? (
+                <div className="h-48 border border-dashed border-border rounded-xl flex items-center justify-center text-center p-6 text-muted-foreground text-xs font-medium">
+                  No leave requests logged in system database.
                 </div>
-                <div className="space-y-1.5">
-                  <label className="block text-[9px] font-bold text-white/40 uppercase tracking-widest">End Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={leaveEnd}
-                    onChange={(e) => setLeaveEnd(e.target.value)}
-                    className="glass-input text-xs"
-                  />
+              ) : (
+                <div className="border border-border rounded-xl bg-card/40 overflow-hidden shadow-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="pl-4">Employee</TableHead>
+                        <TableHead className="text-center w-28">Type</TableHead>
+                        <TableHead className="text-center w-36">Period</TableHead>
+                        <TableHead>Reason</TableHead>
+                        <TableHead className="text-center w-28">Status</TableHead>
+                        <TableHead className="text-center w-20 pr-4">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {leaves.map((leave) => (
+                        <TableRow key={leave.id}>
+                          <TableCell className="font-bold text-foreground pl-4">{getEmpName(leave.employeeId)}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="text-[9px] font-black uppercase text-primary border-primary/20 bg-primary/5 py-0.5">{leave.type}</Badge>
+                          </TableCell>
+                          <TableCell className="text-center text-muted-foreground font-medium text-xs">
+                            {new Date(leave.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(leave.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </TableCell>
+                          <TableCell className="text-foreground/80 max-w-[150px] truncate">{leave.reason || '—'}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant={leave.status === 'approved' ? 'success' : leave.status === 'pending' ? 'warning' : 'destructive'} className="text-[9px] font-black uppercase py-0.5">
+                              {leave.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center pr-4">
+                            {leave.status === 'pending' ? (
+                              <div className="flex gap-1 justify-center">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => leaveStatusMutation.mutate({ id: leave.id, status: 'approved' })}
+                                  className="w-6 h-6 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                  title="Approve Leave"
+                                >
+                                  <CheckCircle2 size={10} />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => leaveStatusMutation.mutate({ id: leave.id, status: 'rejected' })}
+                                  className="w-6 h-6 bg-rose-500/5 hover:bg-rose-500/10 text-rose-400 border-rose-500/20"
+                                  title="Reject Leave"
+                                >
+                                  <XCircle size={10} />
+                                </Button>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground/60">—</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-[9px] font-bold text-white/40 uppercase tracking-widest">Leave Reason</label>
-                <textarea
-                  rows={3}
-                  required
-                  value={leaveReason}
-                  onChange={(e) => setLeaveReason(e.target.value)}
-                  placeholder="Provide brief details regarding request..."
-                  className="glass-input text-xs h-16 resize-none"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="btn-primary h-10 w-full flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer"
-              >
-                {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-                Apply for Leave
-              </button>
-            </form>
+              )}
+            </div>
           </div>
+        </TabsContent>
 
-          {/* Leaves Requests List - 8 Columns */}
-          <div className="lg:col-span-8 space-y-4">
-            <h4 className="font-extrabold text-sm text-white border-b border-white/5 pb-2">Roster Leaves Ledger</h4>
+        <TabsContent value="expenses" className="focus-visible:outline-none">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-in fade-in duration-200">
+            {/* Expense Claim Form */}
+            <Card className="lg:col-span-4 border-border bg-card/60 space-y-4 p-5">
+              <h3 className="font-bold text-sm text-foreground border-b border-border pb-2.5">File Expense Claim</h3>
 
-            {leavesLoading ? (
-              <div className="h-64 flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={24} /></div>
-            ) : leaves.length === 0 ? (
-              <div className="h-48 border border-white/5 rounded-xl bg-white/[0.01] flex items-center justify-center text-center p-6 text-white/30 text-xs">
-                No leave requests logged in system database.
-              </div>
-            ) : (
-              <div className="border border-white/5 rounded-xl bg-[#080710]/40 backdrop-blur-md overflow-hidden">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-white/5 text-[9px] uppercase font-black text-white/30 tracking-widest pb-3 bg-white/[0.01]">
-                      <th className="py-3 px-4">Employee</th>
-                      <th className="py-3 px-4 text-center">Type</th>
-                      <th className="py-3 px-4 text-center">Period</th>
-                      <th className="py-3 px-4">Reason</th>
-                      <th className="py-3 px-4 text-center">Status</th>
-                      <th className="py-3 px-4 text-center">Authorization</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {leaves.map((leave) => (
-                      <tr key={leave.id} className="border-b border-white/[0.03] hover:bg-white/[0.01]">
-                        <td className="py-3.5 px-4 font-bold text-white">{getEmpName(leave.employeeId)}</td>
-                        <td className="py-3.5 px-4 text-center">
-                          <span className="inline-block text-[9px] font-black uppercase text-primary tracking-wider">{leave.type}</span>
-                        </td>
-                        <td className="py-3.5 px-4 text-center text-white/40">
-                          {new Date(leave.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(leave.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </td>
-                        <td className="py-3.5 px-4 text-white/70 max-w-[150px] truncate">{leave.reason || '—'}</td>
-                        <td className="py-3.5 px-4 text-center">
-                          <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[9px] font-black uppercase border ${leave.status === 'approved' ? 'bg-emerald-500/5 border-emerald-500/10 text-emerald-400' : leave.status === 'pending' ? 'bg-amber-500/5 border-amber-500/10 text-amber-400 animate-pulse' : 'bg-rose-500/5 border-rose-500/10 text-rose-400'}`}>{leave.status}</span>
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          {leave.status === 'pending' ? (
-                            <div className="flex gap-1 justify-center">
-                              <button
-                                onClick={() => leaveStatusMutation.mutate({ id: leave.id, status: 'approved' })}
-                                className="p-1 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/10 cursor-pointer"
-                                title="Approve Leave"
-                              >
-                                <CheckCircle2 size={10} />
-                              </button>
-                              <button
-                                onClick={() => leaveStatusMutation.mutate({ id: leave.id, status: 'rejected' })}
-                                className="p-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/10 cursor-pointer"
-                                title="Reject Leave"
-                              >
-                                <XCircle size={10} />
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="text-[10px] text-white/20">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-        </div>
-      )}
-
-      {/* Expenses Tab */}
-      {activeTab === 'expenses' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          
-          {/* Expense Claim Form - 4 Columns */}
-          <div className="lg:col-span-4 glass-card p-6 border-white/5 space-y-4 bg-white/[0.01]">
-            <h3 className="font-extrabold text-sm text-white border-b border-white/5 pb-2.5">File Expense Claim</h3>
-
-            <form onSubmit={handleExpenseSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="block text-[9px] font-bold text-white/40 uppercase tracking-widest">Claim Title</label>
-                <input
-                  type="text"
-                  required
-                  value={expenseTitle}
-                  onChange={(e) => setExpenseTitle(e.target.value)}
-                  placeholder="e.g. Ergonomic Office Chair"
-                  className="glass-input text-xs bg-white/[0.01]"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+              <form onSubmit={handleExpenseSubmit} className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="block text-[9px] font-bold text-white/40 uppercase tracking-widest">Claim Amount ($)</label>
-                  <input
-                    type="number"
+                  <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Claim Title</label>
+                  <Input
+                    type="text"
                     required
-                    min="0"
-                    value={expenseAmount}
-                    onChange={(e) => setExpenseAmount(e.target.value)}
-                    placeholder="e.g. 150"
-                    className="glass-input text-xs bg-white/[0.01]"
+                    value={expenseTitle}
+                    onChange={(e) => setExpenseTitle(e.target.value)}
+                    placeholder="e.g. Ergonomic Office Chair"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="block text-[9px] font-bold text-white/40 uppercase tracking-widest">Receipt Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={expenseDate}
-                    onChange={(e) => setExpenseDate(e.target.value)}
-                    className="glass-input text-xs bg-white/[0.01]"
-                  />
-                </div>
-              </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-[9px] font-bold text-white/40 uppercase tracking-widest">Category</label>
-                <select
-                  value={expenseCategory}
-                  onChange={(e) => setExpenseCategory(e.target.value)}
-                  className="glass-input bg-[#080710] pr-8 cursor-pointer uppercase font-bold text-xs"
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Claim Amount ($)</label>
+                    <Input
+                      type="number"
+                      required
+                      min="0"
+                      value={expenseAmount}
+                      onChange={(e) => setExpenseAmount(e.target.value)}
+                      placeholder="e.g. 150"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Receipt Date</label>
+                    <Input
+                      type="date"
+                      required
+                      value={expenseDate}
+                      onChange={(e) => setExpenseDate(e.target.value)}
+                      className="cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Category</label>
+                  <Select 
+                    value={expenseCategory} 
+                    onValueChange={(val) => setExpenseCategory(val)}
+                  >
+                    <SelectTrigger className="w-full text-xs font-bold uppercase tracking-wider h-10">
+                      <SelectValue placeholder="CATEGORY" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="supplies">OFFICE SUPPLIES</SelectItem>
+                      <SelectItem value="travel">BUSINESS TRAVEL</SelectItem>
+                      <SelectItem value="meals">CLIENT MEALS</SelectItem>
+                      <SelectItem value="software">SOFTWARE SUBSCRIPTIONS</SelectItem>
+                      <SelectItem value="other">GENERAL OTHER</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isSaving}
+                  className="w-full text-xs font-bold gap-1.5 h-10"
                 >
-                  <option value="supplies">OFFICE SUPPLIES</option>
-                  <option value="travel">BUSINESS TRAVEL</option>
-                  <option value="meals">CLIENT MEALS</option>
-                  <option value="software">SOFTWARE SUBSCRIPTIONS</option>
-                  <option value="other">GENERAL OTHER</option>
-                </select>
-              </div>
+                  {isSaving ? <Loader2 size={13} className="animate-spin" /> : <DollarSign size={13} />}
+                  Submit Claim
+                </Button>
+              </form>
+            </Card>
 
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="btn-primary h-10 w-full flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer"
-              >
-                {isSaving ? <Loader2 size={13} className="animate-spin" /> : <DollarSign size={13} />}
-                Submit Claim
-              </button>
-            </form>
+            {/* Expense Claims List */}
+            <div className="lg:col-span-8 space-y-4">
+              <h4 className="font-bold text-sm text-foreground border-b border-border pb-2.5">Reimbursements Log</h4>
+
+              {expLoading ? (
+                <div className="h-64 flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={24} /></div>
+              ) : expenses.length === 0 ? (
+                <div className="h-48 border border-dashed border-border rounded-xl flex items-center justify-center text-center p-6 text-muted-foreground text-xs font-medium">
+                  No expense claims logged in system database.
+                </div>
+              ) : (
+                <div className="border border-border rounded-xl bg-card/40 overflow-hidden shadow-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="pl-4">Employee</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead className="text-center w-28">Category</TableHead>
+                        <TableHead className="text-right w-28">Amount</TableHead>
+                        <TableHead className="text-center w-28">Status</TableHead>
+                        <TableHead className="text-center w-20 pr-4">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {expenses.map((claim) => (
+                        <TableRow key={claim.id}>
+                          <TableCell className="font-bold text-foreground pl-4">{getEmpName(claim.employeeId)}</TableCell>
+                          <TableCell>
+                            <div className="text-foreground/80 font-bold text-xs">{claim.title}</div>
+                            <div className="text-[9px] text-muted-foreground font-bold uppercase mt-0.5 tracking-tight">{new Date(claim.date).toLocaleDateString('en-US')}</div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="text-[9px] font-black uppercase text-primary border-primary/20 bg-primary/5 py-0.5">{claim.category}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-bold text-foreground font-mono">
+                            ${(claim.amount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant={claim.status === 'approved' ? 'success' : claim.status === 'pending' ? 'warning' : 'destructive'} className="text-[9px] font-black uppercase py-0.5">
+                              {claim.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center pr-4">
+                            {claim.status === 'pending' ? (
+                              <div className="flex gap-1 justify-center">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => expenseStatusMutation.mutate({ id: claim.id, status: 'approved' })}
+                                  className="w-6 h-6 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                  title="Approve Claim"
+                                >
+                                  <CheckCircle2 size={10} />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => expenseStatusMutation.mutate({ id: claim.id, status: 'rejected' })}
+                                  className="w-6 h-6 bg-rose-500/5 hover:bg-rose-500/10 text-rose-400 border-rose-500/20"
+                                  title="Reject Claim"
+                                >
+                                  <XCircle size={10} />
+                                </Button>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground/60">—</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
           </div>
-
-          {/* Expense Claims List - 8 Columns */}
-          <div className="lg:col-span-8 space-y-4">
-            <h4 className="font-extrabold text-sm text-white border-b border-white/5 pb-2">Reimbursements Log</h4>
-
-            {expLoading ? (
-              <div className="h-64 flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={24} /></div>
-            ) : expenses.length === 0 ? (
-              <div className="h-48 border border-white/5 rounded-xl bg-white/[0.01] flex items-center justify-center text-center p-6 text-white/30 text-xs">
-                No expense claims logged in system database.
-              </div>
-            ) : (
-              <div className="border border-white/5 rounded-xl bg-[#080710]/40 backdrop-blur-md overflow-hidden">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-white/5 text-[9px] uppercase font-black text-white/30 tracking-widest pb-3 bg-white/[0.01]">
-                      <th className="py-3 px-4">Employee</th>
-                      <th className="py-3 px-4">Description</th>
-                      <th className="py-3 px-4 text-center">Category</th>
-                      <th className="py-3 px-4 text-right">Amount</th>
-                      <th className="py-3 px-4 text-center">Status</th>
-                      <th className="py-3 px-4 text-center">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {expenses.map((claim) => (
-                      <tr key={claim.id} className="border-b border-white/[0.03] hover:bg-white/[0.01]">
-                        <td className="py-3.5 px-4 font-bold text-white">{getEmpName(claim.employeeId)}</td>
-                        <td className="py-3.5 px-4">
-                          <div className="text-white/80 font-semibold">{claim.title}</div>
-                          <div className="text-[9px] text-white/30 font-bold uppercase mt-0.5 tracking-tight">{new Date(claim.date).toLocaleDateString('en-US')}</div>
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <span className="text-[9px] font-black uppercase text-primary px-1.5 py-0.5 rounded bg-primary/5 tracking-wider">{claim.category}</span>
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-black text-white">
-                          ${(claim.amount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[9px] font-black uppercase border ${claim.status === 'approved' ? 'bg-emerald-500/5 border-emerald-500/10 text-emerald-400' : claim.status === 'pending' ? 'bg-amber-500/5 border-amber-500/10 text-amber-400 animate-pulse' : 'bg-rose-500/5 border-rose-500/10 text-rose-400'}`}>{claim.status}</span>
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          {claim.status === 'pending' ? (
-                            <div className="flex gap-1 justify-center">
-                              <button
-                                onClick={() => expenseStatusMutation.mutate({ id: claim.id, status: 'approved' })}
-                                className="p-1 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/10 cursor-pointer"
-                                title="Approve Claim"
-                              >
-                                <CheckCircle2 size={10} />
-                              </button>
-                              <button
-                                onClick={() => expenseStatusMutation.mutate({ id: claim.id, status: 'rejected' })}
-                                className="p-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/10 cursor-pointer"
-                                title="Reject Claim"
-                              >
-                                <XCircle size={10} />
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="text-[10px] text-white/20">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-        </div>
-      )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

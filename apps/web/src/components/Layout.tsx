@@ -1,8 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { 
   LayoutDashboard, Wallet, PieChart, TrendingUp, Settings, LogOut, Bell, Search, 
-  Users, Sparkles, Briefcase, Award, Menu, Package, FileText, CheckSquare, Ticket
+  Users, Sparkles, Briefcase, Award, Menu, Package, FileText, CheckSquare, Ticket, ChevronDown
 } from 'lucide-react';
+import { Button } from './ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './ui/tooltip';
+import { cn } from '../utils/cn';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -53,205 +69,245 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeRole, setActiveR
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background font-sans">
-      {/* Mobile Sidebar Overlay */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/60 z-40 lg:hidden transition-opacity duration-300 animate-in fade-in"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
+    <TooltipProvider>
+      <div className="flex h-screen overflow-hidden bg-background text-foreground font-sans">
+        {/* Mobile Sidebar Overlay */}
+        {isSidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black/80 z-40 lg:hidden transition-opacity duration-300 animate-in fade-in"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
 
-      {/* Sidebar */}
-      <aside className={`w-64 glass-card fixed lg:relative inset-y-0 left-0 z-50 m-0 rounded-none border-y-0 border-l-0 lg:m-4 lg:mr-0 lg:rounded-xl lg:border flex flex-col shrink-0 transition-transform duration-300 lg:translate-x-0 bg-surface ${
-        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
-        {/* Sidebar Header with clean flat branding */}
-        <div className="p-5 border-b border-border flex items-center gap-3.5 bg-[#0f111a]">
-          <div className="h-9 w-9 rounded-lg border border-border p-1.5 flex items-center justify-center bg-[#0d0f17]">
-            <img 
-              src="/logo.png" 
-              alt="Startup OS" 
-              className="w-full h-full object-contain" 
-            />
-          </div>
-          <div>
-            <h1 className="text-sm font-bold text-white tracking-wider leading-none">
-              STARTUP OS
-            </h1>
-            <p className="text-[9px] text-slate-500 uppercase tracking-widest font-extrabold mt-1">C-Suite ERP system</p>
-          </div>
-        </div>
-
-        {/* Department / Office Switcher */}
-        <div className="p-4 space-y-2 border-b border-border bg-[#0f111a]">
-          <div className="px-2 pb-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-            ACTIVE C-SUITE OFFICE
-          </div>
-          
-          <button 
-            onClick={() => { setActiveRole('cfo'); setIsSidebarOpen(false); }}
-            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              activeRole === 'cfo' 
-                ? 'bg-primary/15 text-white border border-primary/20 shadow-sm font-extrabold' 
-                : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <Briefcase size={14} className={activeRole === 'cfo' ? 'text-primary' : ''} />
-              <span>Finance (CFO)</span>
-            </div>
-            {activeRole === 'cfo' && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
-          </button>
-          
-          <button 
-            onClick={() => { setActiveRole('marketer'); setIsSidebarOpen(false); }}
-            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              activeRole === 'marketer' 
-                ? 'bg-primary/15 text-white border border-primary/20 shadow-sm font-extrabold' 
-                : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <Sparkles size={14} className={activeRole === 'marketer' ? 'text-primary' : ''} />
-              <span>Marketing (CMO)</span>
-            </div>
-            {activeRole === 'marketer' && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
-          </button>
-
-          <button 
-            onClick={() => { setActiveRole('hr'); setIsSidebarOpen(false); }}
-            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              activeRole === 'hr' 
-                ? 'bg-primary/15 text-white border border-primary/20 shadow-sm font-extrabold' 
-                : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <Users size={14} className={activeRole === 'hr' ? 'text-primary' : ''} />
-              <span>People Ops (CHRO)</span>
-            </div>
-            {activeRole === 'hr' && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
-          </button>
-
-          <button 
-            onClick={() => { setActiveRole('operations'); setIsSidebarOpen(false); }}
-            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              activeRole === 'operations' 
-                ? 'bg-primary/15 text-white border border-primary/20 shadow-sm font-extrabold' 
-                : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <Package size={14} className={activeRole === 'operations' ? 'text-primary' : ''} />
-              <span>Operations (COO)</span>
-            </div>
-            {activeRole === 'operations' && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
-          </button>
-        </div>
-
-        <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto custom-scrollbar bg-surface">
-          <div className="px-3 pb-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest">
-            ERP WORKSPACE MODULES
-          </div>
-          <NavLink icon={<LayoutDashboard size={18} />} label="Operational Hub" active />
-          
-          {activeRole === 'cfo' && (
-            <>
-              <NavLink icon={<FileText size={18} />} label="Sales & Bills" />
-              <NavLink icon={<Wallet size={18} />} label="Ledger Logs" />
-              <NavLink icon={<PieChart size={18} />} label="Budget Limits" />
-              <NavLink icon={<TrendingUp size={18} />} label="Forecasting" />
-            </>
-          )}
-          {activeRole === 'marketer' && (
-            <>
-              <NavLink icon={<Users size={18} />} label="CRM Pipeline" />
-              <NavLink icon={<Sparkles size={18} />} label="Campaign Ideas" />
-              <NavLink icon={<TrendingUp size={18} />} label="Funnel Analysis" />
-            </>
-          )}
-          {activeRole === 'hr' && (
-            <>
-              <NavLink icon={<CheckSquare size={18} />} label="HR Boardroom" />
-              <NavLink icon={<Users size={18} />} label="Roster logs" />
-              <NavLink icon={<Award size={18} />} label="AI Document Suite" />
-            </>
-          )}
-          {activeRole === 'operations' && (
-            <>
-              <NavLink icon={<Package size={18} />} label="Inventory & Stock" />
-              <NavLink icon={<Briefcase size={18} />} label="Projects & Tasks" />
-              <NavLink icon={<Ticket size={18} />} label="Support Helpdesk" />
-            </>
-          )}
-          
-          <div className="pt-6 pb-2 px-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest">
-            SYSTEM
-          </div>
-          <NavLink icon={<Settings size={18} />} label="System Settings" />
-        </nav>
-
-        {/* Sidebar Footer with Sign Out */}
-        <div className="p-4 border-t border-border bg-[#0f111a]">
-          <button 
-            onClick={onSignOut}
-            className="flex items-center gap-3 w-full px-4 py-3 rounded-lg hover:bg-red-500/10 text-red-400 hover:text-red-300 font-bold text-xs tracking-wider uppercase transition-all cursor-pointer justify-center border border-transparent hover:border-red-500/10"
-          >
-            <LogOut size={16} />
-            <span>Sign Out</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden relative">
-        {/* Header */}
-        <header className="h-20 flex items-center justify-between px-6 sm:px-10 shrink-0 border-b border-border bg-surface z-30">
-          <div className="flex items-center gap-4 flex-1">
-            <button 
-              onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden text-slate-400 hover:text-white p-2.5 rounded-lg hover:bg-white/5 cursor-pointer transition-colors border border-transparent hover:border-white/5"
-            >
-              <Menu size={20} />
-            </button>
-            <div className="relative max-w-md w-full">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-              <input 
-                type="text" 
-                placeholder={searchPlaceholder[activeRole]} 
-                className="glass-input pl-11 py-2.5 text-xs focus:border-primary/40 bg-[#0d0f17] border-border text-white placeholder-slate-500"
+        {/* Sidebar */}
+        <aside className={cn(
+          "w-66 border-r border-border bg-card/40 backdrop-blur-md fixed lg:relative inset-y-0 left-0 z-50 flex flex-col shrink-0 transition-transform duration-300 lg:translate-x-0",
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        )}>
+          {/* Sidebar Header */}
+          <div className="p-6 border-b border-border flex items-center gap-3.5 bg-black/10">
+            <div className="h-9 w-9 rounded-lg border border-border p-1.5 flex items-center justify-center bg-background">
+              <img 
+                src="/logo.png" 
+                alt="Startup OS" 
+                className="w-full h-full object-contain" 
               />
             </div>
+            <div>
+              <h1 className="text-xs font-black text-foreground tracking-wider leading-none">
+                STARTUP OS
+              </h1>
+              <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-black mt-1">C-Suite ERP system</p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-5 sm:gap-6">
-            <div className="hidden sm:block text-right">
-              <div className="text-xs font-bold text-white/90">{departmentLabel[activeRole]}</div>
-              <div className="text-[9px] text-slate-500 uppercase tracking-widest font-extrabold mt-0.5">Enterprise Suite</div>
+          {/* Department Switcher */}
+          <div className="p-4 space-y-2 border-b border-border bg-black/10">
+            <div className="px-2 pb-1.5 text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
+              ACTIVE C-SUITE OFFICE
             </div>
             
-            <button className="relative text-slate-400 hover:text-white transition-colors cursor-pointer p-2.5 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/5">
-              <Bell size={18} />
-              <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-primary rounded-full" />
-            </button>
+            <Button 
+              variant="ghost"
+              onClick={() => { setActiveRole('cfo'); setIsSidebarOpen(false); }}
+              className={cn(
+                "w-full justify-start text-xs font-bold gap-2.5 h-9 px-3 rounded-lg border border-transparent",
+                activeRole === 'cfo' 
+                  ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15 hover:text-primary" 
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+              )}
+            >
+              <Briefcase size={14} className={cn("shrink-0", activeRole === 'cfo' ? 'text-primary' : 'text-muted-foreground')} />
+              <span>Finance (CFO)</span>
+            </Button>
             
-            <div className="h-9 w-9 rounded-lg border border-border p-[1px] bg-slate-800">
-              <div className="h-full w-full rounded-[7px] bg-[#0c0b16] flex items-center justify-center font-bold text-xs text-white/90">
-                {getInitials(userName)}
+            <Button 
+              variant="ghost"
+              onClick={() => { setActiveRole('marketer'); setIsSidebarOpen(false); }}
+              className={cn(
+                "w-full justify-start text-xs font-bold gap-2.5 h-9 px-3 rounded-lg border border-transparent",
+                activeRole === 'marketer' 
+                  ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15 hover:text-primary" 
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+              )}
+            >
+              <Sparkles size={14} className={cn("shrink-0", activeRole === 'marketer' ? 'text-primary' : 'text-muted-foreground')} />
+              <span>Marketing (CMO)</span>
+            </Button>
+
+            <Button 
+              variant="ghost"
+              onClick={() => { setActiveRole('hr'); setIsSidebarOpen(false); }}
+              className={cn(
+                "w-full justify-start text-xs font-bold gap-2.5 h-9 px-3 rounded-lg border border-transparent",
+                activeRole === 'hr' 
+                  ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15 hover:text-primary" 
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+              )}
+            >
+              <Users size={14} className={cn("shrink-0", activeRole === 'hr' ? 'text-primary' : 'text-muted-foreground')} />
+              <span>People Ops (CHRO)</span>
+            </Button>
+
+            <Button 
+              variant="ghost"
+              onClick={() => { setActiveRole('operations'); setIsSidebarOpen(false); }}
+              className={cn(
+                "w-full justify-start text-xs font-bold gap-2.5 h-9 px-3 rounded-lg border border-transparent",
+                activeRole === 'operations' 
+                  ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15 hover:text-primary" 
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+              )}
+            >
+              <Package size={14} className={cn("shrink-0", activeRole === 'operations' ? 'text-primary' : 'text-muted-foreground')} />
+              <span>Operations (COO)</span>
+            </Button>
+          </div>
+
+          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto bg-transparent">
+            <div className="px-3 pb-2 text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
+              ERP WORKSPACE MODULES
+            </div>
+            <NavLink icon={<LayoutDashboard size={16} />} label="Operational Hub" active />
+            
+            {activeRole === 'cfo' && (
+              <>
+                <NavLink icon={<FileText size={16} />} label="Sales & Bills" />
+                <NavLink icon={<Wallet size={16} />} label="Ledger Logs" />
+                <NavLink icon={<PieChart size={16} />} label="Budget Limits" />
+                <NavLink icon={<TrendingUp size={16} />} label="Forecasting" />
+              </>
+            )}
+            {activeRole === 'marketer' && (
+              <>
+                <NavLink icon={<Users size={16} />} label="CRM Pipeline" />
+                <NavLink icon={<Sparkles size={16} />} label="Campaign Ideas" />
+                <NavLink icon={<TrendingUp size={16} />} label="Funnel Analysis" />
+              </>
+            )}
+            {activeRole === 'hr' && (
+              <>
+                <NavLink icon={<CheckSquare size={16} />} label="HR Boardroom" />
+                <NavLink icon={<Users size={16} />} label="Roster logs" />
+                <NavLink icon={<Award size={16} />} label="AI Document Suite" />
+              </>
+            )}
+            {activeRole === 'operations' && (
+              <>
+                <NavLink icon={<Package size={16} />} label="Inventory & Stock" />
+                <NavLink icon={<Briefcase size={16} />} label="Projects & Tasks" />
+                <NavLink icon={<Ticket size={16} />} label="Support Helpdesk" />
+              </>
+            )}
+            
+            <div className="pt-6 pb-2 px-3 text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
+              SYSTEM
+            </div>
+            <NavLink icon={<Settings size={16} />} label="System Settings" />
+          </nav>
+
+          {/* Sidebar Footer with Sign Out */}
+          <div className="p-4 border-t border-border bg-black/10">
+            <Button 
+              variant="ghost"
+              onClick={onSignOut}
+              className="w-full justify-start text-xs font-bold text-destructive hover:bg-destructive/10 hover:text-destructive h-10 px-3 rounded-lg"
+            >
+              <LogOut size={14} className="mr-2" />
+              <span>Sign Out</span>
+            </Button>
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          {/* Header */}
+          <header className="h-20 flex items-center justify-between px-6 sm:px-8 shrink-0 border-b border-border bg-card/20 backdrop-blur-md z-30">
+            <div className="flex items-center gap-4 flex-1">
+              <Button 
+                variant="outline"
+                size="icon"
+                onClick={() => setIsSidebarOpen(true)}
+                className="lg:hidden h-9 w-9"
+              >
+                <Menu size={16} />
+              </Button>
+              <div className="relative max-w-md w-full">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+                <input 
+                  type="text" 
+                  placeholder={searchPlaceholder[activeRole]} 
+                  className="glass-input pl-10 py-2.5 text-xs bg-black/10 hover:bg-black/20 focus:bg-black/30 border-border"
+                />
               </div>
             </div>
-          </div>
-        </header>
 
-        {/* Scrollable Area */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-10 custom-scrollbar z-20">
-          <div className="max-w-7xl mx-auto w-full">
-            {children}
-          </div>
+            <div className="flex items-center gap-4">
+              <div className="hidden sm:block text-right">
+                <div className="text-xs font-bold text-foreground">{departmentLabel[activeRole]}</div>
+                <div className="text-[9px] text-muted-foreground uppercase tracking-widest font-black mt-0.5">Enterprise Suite</div>
+              </div>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative h-9 w-9">
+                    <Bell size={16} className="text-muted-foreground hover:text-foreground" />
+                    <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-primary rounded-full" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Notifications</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="h-9 p-1 pr-2 gap-2 rounded-lg border border-border hover:bg-accent/40">
+                    <div className="h-7 w-7 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-xs text-primary">
+                      {getInitials(userName)}
+                    </div>
+                    <ChevronDown size={12} className="text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <div className="px-2.5 py-1.5">
+                    <p className="text-xs font-bold text-foreground">{userName || 'User'}</p>
+                    <p className="text-[10px] text-muted-foreground">{departmentLabel[activeRole]}</p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setActiveRole('cfo')}>
+                    Finance (CFO)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setActiveRole('marketer')}>
+                    Marketing (CMO)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setActiveRole('hr')}>
+                    People Ops (CHRO)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setActiveRole('operations')}>
+                    Operations (COO)
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive" onClick={onSignOut}>
+                    <LogOut size={12} className="mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </header>
+
+          {/* Scrollable Area */}
+          <main className="flex-1 overflow-y-auto p-6 sm:p-8 custom-scrollbar z-20">
+            <div className="max-w-7xl mx-auto w-full">
+              {children}
+            </div>
+          </main>
         </div>
-      </main>
-    </div>
+      </div>
+    </TooltipProvider>
   );
 };
 
@@ -262,10 +318,8 @@ interface NavLinkProps {
 }
 
 const NavLink: React.FC<NavLinkProps> = ({ icon, label, active }) => (
-  <a href="#" className={`nav-link ${active ? 'active' : ''}`} onClick={(e) => e.preventDefault()}>
+  <a href="#" className={cn("nav-link", active && "active")} onClick={(e) => e.preventDefault()}>
     {icon}
-    <span className="font-semibold">{label}</span>
+    <span>{label}</span>
   </a>
 );
-
-

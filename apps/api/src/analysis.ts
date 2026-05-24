@@ -69,10 +69,6 @@ export class AnalysisService {
       .all();
     
     let cashBalance = accounts.reduce((sum: number, acc: any) => sum + acc.balance, 0);
-    // If no accounts exist yet, set a fallback default matching the UI (e.g., $42,590.20 or 4259020 cents)
-    if (accounts.length === 0) {
-      cashBalance = 4259020;
-    }
 
     // 2. Fetch all employees and calculate monthly payroll
     const employeeList = await this.db
@@ -101,12 +97,7 @@ export class AnalysisService {
     const now = Date.now();
     const ninetyDaysAgo = now - 90 * 24 * 60 * 60 * 1000;
     
-    if (txs.length === 0) {
-      // Sensible baseline defaults to make it look robust if D1 hasn't been seeded yet
-      monthlySubscriptions = 150000; // $1,500.00
-      totalVariableExpenses = 1200000; // $12,000.00
-      totalRevenue = 1500000; // $15,000.00
-    } else {
+    if (txs.length > 0) {
       txs.forEach((tx: any) => {
         const txDate = tx.date instanceof Date ? tx.date.getTime() : new Date(tx.date).getTime();
         
@@ -164,10 +155,10 @@ export class AnalysisService {
       console.warn("Could not fetch saasConfig, table might not exist in D1 yet:", e);
     }
 
-    let startingMrr = 1000000; // $10,000 fallback
-    let churnRate = 200; // 2.0% default
-    let cac = 10000; // $100 default
-    let arpu = 5000; // $50 default
+    let startingMrr = 0;
+    let churnRate = 0;
+    let cac = 0;
+    let arpu = 0;
 
     if (saasConfig) {
       startingMrr = saasConfig.startingMrr;
@@ -190,8 +181,6 @@ export class AnalysisService {
       if (startingMrr === 0) {
         startingMrr = Math.round(totalRevenue * 0.7); // 70% of total revenue is assumed recurring
       }
-    } else {
-      startingMrr = 1500000; // $15,000 default if no txs
     }
 
     const totalFixedCosts = monthlyPayroll + monthlySubscriptions;

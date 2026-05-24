@@ -1,8 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Users, Plus, Award, FileText, 
-  Loader2, AlertCircle, Sparkles, Shield, DollarSign, Calendar, RefreshCw, Copy, Check
+  Loader2, AlertCircle, Sparkles, Shield, DollarSign, Calendar, RefreshCw, Copy, Check, X
 } from 'lucide-react';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Badge } from './ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './ui/table';
 
 interface Employee {
   id: string;
@@ -157,427 +176,417 @@ export const HRDashboard: React.FC = () => {
     <div className="space-y-8">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold mb-1.5 text-white tracking-tight">
+          <h2 className="text-3xl font-bold mb-1.5 text-foreground tracking-tight">
             CHRO Boardroom
           </h2>
-          <p className="text-slate-400 text-sm font-medium">Manage headcount, roster logs, and draft premium HR documentation with Gemini AI.</p>
+          <p className="text-muted-foreground text-sm font-medium">Manage headcount, roster logs, and draft premium HR documentation with Gemini AI.</p>
         </div>
-        <button 
+        <Button 
           onClick={() => setIsFormOpen(!isFormOpen)}
-          className="btn-primary h-12 text-sm font-extrabold flex items-center gap-2 cursor-pointer self-start md:self-auto"
+          className="h-10 text-xs font-bold gap-2 self-start md:self-auto"
         >
-          <Plus size={16} />
+          <Plus size={14} />
           <span>Add Employee</span>
-        </button>
+        </Button>
       </header>
 
       {/* Add Employee Form Drawer */}
       {isFormOpen && (
-        <div className="glass-card p-6 border-primary/20 bg-gradient-to-b from-primary/5 to-transparent animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="flex items-center gap-2 mb-5">
-            <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
-              <Sparkles size={14} className="text-primary animate-pulse" />
-            </div>
-            <h3 className="text-base font-extrabold text-white">Add New Employee to Roster</h3>
-          </div>
-          <form onSubmit={handleAddEmployee} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Full Name</label>
-              <input 
-                type="text"
-                required
-                value={empName}
-                onChange={(e) => setEmpName(e.target.value)}
-                placeholder="e.g. Sandra Bullock"
-                className="glass-input"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Job Title</label>
-              <input 
-                type="text"
-                required
-                value={empRole}
-                onChange={(e) => setEmpRole(e.target.value)}
-                placeholder="e.g. Lead HR Specialist"
-                className="glass-input"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Department</label>
-              <div className="relative">
-                <select
-                  value={empDept}
-                  onChange={(e) => setEmpDept(e.target.value)}
-                  className="glass-input appearance-none pr-8 cursor-pointer"
-                >
-                  <option value="Engineering">Engineering</option>
-                  <option value="Product">Product</option>
-                  <option value="Marketing">Marketing</option>
-                  <option value="People & Culture">People & Culture</option>
-                  <option value="Sales">Sales</option>
-                </select>
-                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-white/30 text-xs">
-                  ▼
-                </div>
+        <Card className="border-primary/20 bg-card/60 backdrop-blur-md animate-in fade-in duration-300">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary animate-pulse">
+                <Sparkles size={14} />
               </div>
+              <CardTitle className="text-sm font-bold">Add New Employee to Roster</CardTitle>
             </div>
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Annual Base Salary ($)</label>
-              <input 
-                type="number"
-                required
-                value={empSalary}
-                onChange={(e) => setEmpSalary(e.target.value)}
-                placeholder="e.g. 110000"
-                className="glass-input"
-              />
-            </div>
-            <div className="flex gap-2">
-              <button 
-                type="submit" 
-                disabled={isSaving}
-                className="btn-primary flex-1 h-[46px] justify-center flex items-center gap-1.5 cursor-pointer text-xs font-bold"
-              >
-                {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                <span>Add</span>
-              </button>
-              <button 
-                type="button"
-                onClick={() => setIsFormOpen(false)}
-                className="btn-secondary h-[46px] text-xs font-bold"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleAddEmployee} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Full Name</label>
+                <Input 
+                  type="text"
+                  required
+                  value={empName}
+                  onChange={(e) => setEmpName(e.target.value)}
+                  placeholder="e.g. Sandra Bullock"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Job Title</label>
+                <Input 
+                  type="text"
+                  required
+                  value={empRole}
+                  onChange={(e) => setEmpRole(e.target.value)}
+                  placeholder="e.g. Lead HR Specialist"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Department</label>
+                <Select 
+                  value={empDept} 
+                  onValueChange={(val) => setEmpDept(val)}
+                >
+                  <SelectTrigger className="w-full text-xs font-bold uppercase tracking-wider h-10">
+                    <SelectValue placeholder="DEPT" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Engineering">Engineering</SelectItem>
+                    <SelectItem value="Product">Product</SelectItem>
+                    <SelectItem value="Marketing">Marketing</SelectItem>
+                    <SelectItem value="People & Culture">People & Culture</SelectItem>
+                    <SelectItem value="Sales">Sales</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Annual Base ($)</label>
+                <Input 
+                  type="number"
+                  required
+                  value={empSalary}
+                  onChange={(e) => setEmpSalary(e.target.value)}
+                  placeholder="e.g. 110000"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  type="submit" 
+                  disabled={isSaving}
+                  className="flex-1 h-10 text-xs font-bold gap-1.5"
+                >
+                  {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                  <span>Add</span>
+                </Button>
+                <Button 
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsFormOpen(false)}
+                  className="h-10 px-4 text-xs font-bold"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Key HR Dashboard Statistics */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="glass-card p-5 group hover:border-primary/20 transition-all cursor-default relative overflow-hidden">
-          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-primary/5 group-hover:scale-110 transition-transform flex items-center justify-center border border-white/5">
-            <Users size={20} className="text-primary/40" />
+        <Card className="p-5 hover:border-primary/30 transition-all cursor-default relative overflow-hidden group">
+          <div className="absolute -right-3 -top-3 w-14 h-14 rounded-full bg-primary/5 group-hover:scale-105 transition-transform flex items-center justify-center border border-border/30">
+            <Users size={18} className="text-primary" />
           </div>
-          <p className="text-white/40 text-xs font-bold uppercase tracking-wider mb-2">Company Headcount</p>
-          <h4 className="text-2xl font-black tracking-tight">{totalHeadcount} Employees</h4>
-          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/5 border border-emerald-500/10 text-emerald-400 inline-block mt-3.5 animate-pulse">
+          <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-2">Company Headcount</p>
+          <h4 className="text-2xl font-black tracking-tight text-foreground">{totalHeadcount} Employees</h4>
+          <Badge variant="success" className="text-[9px] font-black uppercase tracking-wider mt-3.5">
             +{additionalEmployees} Roster growth
-          </span>
-          <p className="text-[9px] text-white/30 mt-2.5 uppercase tracking-widest font-black">Active full-time roster</p>
-        </div>
+          </Badge>
+          <p className="text-[9px] text-muted-foreground/60 mt-2.5 uppercase tracking-widest font-black">Active full-time roster</p>
+        </Card>
 
-        <div className="glass-card p-5 group hover:border-primary/20 transition-all cursor-default relative overflow-hidden">
-          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-primary/5 group-hover:scale-110 transition-transform flex items-center justify-center border border-white/5">
-            <DollarSign size={20} className="text-primary/40" />
+        <Card className="p-5 hover:border-primary/30 transition-all cursor-default relative overflow-hidden group">
+          <div className="absolute -right-3 -top-3 w-14 h-14 rounded-full bg-primary/5 group-hover:scale-105 transition-transform flex items-center justify-center border border-border/30">
+            <DollarSign size={18} className="text-primary" />
           </div>
-          <p className="text-white/40 text-xs font-bold uppercase tracking-wider mb-2">Monthly Outflow</p>
-          <h4 className="text-2xl font-black tracking-tight">${totalPayrollMonthly.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h4>
-          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/5 border border-emerald-500/10 text-emerald-400 inline-block mt-3.5">
+          <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-2">Monthly Outflow</p>
+          <h4 className="text-2xl font-black tracking-tight text-foreground">${totalPayrollMonthly.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h4>
+          <Badge variant="success" className="text-[9px] font-black uppercase tracking-wider mt-3.5">
             Fully Funded
-          </span>
-          <p className="text-[9px] text-white/30 mt-2.5 uppercase tracking-widest font-black">Synced with memory ledger</p>
-        </div>
+          </Badge>
+          <p className="text-[9px] text-muted-foreground/60 mt-2.5 uppercase tracking-widest font-black">Synced with memory ledger</p>
+        </Card>
 
-        <div className="glass-card p-5 group hover:border-primary/20 transition-all cursor-default relative overflow-hidden">
-          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-primary/5 group-hover:scale-110 transition-transform flex items-center justify-center border border-white/5">
-            <Award size={20} className="text-primary/40" />
+        <Card className="p-5 hover:border-primary/30 transition-all cursor-default relative overflow-hidden group">
+          <div className="absolute -right-3 -top-3 w-14 h-14 rounded-full bg-primary/5 group-hover:scale-105 transition-transform flex items-center justify-center border border-border/30">
+            <Award size={18} className="text-primary" />
           </div>
-          <p className="text-white/40 text-xs font-bold uppercase tracking-wider mb-2">Pipeline Candidates</p>
-          <h4 className="text-2xl font-black tracking-tight">{pipelineCandidates} Active</h4>
-          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-primary/20 border border-primary/20 text-primary inline-block mt-3.5">
+          <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-2">Pipeline Candidates</p>
+          <h4 className="text-2xl font-black tracking-tight text-foreground">{pipelineCandidates} Active</h4>
+          <Badge variant="outline" className="text-[9px] font-black uppercase tracking-wider mt-3.5 text-primary border-primary/20 bg-primary/5">
             3 in Final Round
-          </span>
-          <p className="text-[9px] text-white/30 mt-2.5 uppercase tracking-widest font-black">ATS sync online</p>
-        </div>
+          </Badge>
+          <p className="text-[9px] text-muted-foreground/60 mt-2.5 uppercase tracking-widest font-black">ATS sync online</p>
+        </Card>
 
-        <div className="glass-card p-5 group hover:border-primary/20 transition-all cursor-default relative overflow-hidden">
-          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-primary/5 group-hover:scale-110 transition-transform flex items-center justify-center border border-white/5">
-            <Shield size={20} className="text-primary/40" />
+        <Card className="p-5 hover:border-primary/30 transition-all cursor-default relative overflow-hidden group">
+          <div className="absolute -right-3 -top-3 w-14 h-14 rounded-full bg-primary/5 group-hover:scale-105 transition-transform flex items-center justify-center border border-border/30">
+            <Shield size={18} className="text-primary" />
           </div>
-          <p className="text-white/40 text-xs font-bold uppercase tracking-wider mb-2">Employee Sentiment (eNPS)</p>
-          <h4 className="text-2xl font-black tracking-tight">{eNpsScore} / 100</h4>
-          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/5 border border-emerald-500/10 text-emerald-400 inline-block mt-3.5">
+          <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-2">Employee Sentiment (eNPS)</p>
+          <h4 className="text-2xl font-black tracking-tight text-foreground">{eNpsScore} / 100</h4>
+          <Badge variant="success" className="text-[9px] font-black uppercase tracking-wider mt-3.5">
             Top 10% Industry
-          </span>
-          <p className="text-[9px] text-white/30 mt-2.5 uppercase tracking-widest font-black">Anonymous survey</p>
-        </div>
+          </Badge>
+          <p className="text-[9px] text-muted-foreground/60 mt-2.5 uppercase tracking-widest font-black">Anonymous survey</p>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Roster Grid */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="glass-card p-6 overflow-hidden relative">
-            <div className="absolute -right-16 -top-16 w-36 h-36 rounded-full bg-primary/5 blur-2xl pointer-events-none" />
+          <Card className="p-6 relative overflow-hidden shadow-md">
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-base font-extrabold text-white">Official Employee Roster</h3>
-                <p className="text-white/40 text-[10px] uppercase tracking-widest font-black mt-0.5">Database record log</p>
+                <CardTitle className="text-sm font-bold">Official Employee Roster</CardTitle>
+                <p className="text-muted-foreground text-[10px] uppercase tracking-widest font-black mt-0.5">Database record log</p>
               </div>
-              <button 
+              <Button 
+                variant="outline"
+                size="icon"
                 onClick={fetchEmployees}
-                className="w-8 h-8 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-all cursor-pointer"
+                className="w-8 h-8 rounded-full border-border/80"
                 title="Synchronize Roster"
               >
-                <RefreshCw size={14} />
-              </button>
+                <RefreshCw size={12} />
+              </Button>
             </div>
             {loading ? (
               <div className="h-64 flex items-center justify-center">
                 <Loader2 className="animate-spin text-primary" size={24} />
               </div>
             ) : error ? (
-              <div className="p-4 rounded-xl border border-rose-500/10 bg-rose-500/5 text-rose-400 flex items-center gap-2 text-xs font-semibold">
+              <div className="p-4 rounded-xl border border-destructive/20 bg-destructive/10 text-destructive flex items-center gap-2 text-xs font-semibold">
                 <AlertCircle size={16} />
                 <span>{error}</span>
               </div>
             ) : (
-              <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-left text-sm border-collapse">
-                  <thead>
-                    <tr className="border-b border-white/[0.06] text-[9px] uppercase font-black text-white/30 tracking-widest pb-4">
-                      <th className="py-3 px-4">Employee</th>
-                      <th className="py-3 px-4">Department</th>
-                      <th className="py-3 px-4 text-right">Annual Base</th>
-                      <th className="py-3 px-4 text-right">Start Date</th>
-                      <th className="py-3 px-4 text-center">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              <div className="border border-border rounded-lg overflow-hidden bg-black/10">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="pl-4">Employee</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead className="text-right w-32">Annual Base</TableHead>
+                      <TableHead className="text-right w-36">Start Date</TableHead>
+                      <TableHead className="text-center w-28 pr-4">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {employees.map((emp) => (
-                      <tr key={emp.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors group">
-                        <td className="py-3.5 px-4">
-                          <div className="font-extrabold text-white group-hover:text-primary transition-colors text-xs">{emp.name}</div>
-                          <div className="text-[10px] text-white/40 font-bold mt-0.5 tracking-tight">{emp.role}</div>
-                        </td>
-                        <td className="py-3.5 px-4 text-white/70 font-bold text-xs">{emp.department}</td>
-                        <td className="py-3.5 px-4 text-right font-black text-white/80 text-xs">
+                      <TableRow key={emp.id}>
+                        <TableCell className="pl-4">
+                          <div className="font-bold text-foreground text-xs">{emp.name}</div>
+                          <div className="text-[10px] text-muted-foreground font-bold mt-0.5 tracking-tight">{emp.role}</div>
+                        </TableCell>
+                        <TableCell className="text-foreground/80 font-bold text-xs">{emp.department}</TableCell>
+                        <TableCell className="text-right font-bold text-foreground text-xs font-mono">
                           ${(emp.salary / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-3.5 px-4 text-right text-white/40 text-[10px] font-semibold">
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground text-[10px] font-semibold">
                           <div className="flex items-center justify-end gap-1.5">
-                            <Calendar size={11} className="text-white/20" />
+                            <Calendar size={11} className="text-muted-foreground/60" />
                             <span>{new Date(emp.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                           </div>
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border ${
-                            emp.status === 'active' 
-                              ? 'bg-emerald-500/5 border-emerald-500/10 text-emerald-400' 
-                              : emp.status === 'onboarding'
-                                ? 'bg-primary/5 border-primary/10 text-primary'
-                                : 'bg-white/5 border-white/5 text-white/30'
-                          }`}>
+                        </TableCell>
+                        <TableCell className="text-center pr-4">
+                          <Badge variant={emp.status === 'active' ? 'success' : emp.status === 'onboarding' ? 'outline' : 'secondary'} className="text-[9px] font-black uppercase tracking-wider">
                             {emp.status}
-                          </span>
-                        </td>
-                      </tr>
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             )}
-          </div>
+          </Card>
         </div>
 
         {/* AI Job Desk & Policy Writer */}
         <div className="space-y-6">
-          <div className="glass-card p-6 space-y-5 relative overflow-hidden">
-            <div className="absolute -right-16 -top-16 w-36 h-36 rounded-full bg-secondary/5 blur-2xl pointer-events-none" />
-            
-            <div className="flex items-center gap-2.5 border-b border-white/5 pb-4">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-inner">
-                <Sparkles size={16} className="text-white" />
+          <Card className="p-6 relative overflow-hidden shadow-md">
+            <div className="flex items-center gap-2.5 border-b border-border pb-4 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                <Sparkles size={16} />
               </div>
               <div>
-                <h3 className="font-extrabold text-sm text-white">CHRO Document Suite</h3>
-                <p className="text-white/40 text-[9px] uppercase tracking-widest font-black mt-0.5">AI Policy Draft Engine</p>
+                <CardTitle className="text-sm font-bold">CHRO Document Suite</CardTitle>
+                <p className="text-muted-foreground text-[9px] uppercase tracking-widest font-black mt-0.5">AI Policy Draft Engine</p>
               </div>
             </div>
 
             <form onSubmit={handleGenerateDoc} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Document Target Type</label>
+                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Document Target Type</label>
                 <div className="grid grid-cols-3 gap-2">
-                  <button 
+                  <Button 
                     type="button" 
+                    variant={docType === 'job_description' ? 'default' : 'outline'}
                     onClick={() => { setDocType('job_description'); setGeneratedDoc(''); }}
-                    className={`px-2 py-2 text-[9px] font-black uppercase tracking-wider rounded-lg border text-center transition-all cursor-pointer ${
-                      docType === 'job_description' 
-                        ? 'bg-primary/20 text-white border-primary/30 shadow-md shadow-primary/5' 
-                        : 'bg-white/5 text-white/40 border-transparent hover:bg-white/10 hover:text-white/60'
-                    }`}
+                    className="py-1 text-[9px] font-black uppercase h-9 rounded-lg"
                   >
                     Job Desc
-                  </button>
-                  <button 
+                  </Button>
+                  <Button 
                     type="button" 
+                    variant={docType === 'offer_letter' ? 'default' : 'outline'}
                     onClick={() => { setDocType('offer_letter'); setGeneratedDoc(''); }}
-                    className={`px-2 py-2 text-[9px] font-black uppercase tracking-wider rounded-lg border text-center transition-all cursor-pointer ${
-                      docType === 'offer_letter' 
-                        ? 'bg-primary/20 text-white border-primary/30 shadow-md shadow-primary/5' 
-                        : 'bg-white/5 text-white/40 border-transparent hover:bg-white/10 hover:text-white/60'
-                    }`}
+                    className="py-1 text-[9px] font-black uppercase h-9 rounded-lg"
                   >
                     Offer Let
-                  </button>
-                  <button 
+                  </Button>
+                  <Button 
                     type="button" 
+                    variant={docType === 'policy' ? 'default' : 'outline'}
                     onClick={() => { setDocType('policy'); setGeneratedDoc(''); }}
-                    className={`px-2 py-2 text-[9px] font-black uppercase tracking-wider rounded-lg border text-center transition-all cursor-pointer ${
-                      docType === 'policy' 
-                        ? 'bg-primary/20 text-white border-primary/30 shadow-md shadow-primary/5' 
-                        : 'bg-white/5 text-white/40 border-transparent hover:bg-white/10 hover:text-white/60'
-                    }`}
+                    className="py-1 text-[9px] font-black uppercase h-9 rounded-lg"
                   >
                     HR Policy
-                  </button>
+                  </Button>
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">
                   {docType === 'job_description' ? "Job Title" : docType === 'offer_letter' ? "Role Title" : "Policy Name"}
                 </label>
-                <input 
+                <Input 
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder={docType === 'job_description' ? "e.g. Senior Backend Dev" : docType === 'offer_letter' ? "e.g. Senior Designer" : "e.g. Hybrid Work Policy"}
-                  className="glass-input"
+                  className="bg-black/10"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Department</label>
-                  <input 
+                  <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Department</label>
+                  <Input 
                     type="text"
                     required
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
                     placeholder="e.g. Engineering"
-                    className="glass-input"
+                    className="bg-black/10"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">Compensation</label>
-                  <input 
+                  <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Compensation</label>
+                  <Input 
                     type="text"
                     required
                     value={salaryRange}
                     onChange={(e) => setSalaryRange(e.target.value)}
                     placeholder="e.g. $120k - $140k"
-                    className="glass-input"
+                    className="bg-black/10"
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">
                   {docType === 'offer_letter' ? "Candidate Name / Special Perks" : "Requirements / Context Details"}
                 </label>
                 <textarea 
                   rows={4}
                   value={details}
                   onChange={(e) => setDetails(e.target.value)}
-                  placeholder={docType === 'offer_letter' ? "Enter Candidate name, special health benefits..." : "Provide custom requirements or key parameters to embed..."}
-                  className="glass-input custom-scrollbar resize-none h-[96px]"
+                  placeholder={docType === 'offer_letter' ? "Enter Candidate name..." : "Provide custom requirements..."}
+                  className="glass-input custom-scrollbar resize-none h-[96px] bg-black/10"
                 />
               </div>
 
               <div className="flex gap-2 pt-1">
-                <button 
+                <Button 
                   type="submit" 
                   disabled={isGenerating}
-                  className="btn-primary flex-1 h-[42px] text-xs font-extrabold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="flex-1 h-10 text-xs font-bold gap-1.5"
                 >
                   {isGenerating ? (
                     <>
-                      <Loader2 size={14} className="animate-spin" />
+                      <Loader2 size={13} className="animate-spin" />
                       <span>Writing Draft...</span>
                     </>
                   ) : (
                     <>
-                      <FileText size={14} />
+                      <FileText size={13} />
                       <span>Generate Document</span>
                     </>
                   )}
-                </button>
-                <button 
+                </Button>
+                <Button 
                   type="button" 
+                  variant="outline"
                   onClick={handleTryDemoInput}
                   title="Load Demo Parameters"
-                  className="btn-secondary h-[42px] px-3.5 text-xs font-bold"
+                  className="h-10 px-3.5 text-xs font-bold"
                 >
                   Demo
-                </button>
+                </Button>
               </div>
             </form>
 
             {generatedDoc && (
-              <div className="mt-6 border-t border-white/[0.06] pt-5 space-y-3.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="mt-6 border-t border-border pt-5 space-y-3 animate-in fade-in duration-300">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] uppercase tracking-widest font-black text-primary">Draft Document Compiled</span>
                   <div className="flex gap-2">
-                    <button 
+                    <Button 
+                      variant="outline"
+                      size="icon"
                       onClick={handleCopy}
-                      className="w-7 h-7 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all cursor-pointer"
+                      className="w-7 h-7 rounded-lg text-muted-foreground hover:text-foreground"
                       title="Copy to clipboard"
                     >
                       {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                    </button>
-                    <button 
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      size="icon"
                       onClick={() => setGeneratedDoc('')}
-                      className="w-7 h-7 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all cursor-pointer font-bold text-xs"
+                      className="w-7 h-7 rounded-lg text-muted-foreground hover:text-foreground"
                       title="Clear draft"
                     >
-                      ✕
-                    </button>
+                      <X size={12} />
+                    </Button>
                   </div>
                 </div>
                 
-                <div className="bg-[#080710]/50 border border-white/[0.04] p-4.5 rounded-2xl max-h-[350px] overflow-y-auto custom-scrollbar shadow-inner">
+                <div className="bg-black/20 border border-border p-4 rounded-xl max-h-[350px] overflow-y-auto custom-scrollbar shadow-inner">
                   <MarkdownRenderer text={generatedDoc} />
                 </div>
               </div>
             )}
-          </div>
+          </Card>
         </div>
       </div>
     </div>
   );
 };
 
-// Markdown rendering helper inside TSX
+// Markdown rendering helper
 const MarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
   if (!text) return null;
   const lines = text.split('\n');
   return (
-    <div className="space-y-3 text-white/80 text-xs leading-relaxed font-medium">
+    <div className="space-y-2 text-foreground/80 text-[11px] leading-relaxed font-medium">
       {lines.map((line, i) => {
         const content = line.trim();
-        if (!content) return <div key={i} className="h-2" />;
+        if (!content) return <div key={i} className="h-1.5" />;
         
         // Headers
         if (content.startsWith('### ')) {
-          return <h5 key={i} className="text-xs font-bold text-primary mt-4 mb-1 uppercase tracking-wide">{content.slice(4)}</h5>;
+          return <h5 key={i} className="text-[11px] font-bold text-primary mt-3 mb-1 uppercase tracking-wide">{content.slice(4)}</h5>;
         }
         if (content.startsWith('## ')) {
-          return <h4 key={i} className="text-xs font-black text-white mt-5 mb-2 border-l-2 border-primary pl-2">{content.slice(3)}</h4>;
+          return <h4 key={i} className="text-[11px] font-black text-foreground mt-4 mb-1.5 border-l-2 border-primary pl-2">{content.slice(3)}</h4>;
         }
         if (content.startsWith('# ')) {
-          return <h3 key={i} className="text-sm font-black text-white mt-6 mb-3 border-b border-white/10 pb-1.5">{content.slice(2)}</h3>;
+          return <h3 key={i} className="text-xs font-black text-foreground mt-5 mb-2 border-b border-border pb-1">{content.slice(2)}</h3>;
         }
 
         // Bullet points
         if (content.startsWith('* ') || content.startsWith('- ')) {
           const formatted = parseBoldText(content.slice(2));
           return (
-            <div key={i} className="flex gap-2 items-start pl-1.5 my-1">
-              <span className="text-primary mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_var(--glow-color)]" />
+            <div key={i} className="flex gap-2 items-start pl-1 my-1">
+              <span className="text-primary mt-1.5 shrink-0 w-1 h-1 rounded-full bg-primary" />
               <span>{formatted}</span>
             </div>
           );
@@ -588,7 +597,7 @@ const MarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
         if (numMatch) {
           const formatted = parseBoldText(numMatch[2]);
           return (
-            <div key={i} className="flex gap-2 items-start pl-1.5 my-1">
+            <div key={i} className="flex gap-2 items-start pl-1 my-1">
               <span className="text-primary font-black shrink-0">{numMatch[1]}.</span>
               <span>{formatted}</span>
             </div>
@@ -601,12 +610,11 @@ const MarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
-// Bold text highlighter
 const parseBoldText = (text: string) => {
   const parts = text.split(/\*\*(.*?)\*\*/g);
   return parts.map((part, index) => {
     if (index % 2 === 1) {
-      return <strong key={index} className="font-black text-white">{part}</strong>;
+      return <strong key={index} className="font-bold text-foreground">{part}</strong>;
     }
     return part;
   });
