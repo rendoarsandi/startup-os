@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import './setupTests';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { expect, test, vi, beforeEach } from 'vitest';
+import { expect, test, vi, beforeEach, describe } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 
@@ -25,7 +25,7 @@ describe('STARTUP OS - Full Integration & End-to-End Test', () => {
     isLoggedIn = false;
     
     // Reset/Setup Fetch Mock for all API calls
-    fetchMock = vi.fn().mockImplementation((url: string, options?: any) => {
+    fetchMock = vi.fn().mockImplementation((url: string, _options?: any) => {
       // Mock Session Endpoint - first returns null (requires login)
       if (url === '/api/auth/get-session') {
         return Promise.resolve({
@@ -157,7 +157,7 @@ describe('STARTUP OS - Full Integration & End-to-End Test', () => {
     );
 
     // 2. Verify Auth Screen loaded (Sign In Header)
-    const signInTitle = await screen.findByText(/Autonomous Financial & CMO C-Suite/i);
+    const signInTitle = await screen.findByText(/Autonomous C-Suite ERP system/i);
     expect(signInTitle).toBeInTheDocument();
 
     // 3. Switch to "Create Account" tab

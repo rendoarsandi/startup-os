@@ -4,23 +4,30 @@ import { Chat } from './components/Chat'
 import { TransactionList } from './components/TransactionList'
 import { TransactionModal } from './components/TransactionModal'
 import { BudgetTracker } from './components/BudgetTracker'
-import { SpendingTrendChart, CategoryBreakdownChart, RunwayProjectionChart } from './components/Charts'
+import { SpendingTrendChart, RunwayProjectionChart } from './components/Charts'
 import { PlaidLinkButton } from './components/PlaidLink'
 import { MarketingDashboard } from './components/MarketingDashboard'
 import { HRDashboard } from './components/HRDashboard'
+import { InvoicesDashboard } from './components/InvoicesDashboard'
+import { CRMPipeline } from './components/CRMPipeline'
+import { HROperations } from './components/HROperations'
+import { COOOperations } from './components/COOOperations'
 import { useState, useEffect } from 'react'
-import { ScenarioPlanner } from './components/ScenarioPlanner'
-import { Sparkles } from 'lucide-react'
 
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useTransactions } from './hooks/useTransactions'
 import { calculateCustomProjections } from './hooks/useScenario'
 
 function App() {
-  const [activeRole, setActiveRole] = useState<'cfo' | 'marketer' | 'hr'>('cfo');
+  const [activeRole, setActiveRole] = useState<'cfo' | 'marketer' | 'hr' | 'operations'>('cfo');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [chatSeedPrompt, setChatSeedPrompt] = useState<string | undefined>(undefined);
+
+  // View states to toggle between original AI dashboard and clean structured ERP registers
+  const [cfoView, setCfoView] = useState<'overview' | 'invoices'>('overview');
+  const [cmoView, setCmoView] = useState<'campaigns' | 'crm'>('crm');
+  const [chroView, setChroView] = useState<'roster' | 'operations'>('operations');
 
   // Session state
   const [session, setSession] = useState<{ user: { id: string, email: string, name: string } } | null>(null);
@@ -79,16 +86,6 @@ function App() {
     enabled: !!session,
   });
 
-  // Query for AI CFO Insights
-  const { data: insightsData, isLoading: insightsLoading } = useQuery<{ advice: string, items?: any[] }>({
-    queryKey: ['insights', refreshKey, session?.user?.id],
-    queryFn: async () => {
-      const res = await fetch('/api/insights');
-      if (!res.ok) throw new Error('Failed to fetch insights');
-      return res.json();
-    },
-    enabled: !!session,
-  });
 
   // Query for Cash Runway and Burn Rate details
   const { data: runwayData, isLoading: runwayLoading } = useQuery<{
@@ -202,368 +199,308 @@ function App() {
     >
       <div className="space-y-8">
         {activeRole === 'cfo' && (
-          <>
-            <header>
-              <h2 className="text-4xl font-black mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent italic">
-                CFO Financial Dashboard
-              </h2>
-              <p className="text-white/50 text-lg">Your AI CFO has analyzed 12 new transactions today.</p>
-            </header>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <StatCard 
-                title="Total Balance" 
-                value={formattedBalance} 
-                change={accounts.length > 0 ? "Live" : "+2.5%"} 
-                isPositive={true} 
-              />
-              <StatCard 
-                title="Monthly Spending" 
-                value={formattedSpending} 
-                change={transactions.length > 0 ? "Calculated" : "-12%"} 
-                isPositive={true} 
-              />
-              <StatCard 
-                title="AI Cash Runway" 
-                value={runwayLoading ? "Loading..." : customRunway?.runwayMonths === "Infinite" ? "Infinite Runway" : `${customRunway?.runwayMonths ?? '0'} Months`} 
-                change={runwayLoading ? "Calculating" : customRunway?.runwayMonths === "Infinite" ? "Profitable" : `$${Math.round((customRunway?.netBurn ?? 0) / 100).toLocaleString()}/mo burn`} 
-                isPositive={customRunway?.runwayMonths === "Infinite" || (customRunway?.runwayMonths ?? 12) >= 6} 
-              />
+          <div className="space-y-6">
+            {/* View toggles */}
+            <div className="flex border border-white/5 rounded-lg overflow-hidden bg-white/[0.02] p-[2px] w-full sm:w-auto self-start">
+              <button 
+                onClick={() => setCfoView('overview')}
+                className={`px-4 py-2 text-xs font-bold uppercase rounded-md tracking-wider transition-all cursor-pointer ${cfoView === 'overview' ? 'bg-white/10 text-white font-extrabold' : 'text-white/40 hover:text-white/70'}`}
+              >
+                Financial Analytics
+              </button>
+              <button 
+                onClick={() => setCfoView('invoices')}
+                className={`px-4 py-2 text-xs font-bold uppercase rounded-md tracking-wider transition-all cursor-pointer ${cfoView === 'invoices' ? 'bg-white/10 text-white font-extrabold' : 'text-white/40 hover:text-white/70'}`}
+              >
+                Invoices & Billing Register
+              </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 space-y-8">
-                <div className="glass-card p-8 min-h-[400px]">
-                  <h3 className="text-xl font-bold mb-6">Spending Trends</h3>
-                  <SpendingTrendChart />
-                </div>
+            {cfoView === 'overview' ? (
+              <>
+                <header>
+                  <h2 className="text-3xl font-bold mb-2 text-white">
+                    CFO Financial Dashboard
+                  </h2>
+                  <p className="text-slate-400 text-sm">Your AI CFO has analyzed 12 new transactions today.</p>
+                </header>
 
-                <div className="glass-card p-8 min-h-[400px]">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-bold">Cash Runway Projections</h3>
-                    <div className="flex items-center gap-3">
-                      <button 
-                        onClick={() => setIsParamsOpen(!isParamsOpen)}
-                        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-white/10 hover:border-white/20 bg-white/5 text-white/70 hover:text-white transition-all cursor-pointer animate-pulse"
-                      >
-                        ⚙️ Model Parameters {isParamsOpen ? '▲' : '▼'}
-                      </button>
-                      {!runwayLoading && customRunway && (
-                        <span className={`text-xs px-2.5 py-1 rounded-md font-bold ${
-                          customRunway.runwayMonths === 'Infinite' 
-                            ? 'bg-green-500/10 text-green-400' 
-                            : customRunway.runwayMonths < 6 
-                              ? 'bg-red-500/10 text-red-400 animate-pulse' 
-                              : 'bg-amber-500/10 text-amber-400'
-                        }`}>
-                          {customRunway.runwayMonths === 'Infinite' 
-                            ? 'Profitable' 
-                            : `${customRunway.runwayMonths} Mo. Runway`}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {isParamsOpen && (
-                    <div className="mb-6 p-6 rounded-xl border border-white/5 bg-white/[0.02] space-y-6 animate-in slide-in-from-top duration-200">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-white/60 font-medium">Revenue Growth Rate</span>
-                            <span className="text-primary font-bold">{revGrowth >= 0 ? '+' : ''}{revGrowth}% MoM</span>
-                          </div>
-                          <input 
-                            type="range"
-                            min="-10"
-                            max="20"
-                            step="0.5"
-                            value={revGrowth}
-                            onChange={(e) => setRevGrowth(parseFloat(e.target.value))}
-                            className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
-                          />
-                          <p className="text-[10px] text-white/30">Compounds baseline monthly revenue.</p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-white/60 font-medium">Expense Growth Rate</span>
-                            <span className="text-secondary font-bold">{expGrowth >= 0 ? '+' : ''}{expGrowth}% MoM</span>
-                          </div>
-                          <input 
-                            type="range"
-                            min="-10"
-                            max="20"
-                            step="0.5"
-                            value={expGrowth}
-                            onChange={(e) => setExpGrowth(parseFloat(e.target.value))}
-                            className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-secondary"
-                          />
-                          <p className="text-[10px] text-white/30">Compounds variable operating costs.</p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="block text-xs text-white/60 font-medium">Seasonality Profile</label>
-                          <select 
-                            value={seasonalityProfile}
-                            onChange={(e) => setSeasonalityProfile(e.target.value)}
-                            className="w-full px-3 py-1.5 bg-zinc-950 border border-white/10 rounded-lg text-xs text-white focus:outline-none focus:border-primary/50 transition-colors"
-                          >
-                            <option value="steady">Steady SaaS / Constant</option>
-                            <option value="holiday">Holiday/Q4 Surge (E-commerce)</option>
-                            <option value="quarterly">B2B Quarterly Spikes</option>
-                            <option value="summer">Summer Slump Profile</option>
-                          </select>
-                          <p className="text-[10px] text-white/30">Applies cyclical peaks and valleys.</p>
-                        </div>
-                      </div>
-
-                      <div className="border-t border-white/5 pt-4">
-                        <h4 className="text-xs uppercase tracking-widest font-black text-indigo-400 mb-4 flex items-center gap-1.5 font-bold">
-                          <Sparkles size={12} /> Baseline SaaS Setup (Saved to DB)
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                          <div>
-                            <label className="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1.5">Starting MRR ($)</label>
-                            <input 
-                              type="number"
-                              value={mrrInput || ''}
-                              onChange={(e) => setMrrInput(Number(e.target.value))}
-                              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500/50"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1.5">Monthly Churn (%)</label>
-                            <input 
-                              type="number"
-                              step="0.1"
-                              value={churnInput || ''}
-                              onChange={(e) => setChurnInput(Number(e.target.value))}
-                              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500/50"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1.5">Target CAC ($)</label>
-                            <input 
-                              type="number"
-                              value={cacInput || ''}
-                              onChange={(e) => setCacInput(Number(e.target.value))}
-                              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500/50"
-                            />
-                          </div>
-                          <div className="flex gap-2">
-                            <div className="flex-1">
-                              <label className="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1.5">Target ARPU ($)</label>
-                              <input 
-                                type="number"
-                                value={arpuInput || ''}
-                                onChange={(e) => setArpuInput(Number(e.target.value))}
-                                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500/50"
-                              />
-                            </div>
-                            <button
-                              onClick={() => {
-                                saasMutation.mutate({
-                                  startingMrr: mrrInput * 100,
-                                  churnRate: Math.round(churnInput * 100),
-                                  cac: cacInput * 100,
-                                  arpu: arpuInput * 100
-                                });
-                              }}
-                              disabled={saasMutation.isPending}
-                              className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3 py-2 rounded-lg shrink-0 cursor-pointer h-[32px] flex items-center justify-center transition-colors disabled:opacity-50"
-                            >
-                              {saasMutation.isPending ? 'Saving...' : 'Save'}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <RunwayProjectionChart projections={customRunway?.projections ?? []} />
-                </div>
-
-                {/* Interactive What-If Scenario Simulator */}
-                <div className="glass-card p-8 border-emerald-500/10 bg-gradient-to-b from-white/[0.01] to-emerald-950/[0.02]">
-                  <header className="mb-6">
-                    <h3 className="text-xl font-extrabold flex items-center gap-2 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent italic">
-                      <Sparkles size={20} className="text-emerald-400 shrink-0" />
-                      <span>Interactive What-If Scenario Simulator</span>
-                    </h3>
-                    <p className="text-white/50 text-xs mt-1">Run predictive growth models, overhead adjustments, and simulate new hiring impacts on your business.</p>
-                  </header>
-                  <ScenarioPlanner 
-                    baseline={customRunway} 
-                    onOpenChat={(seed) => {
-                      setChatSeedPrompt(seed);
-                    }} 
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <StatCard 
+                    title="Total Balance" 
+                    value={formattedBalance} 
+                    change={accounts.length > 0 ? "Live" : "+2.5%"} 
+                    isPositive={true} 
+                  />
+                  <StatCard 
+                    title="Monthly Spending" 
+                    value={formattedSpending} 
+                    change={transactions.length > 0 ? "Calculated" : "-12%"} 
+                    isPositive={true} 
+                  />
+                  <StatCard 
+                    title="AI Cash Runway" 
+                    value={runwayLoading ? "Loading..." : customRunway?.runwayMonths === "Infinite" ? "Infinite Runway" : `${customRunway?.runwayMonths ?? '0'} Months`} 
+                    change={runwayLoading ? "Calculating" : customRunway?.runwayMonths === "Infinite" ? "Profitable" : `$${Math.round((customRunway?.netBurn ?? 0) / 100).toLocaleString()}/mo burn`} 
+                    isPositive={customRunway?.runwayMonths === "Infinite" || (customRunway?.runwayMonths ?? 12) >= 6} 
                   />
                 </div>
 
-
-                <div className="glass-card p-8">
-                  <h3 className="text-xl font-bold mb-6">Category Breakdown</h3>
-                  <CategoryBreakdownChart />
-                </div>
-
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-bold text-lg">Recent Activity</h3>
-                    <div className="flex gap-4">
-                      <button 
-                        onClick={() => setIsModalOpen(true)}
-                        className="text-[10px] bg-white/5 hover:bg-white/10 px-2.5 py-1 rounded-md uppercase tracking-widest font-black transition-colors cursor-pointer"
-                      >
-                        + Add
-                      </button>
-                      <button className="text-xs text-primary font-bold hover:underline text-[10px] uppercase tracking-widest cursor-pointer">View All</button>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <div className="lg:col-span-2 space-y-8">
+                    <div className="glass-card p-8 min-h-[400px]">
+                      <h3 className="text-xl font-bold mb-6">Spending Trends</h3>
+                      <SpendingTrendChart />
                     </div>
-                  </div>
-                  <TransactionList key={refreshKey} />
-                </div>
-              </div>
 
-              <div className="space-y-8">
-                {/* SaaS Unit Economics & Metrics Card */}
-                <div className="glass-card p-6 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border-indigo-500/20">
-                  <h3 className="text-base font-bold mb-4 flex items-center gap-2">
-                    <Sparkles className="text-indigo-400 shrink-0" size={16} />
-                    <span>SaaS Unit Economics</span>
-                  </h3>
-                  {runwayLoading ? (
-                    <div className="h-24 rounded-xl bg-white/5 animate-pulse flex items-center justify-center text-xs opacity-50 text-white/50">
-                      Analyzing SaaS metrics...
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 bg-white/5 rounded-xl border border-white/5">
-                        <p className="text-white/40 text-[9px] font-bold uppercase tracking-wider mb-1">MRR</p>
-                        <p className="text-base font-black text-white">
-                          ${Math.round((runwayData?.startingMrr ?? 0) / 100).toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="p-3 bg-white/5 rounded-xl border border-white/5">
-                        <p className="text-white/40 text-[9px] font-bold uppercase tracking-wider mb-1">ARR</p>
-                        <p className="text-base font-black text-white">
-                          ${Math.round(((runwayData?.startingMrr ?? 0) * 12) / 100).toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="p-3 bg-white/5 rounded-xl border border-white/5">
-                        <p className="text-white/40 text-[9px] font-bold uppercase tracking-wider mb-1">Monthly Churn</p>
-                        <p className="text-base font-black text-rose-400">
-                          {((runwayData?.churnRate ?? 0) / 100).toFixed(1)}%
-                        </p>
-                      </div>
-                      <div className="p-3 bg-white/5 rounded-xl border border-white/5">
-                        <p className="text-white/40 text-[9px] font-bold uppercase tracking-wider mb-1">LTV : CAC</p>
-                        <p className="text-base font-black text-emerald-400">
-                          {runwayData && runwayData.cac !== undefined && runwayData.cac > 0 && runwayData.churnRate !== undefined && runwayData.churnRate > 0 && runwayData.arpu !== undefined ? (
-                            ((runwayData.arpu * 10000) / (runwayData.churnRate * runwayData.cac)).toFixed(1) + 'x'
-                          ) : (
-                            'N/A'
+                    <div className="glass-card p-8 min-h-[400px]">
+                      <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-xl font-bold">Cash Runway Projections</h3>
+                        <div className="flex items-center gap-3">
+                          <button 
+                            onClick={() => setIsParamsOpen(!isParamsOpen)}
+                            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-white/10 hover:border-white/20 bg-white/5 text-white/70 hover:text-white transition-all cursor-pointer animate-pulse"
+                          >
+                            ⚙️ Model Parameters {isParamsOpen ? '▲' : '▼'}
+                          </button>
+                          {!runwayLoading && customRunway && (
+                            <span className={`text-xs px-2.5 py-1 rounded-md font-bold ${
+                              customRunway.runwayMonths === 'Infinite' 
+                                ? 'bg-green-500/10 text-green-400' 
+                                : customRunway.runwayMonths < 6 
+                                  ? 'bg-red-500/10 text-red-400 animate-pulse' 
+                                  : 'bg-amber-500/10 text-amber-400'
+                            }`}>
+                              {customRunway.runwayMonths === 'Infinite' 
+                                ? 'Profitable' 
+                                : `${customRunway.runwayMonths} Mo. Runway`}
+                            </span>
                           )}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  {runwayData && runwayData.cac !== undefined && runwayData.cac > 0 && (
-                    <div className="mt-3 pt-3 border-t border-white/5 flex justify-between text-[9px] text-white/50">
-                      <span>CAC: ${Math.round(runwayData.cac / 100)}</span>
-                      <span>ARPU: ${runwayData.arpu !== undefined ? Math.round(runwayData.arpu / 100) : 0}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="glass-card p-8">
-                  <h3 className="text-xl font-bold mb-6">Budget Tracker</h3>
-                  <BudgetTracker />
-                </div>
-
-                <div className="glass-card p-8">
-                  <h3 className="text-xl font-bold mb-6">AI Insights</h3>
-                  <div className="space-y-4">
-                    {insightsLoading ? (
-                      <div className="h-20 rounded-xl bg-white/5 animate-pulse flex items-center justify-center text-xs opacity-50">
-                        Analyzing financial data...
-                      </div>
-                    ) : insightsData?.items && Array.isArray(insightsData.items) ? (
-                      insightsData.items.map((item: any, idx: number) => (
-                        <InsightItem 
-                          key={idx}
-                          type={item.type}
-                          message={item.message}
-                        />
-                      ))
-                    ) : insightsData?.advice ? (
-                      <InsightItem 
-                        type="opportunity"
-                        message={insightsData.advice}
-                      />
-                    ) : (
-                      <>
-                        <InsightItem 
-                          type="opportunity"
-                          message="You could save $45/mo by switching your Netflix plan."
-                        />
-                        <InsightItem 
-                          type="warning"
-                          message="Unexpected $200 charge from 'AWS'. Investigate?"
-                        />
-                        <InsightItem 
-                          type="success"
-                          message="Your investment portfolio is up 5% this week!"
-                        />
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                <div className="glass-card p-8 bg-gradient-to-br from-primary/20 to-secondary/20 border-primary/30">
-                  <h3 className="text-xl font-bold mb-2">Ask AI CFO</h3>
-                  <p className="text-white/60 text-sm mb-6">Get instant answers about your finances using Gemini AI.</p>
-                  <button className="btn-primary w-full cursor-pointer">Start Conversation</button>
-                </div>
-
-                <div className="glass-card p-8 space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-bold">Bank Accounts</h3>
-                    {accounts.length > 0 && (
-                      <SyncBankButton onSyncSuccess={() => setRefreshKey(prev => prev + 1)} />
-                    )}
-                  </div>
-                  
-                  {accounts.length > 0 ? (
-                    <div className="space-y-3">
-                      {accounts.map((acc: any) => (
-                        <div key={acc.id} className="flex justify-between items-center p-3 rounded-lg bg-white/5 border border-white/10">
-                          <div>
-                            <p className="text-sm font-semibold text-white">{acc.name}</p>
-                            <p className="text-[10px] text-white/40 capitalize">{acc.type}</p>
-                          </div>
-                          <p className="text-sm font-bold text-white">
-                            ${(acc.balance / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                          </p>
                         </div>
-                      ))}
+                      </div>
+
+                      {isParamsOpen && (
+                        <div className="mb-6 p-6 rounded-xl border border-white/5 bg-white/[0.02] space-y-6 animate-in slide-in-from-top duration-200">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-white/60 font-medium">Revenue Growth Rate</span>
+                                <span className="text-primary font-bold">{revGrowth >= 0 ? '+' : ''}{revGrowth}% MoM</span>
+                              </div>
+                              <input 
+                                type="range"
+                                min="-10"
+                                max="20"
+                                step="0.5"
+                                value={revGrowth}
+                                onChange={(e) => setRevGrowth(parseFloat(e.target.value))}
+                                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
+                              />
+                              <p className="text-[10px] text-white/30">Compounds baseline monthly revenue.</p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-white/60 font-medium">Expense Growth Rate</span>
+                                <span className="text-secondary font-bold">{expGrowth >= 0 ? '+' : ''}{expGrowth}% MoM</span>
+                              </div>
+                              <input 
+                                type="range"
+                                min="-10"
+                                max="20"
+                                step="0.5"
+                                value={expGrowth}
+                                onChange={(e) => setExpGrowth(parseFloat(e.target.value))}
+                                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-secondary"
+                              />
+                              <p className="text-[10px] text-white/30">Compounds baseline monthly expenses.</p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="block text-xs text-white/60 font-medium mb-2.5">Seasonality Profile</label>
+                              <div className="relative">
+                                <select 
+                                  value={seasonalityProfile}
+                                  onChange={(e) => setSeasonalityProfile(e.target.value)}
+                                  className="w-full h-9 bg-black/40 border border-white/10 rounded-lg px-3.5 text-xs text-white/80 focus:outline-none focus:border-primary cursor-pointer appearance-none"
+                                >
+                                  <option value="steady">Steady state (No seasonality)</option>
+                                  <option value="growth">Hyper growth (Q3 surge)</option>
+                                  <option value="summer-dip">Summer Dip (August slump)</option>
+                                </select>
+                                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-white/40 text-[9px]">
+                                  ▼
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <RunwayProjectionChart projections={customRunway?.projections || []} />
                     </div>
-                  ) : (
-                    <p className="text-zinc-500 text-xs">No bank accounts linked yet.</p>
-                  )}
-                  
-                  <PlaidLinkButton onSuccess={() => setRefreshKey(prev => prev + 1)} />
+
+                    <div className="glass-card p-8 min-h-[400px]">
+                      <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-xl font-bold">Transaction History</h3>
+                        <button 
+                          onClick={() => setIsModalOpen(true)}
+                          className="btn-primary flex items-center gap-1.5 text-xs font-bold px-4 py-2 cursor-pointer"
+                        >
+                          <span className="text-sm">+</span> Add Transaction
+                        </button>
+                      </div>
+                      <TransactionList />
+                    </div>
+                  </div>
+
+                  <div className="space-y-8">
+                    <div className="glass-card p-8">
+                      <h3 className="text-xl font-bold mb-4">SaaS Valuation Metrics</h3>
+                      <div className="space-y-6">
+                        <div className="space-y-2">
+                          <label className="block text-xs text-white/60 font-medium">Starting MRR (USD)</label>
+                          <input 
+                            type="number"
+                            value={mrrInput}
+                            onChange={(e) => setMrrInput(Number(e.target.value))}
+                            className="w-full h-10 bg-black/40 border border-white/10 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-primary"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="block text-xs text-white/60 font-medium">Churn Rate (%)</label>
+                            <input 
+                              type="number"
+                              step="0.1"
+                              value={churnInput}
+                              onChange={(e) => setChurnInput(Number(e.target.value))}
+                              className="w-full h-10 bg-black/40 border border-white/10 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-primary"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="block text-xs text-white/60 font-medium">CAC (USD)</label>
+                            <input 
+                              type="number"
+                              value={cacInput}
+                              onChange={(e) => setCacInput(Number(e.target.value))}
+                              className="w-full h-10 bg-black/40 border border-white/10 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-primary"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-xs text-white/60 font-medium">ARPU (USD)</label>
+                          <input 
+                            type="number"
+                            value={arpuInput}
+                            onChange={(e) => setArpuInput(Number(e.target.value))}
+                            className="w-full h-10 bg-black/40 border border-white/10 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-primary"
+                          />
+                        </div>
+                        <button
+                          onClick={() => saasMutation.mutate({
+                            startingMrr: mrrInput * 100,
+                            churnRate: Math.round(churnInput * 100),
+                            cac: cacInput * 100,
+                            arpu: arpuInput * 100
+                          })}
+                          disabled={saasMutation.isPending}
+                          className="w-full h-11 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl font-bold text-xs tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          {saasMutation.isPending ? "Updating..." : "Recalculate SaaS Model"}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="glass-card p-8">
+                      <h3 className="text-xl font-bold mb-4">Budget Limits</h3>
+                      <BudgetTracker />
+                    </div>
+
+                    <div className="glass-card p-8 space-y-6">
+                      <div className="flex justify-between items-center border-b border-white/5 pb-4">
+                        <div>
+                          <h3 className="text-xl font-bold">SVB Connected</h3>
+                          <p className="text-[10px] text-white/40 uppercase tracking-widest font-black mt-0.5">Plaid secure credential integration</p>
+                        </div>
+                        {accounts.length > 0 && (
+                          <SyncBankButton onSyncSuccess={() => setRefreshKey(prev => prev + 1)} />
+                        )}
+                      </div>
+                      
+                      {accounts.length > 0 ? (
+                        <div className="space-y-3">
+                          {accounts.map((acc: any) => (
+                            <div key={acc.id} className="flex justify-between items-center p-3 rounded-lg bg-white/5 border border-white/10">
+                              <div>
+                                <p className="text-sm font-semibold text-white">{acc.name}</p>
+                                <p className="text-[10px] text-white/40 capitalize">{acc.type}</p>
+                              </div>
+                              <p className="text-sm font-bold text-white">
+                                ${(acc.balance / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-zinc-500 text-xs">No bank accounts linked yet.</p>
+                      )}
+                      
+                      <PlaidLinkButton onSuccess={() => setRefreshKey(prev => prev + 1)} />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </>
+              </>
+            ) : (
+              <InvoicesDashboard />
+            )}
+          </div>
         )}
 
-        {activeRole === 'marketer' && <MarketingDashboard />}
+        {activeRole === 'marketer' && (
+          <div className="space-y-6">
+            <div className="flex border border-white/5 rounded-lg overflow-hidden bg-white/[0.02] p-[2px] w-full sm:w-auto self-start mb-2">
+              <button 
+                onClick={() => setCmoView('crm')}
+                className={`px-4 py-2 text-xs font-bold uppercase rounded-md tracking-wider transition-all cursor-pointer ${cmoView === 'crm' ? 'bg-white/10 text-white font-extrabold' : 'text-white/40 hover:text-white/70'}`}
+              >
+                CRM Lead Pipeline
+              </button>
+              <button 
+                onClick={() => setCmoView('campaigns')}
+                className={`px-4 py-2 text-xs font-bold uppercase rounded-md tracking-wider transition-all cursor-pointer ${cmoView === 'campaigns' ? 'bg-white/10 text-white font-extrabold' : 'text-white/40 hover:text-white/70'}`}
+              >
+                AI Marketing Campaigns
+              </button>
+            </div>
+            {cmoView === 'crm' ? <CRMPipeline /> : <MarketingDashboard />}
+          </div>
+        )}
 
-        {activeRole === 'hr' && <HRDashboard />}
+        {activeRole === 'hr' && (
+          <div className="space-y-6">
+            <div className="flex border border-white/5 rounded-lg overflow-hidden bg-white/[0.02] p-[2px] w-full sm:w-auto self-start mb-2">
+              <button 
+                onClick={() => setChroView('operations')}
+                className={`px-4 py-2 text-xs font-bold uppercase rounded-md tracking-wider transition-all cursor-pointer ${chroView === 'operations' ? 'bg-white/10 text-white font-extrabold' : 'text-white/40 hover:text-white/70'}`}
+              >
+                HR Punch Card & Claims
+              </button>
+              <button 
+                onClick={() => setChroView('roster')}
+                className={`px-4 py-2 text-xs font-bold uppercase rounded-md tracking-wider transition-all cursor-pointer ${chroView === 'roster' ? 'bg-white/10 text-white font-extrabold' : 'text-white/40 hover:text-white/70'}`}
+              >
+                AI Job Desk Roster
+              </button>
+            </div>
+            {chroView === 'operations' ? <HROperations /> : <HRDashboard />}
+          </div>
+        )}
+
+        {activeRole === 'operations' && <COOOperations />}
 
         <Chat activeRole={activeRole} seedPrompt={chatSeedPrompt} setSeedPrompt={setChatSeedPrompt} />
 
-        
         <TransactionModal 
           isOpen={isModalOpen} 
           onClose={() => setIsModalOpen(false)} 
@@ -586,7 +523,7 @@ const StatCard = ({ title, value, change, isPositive }: { title: string, value: 
   </div>
 )
 
-const InsightItem = ({ type, message }: { type: 'opportunity' | 'warning' | 'success', message: string }) => {
+export const InsightItem = ({ type, message }: { type: 'opportunity' | 'warning' | 'success', message: string }) => {
   const colors = {
     opportunity: 'text-primary border-primary/20 bg-primary/5',
     warning: 'text-orange-400 border-orange-400/20 bg-orange-400/5',
@@ -670,4 +607,3 @@ function SyncBankButton({ onSyncSuccess }: { onSyncSuccess: () => void }) {
 }
 
 export default App;
-

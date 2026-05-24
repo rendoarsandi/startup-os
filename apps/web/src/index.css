@@ -1,44 +1,52 @@
 @import "tailwindcss";
 
 :root {
-  --primary: oklch(0.65 0.25 260); /* Electric Cyber Blue */
-  --secondary: oklch(0.7 0.2 300); /* Amethyst Purple */
-  --primary-rgb: 0, 229, 255;
-  --secondary-rgb: 157, 78, 221;
-  --glow-color: rgba(0, 229, 255, 0.15);
+  --primary: #2563eb; /* Professional Corporate Blue */
+  --secondary: #4f46e5; /* Indigo */
+  --primary-rgb: 37, 99, 235;
+  --secondary-rgb: 79, 70, 229;
+  --glow-color: transparent;
 }
 
 :root.theme-marketer {
-  --primary: oklch(0.65 0.22 30); /* Hyper Coral */
-  --secondary: oklch(0.6 0.25 340); /* Neon Hot Pink */
-  --primary-rgb: 255, 94, 54;
-  --secondary-rgb: 255, 0, 127;
-  --glow-color: rgba(255, 94, 54, 0.15);
+  --primary: #6366f1; /* CRM Indigo */
+  --secondary: #4338ca; /* Deep Indigo */
+  --primary-rgb: 99, 102, 241;
+  --secondary-rgb: 67, 56, 202;
+  --glow-color: transparent;
 }
 
 :root.theme-hr {
-  --primary: oklch(0.75 0.25 150); /* Vivid Emerald Mint */
-  --secondary: oklch(0.65 0.2 200); /* Cyber Teal */
-  --primary-rgb: 0, 255, 135;
-  --secondary-rgb: 0, 229, 255;
-  --glow-color: rgba(0, 255, 135, 0.15);
+  --primary: #10b981; /* People Ops Emerald */
+  --secondary: #059669; /* Dark Emerald */
+  --primary-rgb: 16, 185, 129;
+  --secondary-rgb: 5, 150, 105;
+  --glow-color: transparent;
+}
+
+:root.theme-operations {
+  --primary: #d97706; /* Operational Amber */
+  --secondary: #b45309; /* Dark Amber */
+  --primary-rgb: 217, 119, 6;
+  --secondary-rgb: 180, 83, 9;
+  --glow-color: transparent;
 }
 
 @theme {
   --color-primary: var(--primary);
   --color-secondary: var(--secondary);
   --color-accent: oklch(0.8 0.12 180);
-  --color-background: #080710; /* True Jet Black */
-  --color-surface: rgba(255, 255, 255, 0.03); /* Glass Surface */
-  --color-border: rgba(255, 255, 255, 0.08);
+  --color-background: #090a0f; /* Deep Solid Obsidian Charcoal */
+  --color-surface: #131622; /* Solid Corporate Slate surface */
+  --color-border: #212638; /* Crisp solid border */
   
   --font-sans: 'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
 @layer base {
   body {
-    background-color: #080710;
-    color: rgba(255, 255, 255, 0.95);
+    background-color: #090a0f;
+    color: #e2e8f0;
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     letter-spacing: -0.01em;
@@ -52,97 +60,75 @@
 }
 
 @layer components {
-  /* High-end Satin Glassmorphic Cards */
+  /* Crisp Solid Cards for Administrative Operations */
   .glass-card, .glass-card-interactive {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(24px) saturate(120%);
-    -webkit-backdrop-filter: blur(24px) saturate(120%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-    border-radius: 20px;
-    transition: background-color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+    background: #131622; /* Solid Surface background */
+    border: 1px solid #212638; /* Solid crisp boundary */
+    box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.25);
+    border-radius: 12px; /* Smaller, cleaner operational border radius */
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
   }
 
   .glass-card-interactive {
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .glass-card-interactive:hover {
-    transform: translateY(-3px);
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 12px 30px 0 var(--glow-color);
+    transform: translateY(-2px);
+    background: #181c2b;
+    border-color: #2e344d;
+    box-shadow: 0 6px 18px 0 rgba(0, 0, 0, 0.35);
   }
 
   .glass-card-interactive:active {
-    transform: translateY(-1px);
+    transform: translateY(0);
   }
 
   /* Sleek navigation links */
   .nav-link {
-    @apply flex items-center gap-3.5 px-4 py-3 rounded-xl hover:bg-white/5 text-white/50 hover:text-white font-medium text-sm transition-all;
+    @apply flex items-center gap-3.5 px-4 py-3 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white font-medium text-sm transition-all;
   }
 
   .nav-link.active {
-    background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.12), rgba(var(--secondary-rgb), 0.04));
-    @apply text-white border border-primary/20 shadow-md;
-    box-shadow: 0 0 15px 0 rgba(var(--primary-rgb), 0.05);
+    background: #1b2136;
+    @apply text-white border-l-4 border-primary rounded-l-none pl-3;
   }
 
-  /* High-fidelity primary button */
+  /* Solid Professional primary button (No blurred glows) */
   .btn-primary {
-    position: relative;
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    @apply text-white font-bold px-6 py-3 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer;
-    box-shadow: 0 4px 20px 0 rgba(var(--primary-rgb), 0.25);
-  }
-
-  .btn-primary::after {
-    content: '';
-    position: absolute;
-    inset: -1px;
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    border-radius: inherit;
-    z-index: -1;
-    opacity: 0.4;
-    filter: blur(8px);
-    transition: opacity 0.3s ease;
+    background: var(--primary);
+    @apply text-white font-bold px-5 py-2.5 rounded-lg shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer;
   }
 
   .btn-primary:hover {
-    @apply scale-[1.02] brightness-110;
-  }
-
-  .btn-primary:hover::after {
-    opacity: 0.7;
+    @apply brightness-115 scale-[1.01];
   }
 
   .btn-primary:active {
-    @apply scale-[0.98] brightness-95;
+    @apply scale-[0.99] brightness-95;
   }
 
-  /* High-fidelity secondary button */
+  /* Solid Professional secondary button */
   .btn-secondary {
-    background: rgba(255, 255, 255, 0.03);
-    @apply text-white/80 hover:text-white font-semibold px-6 py-3 rounded-xl border border-white/8 shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer hover:bg-white/5 hover:border-white/15;
+    background: #1b2030;
+    @apply text-slate-200 hover:text-white font-semibold px-5 py-2.5 rounded-lg border border-slate-700 shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-700/30 hover:border-slate-600;
   }
 
   .btn-secondary:active {
-    @apply scale-[0.98];
+    @apply scale-[0.99];
   }
 
-  /* Sleek Glass Inputs */
+  /* Solid input elements */
   .glass-input {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    @apply rounded-xl px-4 py-3 text-white text-sm outline-none transition-all w-full placeholder-white/30;
+    background: #0d0f17;
+    border: 1px solid #282e42;
+    @apply rounded-lg px-4 py-2.5 text-white text-sm outline-none transition-all w-full placeholder-slate-500;
   }
 
   .glass-input:focus {
-    background: rgba(255, 255, 255, 0.04);
+    background: #10131d;
     border-color: var(--primary);
-    box-shadow: 0 0 12px 0 rgba(var(--primary-rgb), 0.15);
+    box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.2);
   }
 }
 
@@ -151,10 +137,9 @@ input[type="range"].glass-slider {
   -webkit-appearance: none;
   width: 100%;
   height: 6px;
-  background: rgba(255, 255, 255, 0.08);
+  background: #1c1e29;
   border-radius: 9999px;
   outline: none;
-  transition: all 0.3s;
 }
 
 input[type="range"].glass-slider::-webkit-slider-thumb {
@@ -164,24 +149,17 @@ input[type="range"].glass-slider::-webkit-slider-thumb {
   height: 16px;
   border-radius: 50%;
   background: var(--primary);
-  box-shadow: 0 0 8px 0 rgba(var(--primary-rgb), 0.6);
   cursor: pointer;
-  transition: transform 0.2s, background-color 0.2s;
+  transition: transform 0.1s;
 }
 
 input[type="range"].glass-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.25);
-  background: #ffffff;
+  transform: scale(1.15);
 }
 
-/* Nebula radial glows */
+/* Nebula radial glows (Disabled for administrative layout) */
 .nebula-glow {
-  position: absolute;
-  border-radius: 9999px;
-  filter: blur(150px);
-  z-index: -10;
-  opacity: 0.18;
-  pointer-events: none;
+  display: none;
 }
 
 /* Scrollbar customization */
@@ -195,9 +173,8 @@ input[type="range"].glass-slider::-webkit-slider-thumb:hover {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: #202436;
   border-radius: 99px;
-  transition: background-color 0.3s;
 }
 
 ::-webkit-scrollbar-thumb:hover {

@@ -1,7 +1,10 @@
 import { Hono } from 'hono'
 import { drizzle } from 'drizzle-orm/d1'
 import { eq, and, desc } from 'drizzle-orm'
-import { users, financialAccounts, transactions, budgets, marketingCampaigns, employees, plaidConnections, saasConfigs } from "@ai-cfo/db";
+import { 
+  users, financialAccounts, transactions, budgets, marketingCampaigns, employees, plaidConnections, saasConfigs,
+  invoices, crmLeads, attendance, leaveRequests, expenseClaims, inventoryItems, projects, projectTasks, supportTickets
+} from "@ai-cfo/db";
 import { getAuth } from './auth';
 import { GeminiService } from "./gemini";
 import { AnalysisService } from "./analysis";
@@ -266,6 +269,216 @@ async function seedUser(db: any, userId: string) {
   if (transactionsToInsert.length > 0) {
     await db.insert(transactions).values(transactionsToInsert).run();
   }
+
+  // Fetch seeded employees to reference correct foreign key IDs
+  const seededEmployees = await db.select().from(employees).where(eq(employees.userId, userId)).all();
+  const empAlice = seededEmployees.find(e => e.name === 'Alice Vance') || seededEmployees[0];
+  const empBob = seededEmployees.find(e => e.name === 'Bob Sterling') || seededEmployees[1];
+  const empClara = seededEmployees.find(e => e.name === 'Clara Hayes') || seededEmployees[2];
+  const empDavid = seededEmployees.find(e => e.name === 'David Miller') || seededEmployees[3];
+  const empEmily = seededEmployees.find(e => e.name === 'Emily Rose') || seededEmployees[4];
+
+  // 7. Seed Invoices
+  await db.insert(invoices).values([
+    {
+      id: uuidv4(),
+      userId,
+      invoiceNumber: "INV-2026-001",
+      clientName: "Acme Corporation",
+      type: "sales",
+      amount: 1250000,
+      status: "paid",
+      issueDate: new Date(now.getTime() - 25 * 24 * 60 * 60 * 1000),
+      dueDate: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000),
+      items: JSON.stringify([
+        { description: "SaaS Enterprise Core Integration", qty: 1, rate: 1000000 },
+        { description: "API Maintenance Support (Q1)", qty: 1, rate: 250000 }
+      ]),
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: uuidv4(),
+      userId,
+      invoiceNumber: "INV-2026-002",
+      clientName: "Globex Corporation",
+      type: "sales",
+      amount: 850000,
+      status: "unpaid",
+      issueDate: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000),
+      dueDate: new Date(now.getTime() + 20 * 24 * 60 * 60 * 1000),
+      items: JSON.stringify([
+        { description: "Custom UI/UX Implementation", qty: 1, rate: 850000 }
+      ]),
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: uuidv4(),
+      userId,
+      invoiceNumber: "INV-2026-003",
+      clientName: "Wayne Enterprises",
+      type: "sales",
+      amount: 4500000,
+      status: "overdue",
+      issueDate: new Date(now.getTime() - 40 * 24 * 60 * 60 * 1000),
+      dueDate: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000),
+      items: JSON.stringify([
+        { description: "Cryptographic Security Auditing", qty: 3, rate: 1500000 }
+      ]),
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: uuidv4(),
+      userId,
+      invoiceNumber: "INV-PUR-001",
+      clientName: "Amazon Web Services",
+      type: "purchase",
+      amount: 145000,
+      status: "paid",
+      issueDate: new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000),
+      dueDate: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000),
+      items: JSON.stringify([
+        { description: "Cloud Hosting Credits", qty: 1, rate: 145000 }
+      ]),
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: uuidv4(),
+      userId,
+      invoiceNumber: "INV-PUR-002",
+      clientName: "GitHub Inc.",
+      type: "purchase",
+      amount: 48000,
+      status: "unpaid",
+      issueDate: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000),
+      dueDate: new Date(now.getTime() + 25 * 24 * 60 * 60 * 1000),
+      items: JSON.stringify([
+        { description: "GitHub Enterprise Copilot Seats", qty: 24, rate: 2000 }
+      ]),
+      createdAt: now,
+      updatedAt: now
+    }
+  ]).run();
+
+  // 8. Seed CRM Leads
+  await db.insert(crmLeads).values([
+    { id: uuidv4(), userId, name: "Bruce Wayne", company: "Wayne Enterprises", email: "bruce@wayne.co", phone: "+1-555-0192", value: 5000000, status: "proposal", createdAt: now, updatedAt: now },
+    { id: uuidv4(), userId, name: "Tony Stark", company: "Stark Industries", email: "tony@stark.io", phone: "+1-555-3000", value: 12000000, status: "contacted", createdAt: now, updatedAt: now },
+    { id: uuidv4(), userId, name: "Peter Parker", company: "Daily Bugle", email: "peter@bugle.com", phone: "+1-555-9821", value: 150000, status: "lead", createdAt: now, updatedAt: now },
+    { id: uuidv4(), userId, name: "Richard Hendricks", company: "Pied Piper", email: "richard@piedpiper.co", phone: "+1-555-8822", value: 2500000, status: "won", createdAt: now, updatedAt: now },
+    { id: uuidv4(), userId, name: "Gregory House", company: "PPTH Clinic", email: "greg@ppth.org", phone: "+1-555-4040", value: 850000, status: "lost", createdAt: now, updatedAt: now }
+  ]).run();
+
+  // 9. Seed Attendance
+  if (empAlice && empBob && empClara) {
+    const daysToSeed = [0, 1, 2, 3, 4];
+    const attendanceRecords: any[] = [];
+    for (const day of daysToSeed) {
+      const logDate = new Date(now.getTime() - day * 24 * 60 * 60 * 1000);
+      if (logDate.getDay() === 0 || logDate.getDay() === 6) continue;
+      
+      attendanceRecords.push(
+        { id: uuidv4(), userId, employeeId: empAlice.id, date: logDate, status: "present", clockIn: "08:55 AM", clockOut: "06:05 PM", createdAt: now },
+        { id: uuidv4(), userId, employeeId: empBob.id, date: logDate, status: day === 2 ? "late" : "present", clockIn: day === 2 ? "10:12 AM" : "09:02 AM", clockOut: "06:00 PM", createdAt: now },
+        { id: uuidv4(), userId, employeeId: empClara.id, date: logDate, status: "present", clockIn: "08:45 AM", clockOut: "05:55 PM", createdAt: now }
+      );
+    }
+    if (attendanceRecords.length > 0) {
+      await db.insert(attendance).values(attendanceRecords).run();
+    }
+  }
+
+  // 10. Seed Leave Requests
+  if (empBob && empDavid) {
+    await db.insert(leaveRequests).values([
+      {
+        id: uuidv4(),
+        userId,
+        employeeId: empBob.id,
+        type: "vacation",
+        startDate: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000),
+        endDate: new Date(now.getTime() + 12 * 24 * 60 * 60 * 1000),
+        status: "approved",
+        reason: "Annual family summer trip to Yosemite",
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: uuidv4(),
+        userId,
+        employeeId: empDavid.id,
+        type: "sick",
+        startDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
+        endDate: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000),
+        status: "approved",
+        reason: "Dental cleaning and checkup appointment",
+        createdAt: now,
+        updatedAt: now
+      }
+    ]).run();
+  }
+
+  // 11. Seed Expense Claims
+  if (empAlice && empClara) {
+    await db.insert(expenseClaims).values([
+      {
+        id: uuidv4(),
+        userId,
+        employeeId: empAlice.id,
+        title: "Mechanical Keyboard & Trackpad for Office",
+        amount: 32500,
+        category: "supplies",
+        status: "approved",
+        date: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000),
+        createdAt: now
+      },
+      {
+        id: uuidv4(),
+        userId,
+        employeeId: empClara.id,
+        title: "Growth Hackers Annual Conference Tickets",
+        amount: 85000,
+        category: "travel",
+        status: "pending",
+        date: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
+        createdAt: now
+      }
+    ]).run();
+  }
+
+  // 12. Seed Inventory Items
+  await db.insert(inventoryItems).values([
+    { id: uuidv4(), userId, sku: "HW-MBP-16", name: "Apple MacBook Pro 16\" (M3 Max, 36GB)", qty: 8, rate: 349900, warehouse: "San Francisco HQ", reorderLevel: 5, createdAt: now, updatedAt: now },
+    { id: uuidv4(), userId, sku: "HW-MON-32", name: "Dell UltraSharp 32\" 4K USB-C Hub Monitor", qty: 3, rate: 89900, warehouse: "San Francisco HQ", reorderLevel: 5, createdAt: now, updatedAt: now },
+    { id: uuidv4(), userId, sku: "HW-YUBI-5", name: "YubiKey 5C NFC Security Key", qty: 25, rate: 5500, warehouse: "NY Fulfillment Center", reorderLevel: 10, createdAt: now, updatedAt: now },
+    { id: uuidv4(), userId, sku: "SW-FPA-01", name: "Startup OS Premium License Dongle", qty: 100, rate: 12000, warehouse: "Cloud Vault", reorderLevel: 15, createdAt: now, updatedAt: now }
+  ]).run();
+
+  // 13. Seed Projects & Tasks
+  const projRedesignId = uuidv4();
+  const projSocId = uuidv4();
+  await db.insert(projects).values([
+    { id: projRedesignId, userId, name: "Website Rebranding Q3", description: "Complete visual redesign of public landing page and documentation hub.", status: "active", dueDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000), createdAt: now, updatedAt: now },
+    { id: projSocId, userId, name: "SOC-2 Type II Compliance", description: "Establish security controls and prepare audit trials for system compliance.", status: "active", dueDate: new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000), createdAt: now, updatedAt: now }
+  ]).run();
+
+  if (empAlice && empBob && empEmily) {
+    await db.insert(projectTasks).values([
+      { id: uuidv4(), userId, projectId: projRedesignId, title: "Create Figma Brand Assets and Visual Mockups", assignedEmployeeId: empBob.id, status: "completed", hoursLogged: 25, createdAt: now, updatedAt: now },
+      { id: uuidv4(), userId, projectId: projRedesignId, title: "Implement Responsive Web Components in TanStack", assignedEmployeeId: empEmily.id, status: "inprogress", hoursLogged: 12, createdAt: now, updatedAt: now },
+      { id: uuidv4(), userId, projectId: projSocId, title: "Formulate Encryption at Rest Infrastructure Policies", assignedEmployeeId: empAlice.id, status: "todo", hoursLogged: 0, createdAt: now, updatedAt: now }
+    ]).run();
+  }
+
+  // 14. Seed Support Tickets
+  await db.insert(supportTickets).values([
+    { id: uuidv4(), userId, customerName: "Wayne Enterprises IT", subject: "Webhook Endpoint latency spikes", description: "We are seeing 504 Gateway Timeouts on payments callbacks under high load.", status: "open", priority: "high", createdAt: now, updatedAt: now },
+    { id: uuidv4(), userId, customerName: "Globex Inc (HR Department)", subject: "Invoice calculation formula typo", description: "Invoice INV-2026-002 displays standard rate instead of contracted discount. Please review.", status: "replied", priority: "medium", createdAt: now, updatedAt: now },
+    { id: uuidv4(), userId, customerName: "Pied Piper Dev Team", subject: "API Integration Token Reset", description: "Need to regenerate OAuth API tokens for the staging sandbox.", status: "resolved", priority: "low", createdAt: now, updatedAt: now }
+  ]).run();
 }
 
 async function getUserId(c: any): Promise<string | null> {
@@ -1061,6 +1274,539 @@ app.post("/api/plaid/sync-transactions", async (c) => {
       accountsSynced,
       newTransactionsSynced,
     });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// ==========================================
+// CFO INVOICES API
+// ==========================================
+app.get("/api/cfo/invoices", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const results = await db.select().from(invoices).where(eq(invoices.userId, userId)).orderBy(desc(invoices.issueDate)).all();
+    return c.json(results);
+  } catch (error) {
+    console.error("GET /api/cfo/invoices error:", error);
+    return c.json([]);
+  }
+});
+
+app.post("/api/cfo/invoices", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const body = await c.req.json();
+    const newInvoice = {
+      id: uuidv4(),
+      userId,
+      invoiceNumber: body.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
+      clientName: body.clientName,
+      type: body.type || 'sales',
+      amount: Number(body.amount), // in cents
+      status: body.status || 'unpaid',
+      issueDate: body.issueDate ? new Date(body.issueDate) : new Date(),
+      dueDate: body.dueDate ? new Date(body.dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      items: typeof body.items === 'string' ? body.items : JSON.stringify(body.items || []),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    await db.insert(invoices).values(newInvoice).run();
+    return c.json(newInvoice, 201);
+  } catch (error: any) {
+    console.error("POST /api/cfo/invoices error:", error);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.post("/api/cfo/parse-invoice", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const gemini = new GeminiService(c.env.GEMINI_API_KEY);
+  try {
+    const { text } = await c.req.json();
+    const prompt = `You are a professional CFO billing assistant. Extract invoice information from the following text and return a structured JSON object.
+    Text to analyze: "${text}"
+    
+    You MUST respond with a raw JSON object containing ONLY the following keys:
+    - clientName: string (the name of the client/vendor)
+    - type: 'sales' | 'purchase'
+    - dueDateOffsetDays: number (due date relative to today in days, default to 14 if not mentioned)
+    - items: array of objects containing:
+      * description: string
+      * qty: number
+      * rate: number (unit rate in USD dollars, NOT cents)
+      
+    Do not wrap the response in markdown code blocks or add any additional chat text. Return strictly the raw JSON object.`;
+    
+    const responseText = await gemini.generateResponse(prompt, "", "cfo");
+    
+    // Clean up potential markdown formatting in response
+    const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(cleanJson);
+    return c.json(parsed);
+  } catch (error: any) {
+    console.error("AI parse invoice failed:", error);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.put("/api/cfo/invoices/:id/status", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const id = c.req.param("id");
+    const { status } = await c.req.json();
+    await db.update(invoices).set({ status, updatedAt: new Date() }).where(and(eq(invoices.id, id), eq(invoices.userId, userId))).run();
+    return c.json({ success: true });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// ==========================================
+// CMO CRM LEADS API
+// ==========================================
+app.get("/api/marketing/crm", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const results = await db.select().from(crmLeads).where(eq(crmLeads.userId, userId)).orderBy(desc(crmLeads.createdAt)).all();
+    return c.json(results);
+  } catch (error) {
+    console.error("GET /api/marketing/crm error:", error);
+    return c.json([]);
+  }
+});
+
+app.post("/api/marketing/crm", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const body = await c.req.json();
+    const newLead = {
+      id: uuidv4(),
+      userId,
+      name: body.name,
+      company: body.company,
+      email: body.email || null,
+      phone: body.phone || null,
+      value: Number(body.value || 0),
+      status: body.status || 'lead',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    await db.insert(crmLeads).values(newLead).run();
+    return c.json(newLead, 201);
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.put("/api/marketing/crm/:id", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const id = c.req.param("id");
+    const body = await c.req.json();
+    await db.update(crmLeads).set({
+      name: body.name,
+      company: body.company,
+      email: body.email,
+      phone: body.phone,
+      value: body.value !== undefined ? Number(body.value) : undefined,
+      status: body.status,
+      updatedAt: new Date()
+    }).where(and(eq(crmLeads.id, id), eq(crmLeads.userId, userId))).run();
+    return c.json({ success: true });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// ==========================================
+// CHRO HR OPERATIONS API
+// ==========================================
+app.get("/api/hr/attendance", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const results = await db.select().from(attendance).where(eq(attendance.userId, userId)).orderBy(desc(attendance.date)).all();
+    return c.json(results);
+  } catch (error) {
+    return c.json([]);
+  }
+});
+
+app.post("/api/hr/attendance/clock-in", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const body = await c.req.json();
+    const formatter = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const nowStr = formatter.format(new Date());
+    const newLog = {
+      id: uuidv4(),
+      userId,
+      employeeId: body.employeeId,
+      date: new Date(),
+      status: body.status || 'present',
+      clockIn: nowStr,
+      clockOut: null,
+      createdAt: new Date()
+    };
+    await db.insert(attendance).values(newLog).run();
+    return c.json(newLog, 201);
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.post("/api/hr/attendance/clock-out", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const body = await c.req.json();
+    const formatter = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const nowStr = formatter.format(new Date());
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const existing = await db.select().from(attendance).where(
+      and(
+        eq(attendance.userId, userId),
+        eq(attendance.employeeId, body.employeeId)
+      )
+    ).all();
+    
+    const activeRecord = existing
+      .filter(a => new Date(a.date).getTime() >= today.getTime())
+      .find(a => !a.clockOut);
+      
+    if (activeRecord) {
+      await db.update(attendance).set({ clockOut: nowStr }).where(eq(attendance.id, activeRecord.id)).run();
+      return c.json({ success: true });
+    }
+    return c.json({ error: "No active clock-in log found for today." }, 400);
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.get("/api/hr/leaves", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const results = await db.select().from(leaveRequests).where(eq(leaveRequests.userId, userId)).orderBy(desc(leaveRequests.createdAt)).all();
+    return c.json(results);
+  } catch (error) {
+    return c.json([]);
+  }
+});
+
+app.post("/api/hr/leaves", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const body = await c.req.json();
+    const newLeave = {
+      id: uuidv4(),
+      userId,
+      employeeId: body.employeeId,
+      type: body.type,
+      startDate: new Date(body.startDate),
+      endDate: new Date(body.endDate),
+      status: 'pending',
+      reason: body.reason || null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    await db.insert(leaveRequests).values(newLeave).run();
+    return c.json(newLeave, 201);
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.put("/api/hr/leaves/:id/status", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const id = c.req.param("id");
+    const { status } = await c.req.json();
+    await db.update(leaveRequests).set({ status, updatedAt: new Date() }).where(and(eq(leaveRequests.id, id), eq(leaveRequests.userId, userId))).run();
+    return c.json({ success: true });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.get("/api/hr/expenses", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const results = await db.select().from(expenseClaims).where(eq(expenseClaims.userId, userId)).orderBy(desc(expenseClaims.date)).all();
+    return c.json(results);
+  } catch (error) {
+    return c.json([]);
+  }
+});
+
+app.post("/api/hr/expenses", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const body = await c.req.json();
+    const newClaim = {
+      id: uuidv4(),
+      userId,
+      employeeId: body.employeeId,
+      title: body.title,
+      amount: Number(body.amount),
+      category: body.category,
+      status: 'pending',
+      date: body.date ? new Date(body.date) : new Date(),
+      createdAt: new Date()
+    };
+    await db.insert(expenseClaims).values(newClaim).run();
+    return c.json(newClaim, 201);
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.put("/api/hr/expenses/:id/status", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const id = c.req.param("id");
+    const { status } = await c.req.json();
+    await db.update(expenseClaims).set({ status }).where(and(eq(expenseClaims.id, id), eq(expenseClaims.userId, userId))).run();
+    return c.json({ success: true });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// ==========================================
+// COO OPERATIONS & INVENTORY API
+// ==========================================
+app.get("/api/operations/inventory", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const results = await db.select().from(inventoryItems).where(eq(inventoryItems.userId, userId)).orderBy(inventoryItems.sku).all();
+    return c.json(results);
+  } catch (error) {
+    return c.json([]);
+  }
+});
+
+app.post("/api/operations/inventory", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const body = await c.req.json();
+    const sku = body.sku.toUpperCase();
+    const existing = await db.select().from(inventoryItems).where(and(eq(inventoryItems.sku, sku), eq(inventoryItems.userId, userId))).get();
+    
+    if (existing) {
+      const newQty = body.qty !== undefined ? Number(body.qty) : existing.qty;
+      await db.update(inventoryItems).set({
+        qty: newQty,
+        rate: body.rate !== undefined ? Number(body.rate) : existing.rate,
+        warehouse: body.warehouse || existing.warehouse,
+        updatedAt: new Date()
+      }).where(eq(inventoryItems.id, existing.id)).run();
+      return c.json({ ...existing, qty: newQty, rate: body.rate || existing.rate });
+    } else {
+      const newItem = {
+        id: uuidv4(),
+        userId,
+        sku,
+        name: body.name,
+        qty: Number(body.qty || 0),
+        rate: Number(body.rate),
+        warehouse: body.warehouse || 'Main Warehouse',
+        reorderLevel: Number(body.reorderLevel || 10),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      await db.insert(inventoryItems).values(newItem).run();
+      return c.json(newItem, 201);
+    }
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.get("/api/operations/projects", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const results = await db.select().from(projects).where(eq(projects.userId, userId)).orderBy(desc(projects.createdAt)).all();
+    return c.json(results);
+  } catch (error) {
+    return c.json([]);
+  }
+});
+
+app.post("/api/operations/projects", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const body = await c.req.json();
+    const newProject = {
+      id: uuidv4(),
+      userId,
+      name: body.name,
+      description: body.description || null,
+      status: body.status || 'active',
+      dueDate: body.dueDate ? new Date(body.dueDate) : null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    await db.insert(projects).values(newProject).run();
+    return c.json(newProject, 201);
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.get("/api/operations/tasks", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const results = await db.select().from(projectTasks).where(eq(projectTasks.userId, userId)).all();
+    return c.json(results);
+  } catch (error) {
+    return c.json([]);
+  }
+});
+
+app.post("/api/operations/tasks", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const body = await c.req.json();
+    const newTask = {
+      id: uuidv4(),
+      userId,
+      projectId: body.projectId,
+      title: body.title,
+      assignedEmployeeId: body.assignedEmployeeId || null,
+      status: 'todo',
+      hoursLogged: 0,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    await db.insert(projectTasks).values(newTask).run();
+    return c.json(newTask, 201);
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.put("/api/operations/tasks/:id/status", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const id = c.req.param("id");
+    const { status } = await c.req.json();
+    await db.update(projectTasks).set({ status, updatedAt: new Date() }).where(and(eq(projectTasks.id, id), eq(projectTasks.userId, userId))).run();
+    return c.json({ success: true });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.post("/api/operations/tasks/:id/log-hours", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const id = c.req.param("id");
+    const { hours } = await c.req.json();
+    const existing = await db.select().from(projectTasks).where(and(eq(projectTasks.id, id), eq(projectTasks.userId, userId))).get();
+    if (existing) {
+      const newHours = existing.hoursLogged + Number(hours);
+      await db.update(projectTasks).set({ hoursLogged: newHours, updatedAt: new Date() }).where(eq(projectTasks.id, id)).run();
+      return c.json({ success: true, hoursLogged: newHours });
+    }
+    return c.json({ error: "Task not found" }, 404);
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.get("/api/operations/tickets", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const results = await db.select().from(supportTickets).where(eq(supportTickets.userId, userId)).orderBy(desc(supportTickets.createdAt)).all();
+    return c.json(results);
+  } catch (error) {
+    return c.json([]);
+  }
+});
+
+app.post("/api/operations/tickets", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const body = await c.req.json();
+    const newTicket = {
+      id: uuidv4(),
+      userId,
+      customerName: body.customerName,
+      subject: body.subject,
+      description: body.description,
+      status: 'open',
+      priority: body.priority || 'medium',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    await db.insert(supportTickets).values(newTicket).run();
+    return c.json(newTicket, 201);
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.put("/api/operations/tickets/:id/status", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const db = drizzle(c.env.DB);
+  try {
+    const id = c.req.param("id");
+    const { status } = await c.req.json();
+    await db.update(supportTickets).set({ status, updatedAt: new Date() }).where(and(eq(supportTickets.id, id), eq(supportTickets.userId, userId))).run();
+    return c.json({ success: true });
   } catch (error: any) {
     return c.json({ error: error.message }, 500);
   }

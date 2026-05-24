@@ -157,10 +157,10 @@ export const HRDashboard: React.FC = () => {
     <div className="space-y-8">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-black mb-1.5 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent italic tracking-tight">
+          <h2 className="text-3xl font-bold mb-1.5 text-white tracking-tight">
             CHRO Boardroom
           </h2>
-          <p className="text-white/40 text-sm font-medium">Manage headcount, roster logs, and draft premium HR documentation with Gemini AI.</p>
+          <p className="text-slate-400 text-sm font-medium">Manage headcount, roster logs, and draft premium HR documentation with Gemini AI.</p>
         </div>
         <button 
           onClick={() => setIsFormOpen(!isFormOpen)}

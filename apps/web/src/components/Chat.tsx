@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, User, Loader2, Sparkles, Briefcase, Users, Zap } from 'lucide-react';
+import { MessageCircle, X, Send, User, Loader2, Sparkles, Briefcase, Users, Zap, Package } from 'lucide-react';
 import { useChat } from '../hooks/useChat';
 
 interface ChatProps {
-  activeRole: 'cfo' | 'marketer' | 'hr';
+  activeRole: 'cfo' | 'marketer' | 'hr' | 'operations';
   seedPrompt?: string;
   setSeedPrompt?: (prompt: string | undefined) => void;
 }
@@ -43,18 +43,21 @@ export const Chat: React.FC<ChatProps> = ({ activeRole, seedPrompt, setSeedPromp
   const roleTitle = {
     cfo: "AI CFO Assistant",
     marketer: "AI CMO Growth Partner",
-    hr: "AI CHRO People Advisor"
+    hr: "AI CHRO People Advisor",
+    operations: "AI COO Operations Director"
   };
 
   const roleWelcome = {
     cfo: "Hello! I'm your AI CFO. How can I help you manage your finances, expenses, or cashflow today?",
     marketer: "Hey there! I'm your AI CMO. Let's design some high-converting campaigns or brainstorm growth ideas!",
-    hr: "Welcome! I'm your AI CHRO. I can assist you with HR policies, job descriptions, offer letters, or compliance questions."
+    hr: "Welcome! I'm your AI CHRO. I can assist you with HR policies, job descriptions, offer letters, or compliance questions.",
+    operations: "Greetings! I'm your AI COO. Let's optimize our stock inventory levels, coordinate project tasks, or resolve client support issues."
   };
 
   const RoleIcon = () => {
     if (activeRole === 'marketer') return <Sparkles size={20} />;
     if (activeRole === 'hr') return <Users size={20} />;
+    if (activeRole === 'operations') return <Package size={20} />;
     return <Briefcase size={20} />;
   };
 

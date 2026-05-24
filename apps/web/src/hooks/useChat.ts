@@ -6,11 +6,12 @@ export interface Message {
   parts: { text: string }[];
 }
 
-export const useChat = (activeRole: 'cfo' | 'marketer' | 'hr') => {
-  const [messagesMap, setMessagesMap] = useState<Record<'cfo' | 'marketer' | 'hr', Message[]>>({
+export const useChat = (activeRole: 'cfo' | 'marketer' | 'hr' | 'operations') => {
+  const [messagesMap, setMessagesMap] = useState<Record<'cfo' | 'marketer' | 'hr' | 'operations', Message[]>>({
     cfo: [],
     marketer: [],
-    hr: []
+    hr: [],
+    operations: []
   });
 
   const currentMessages = messagesMap[activeRole] || [];

@@ -71,43 +71,41 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
       <div className="nebula-glow bottom-[-15%] left-[-15%] w-[50%] h-[50%] bg-secondary/20" />
       <div className="nebula-glow top-[30%] left-[25%] w-[400px] h-[400px] bg-accent/15" />
 
-      {/* Main glass card container */}
-      <div className="w-full max-w-md p-10 glass-card m-4 relative z-10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)] border border-white/10 animate-in fade-in slide-in-from-bottom-6 duration-700">
+      {/* Main container */}
+      <div className="w-full max-w-md p-10 glass-card m-4 relative z-10 shadow-[0_16px_36px_rgba(0,0,0,0.5)] border border-border animate-in fade-in duration-500">
         <div className="flex flex-col items-center mb-8 text-center">
           {/* Logo / Header */}
-          <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-primary/30 to-secondary/30 p-[1.5px] mb-5 shadow-[0_8px_32px_rgba(var(--primary-rgb),0.15)] flex items-center justify-center transition-transform hover:scale-105 duration-300">
-            <div className="h-full w-full rounded-[14px] bg-[#090812] overflow-hidden flex items-center justify-center">
-              <img 
-                src="/logo.png" 
-                alt="Startup OS Logo" 
-                className="w-[130%] h-[130%] object-cover scale-110" 
-              />
-            </div>
+          <div className="h-16 w-16 rounded-xl border border-border p-2 mb-5 bg-[#0d0f17] flex items-center justify-center">
+            <img 
+              src="/logo.png" 
+              alt="Startup OS Logo" 
+              className="w-full h-full object-contain" 
+            />
           </div>
-          <h2 className="text-3xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent italic tracking-wider">
+          <h2 className="text-2xl font-bold text-white tracking-wider">
             STARTUP OS
           </h2>
-          <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold mt-1.5">Autonomous Financial & CMO C-Suite</p>
+          <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-1.5">Autonomous C-Suite ERP system</p>
         </div>
 
         {/* Tab switchers */}
-        <div className="grid grid-cols-2 p-1 bg-white/5 rounded-xl border border-white/5 mb-6">
+        <div className="grid grid-cols-2 p-1 bg-white/5 rounded-lg border border-border mb-6">
           <button
             onClick={() => { setIsLogin(true); setError(null); setSuccessMsg(null); }}
-            className={`py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            className={`py-2.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
               isLogin 
-                ? 'bg-primary/20 text-white border border-primary/20 shadow-md shadow-primary/10 font-extrabold' 
-                : 'text-white/40 hover:text-white/70'
+                ? 'bg-primary/15 text-white border border-primary/20 font-extrabold' 
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             Sign In
           </button>
           <button
             onClick={() => { setIsLogin(false); setError(null); setSuccessMsg(null); }}
-            className={`py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            className={`py-2.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
               !isLogin 
-                ? 'bg-primary/20 text-white border border-primary/20 shadow-md shadow-primary/10 font-extrabold' 
-                : 'text-white/40 hover:text-white/70'
+                ? 'bg-primary/15 text-white border border-primary/20 font-extrabold' 
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             Create Account

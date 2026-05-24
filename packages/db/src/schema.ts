@@ -153,3 +153,116 @@ export const saasConfigs = sqliteTable('saas_config', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
+export const invoices = sqliteTable('invoice', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  invoiceNumber: text('invoice_number').notNull(),
+  clientName: text('client_name').notNull(),
+  type: text('type').notNull().default('sales'), // 'sales' or 'purchase'
+  amount: integer('amount').notNull(), // in cents
+  status: text('status').notNull().default('unpaid'), // 'paid', 'unpaid', 'overdue'
+  issueDate: integer('issue_date', { mode: 'timestamp' }).notNull(),
+  dueDate: integer('due_date', { mode: 'timestamp' }).notNull(),
+  items: text('items').notNull(), // JSON string representing array of items: { description: string, qty: number, rate: number }
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const crmLeads = sqliteTable('crm_lead', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  name: text('name').notNull(),
+  company: text('company').notNull(),
+  email: text('email'),
+  phone: text('phone'),
+  value: integer('value').notNull().default(0), // in cents
+  status: text('status').notNull().default('lead'), // 'lead', 'contacted', 'proposal', 'won', 'lost'
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const attendance = sqliteTable('attendance', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  employeeId: text('employee_id').notNull().references(() => employees.id),
+  date: integer('date', { mode: 'timestamp' }).notNull(),
+  status: text('status').notNull().default('present'), // 'present', 'absent', 'late'
+  clockIn: text('clock_in'),
+  clockOut: text('clock_out'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const leaveRequests = sqliteTable('leave_request', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  employeeId: text('employee_id').notNull().references(() => employees.id),
+  type: text('type').notNull(), // 'vacation', 'sick', 'unpaid', 'maternity'
+  startDate: integer('start_date', { mode: 'timestamp' }).notNull(),
+  endDate: integer('end_date', { mode: 'timestamp' }).notNull(),
+  status: text('status').notNull().default('pending'), // 'pending', 'approved', 'rejected'
+  reason: text('reason'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const expenseClaims = sqliteTable('expense_claim', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  employeeId: text('employee_id').notNull().references(() => employees.id),
+  title: text('title').notNull(),
+  amount: integer('amount').notNull(), // in cents
+  category: text('category').notNull(), // 'travel', 'meals', 'supplies', 'software', 'other'
+  status: text('status').notNull().default('pending'), // 'pending', 'approved', 'rejected'
+  date: integer('date', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const inventoryItems = sqliteTable('inventory_item', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  sku: text('sku').notNull().unique(),
+  name: text('name').notNull(),
+  qty: integer('qty').notNull().default(0),
+  rate: integer('rate').notNull(), // unit purchase rate in cents
+  warehouse: text('warehouse').notNull().default('Main Warehouse'),
+  reorderLevel: integer('reorder_level').notNull().default(10),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const projects = sqliteTable('project', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  name: text('name').notNull(),
+  description: text('description'),
+  status: text('status').notNull().default('active'), // 'active', 'completed', 'onhold'
+  dueDate: integer('due_date', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const projectTasks = sqliteTable('project_task', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  projectId: text('project_id').notNull().references(() => projects.id),
+  title: text('title').notNull(),
+  assignedEmployeeId: text('assigned_employee_id').references(() => employees.id),
+  status: text('status').notNull().default('todo'), // 'todo', 'inprogress', 'completed'
+  hoursLogged: integer('hours_logged').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const supportTickets = sqliteTable('support_ticket', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  customerName: text('customer_name').notNull(),
+  subject: text('subject').notNull(),
+  description: text('description').notNull(),
+  status: text('status').notNull().default('open'), // 'open', 'replied', 'resolved'
+  priority: text('priority').notNull().default('medium'), // 'low', 'medium', 'high'
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+
