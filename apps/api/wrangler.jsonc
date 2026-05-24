@@ -2,6 +2,10 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "api",
   "main": "src/index.ts",
+  "build": {
+    "command": "bun run build",
+    "cwd": "../.."
+  },
   "compatibility_date": "2026-05-20",
   "compatibility_flags": [
     "nodejs_compat"
