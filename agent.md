@@ -47,3 +47,10 @@ All agents utilize large language models to interact and make structural decisio
   1. *None (Read-Only):* Agents only summarize data without making modifications.
   2. *Require Approval:* Agents draft changes and wait for human confirmation.
   3. *Fully Autonomous:* Agents execute database writes, dispatch emails, and parse files without human intervention.
+
+---
+
+## 3. Package Management & Commands Rule
+
+- **Crucial Rule:** DO NOT use `npm`, `npm install`, `npm uninstall`, or standard node package deletions on this codebase.
+- **Enforcement:** Always use `bun` (e.g., `bun add`, `bun install`, `bun remove`, `bun run`) for all package management, dependencies, and script execution.

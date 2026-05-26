@@ -15,6 +15,7 @@ import { COOOperations } from './components/COOOperations'
 import { SystemSettings } from './components/SystemSettings'
 import { FunnelAnalysis } from './components/FunnelAnalysis'
 import { HRBoardroom } from './components/HRBoardroom'
+import { ScenarioPlanner } from './components/ScenarioPlanner'
 import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 
@@ -508,144 +509,14 @@ function App() {
                 )}
 
                 {currentView === 'forecasting' && (
-                  <div className="space-y-6 animate-in fade-in duration-300">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                      <Card className="lg:col-span-2 p-6 min-h-[400px]">
-                        <div className="flex items-center justify-between mb-5">
-                          <h3 className="text-base font-bold text-foreground/90">Cash Runway Projections</h3>
-                          <div className="flex items-center gap-2">
-                            <Button 
-                              variant="outline"
-                              onClick={() => setIsParamsOpen(!isParamsOpen)}
-                              className="h-8 text-[10px] font-bold px-3 uppercase tracking-wider gap-1.5"
-                            >
-                              ⚙️ Model Parameters {isParamsOpen ? '▲' : '▼'}
-                            </Button>
-                            {!runwayLoading && customRunway && (
-                              <Badge variant={customRunway.runwayMonths === 'Infinite' ? 'success' : customRunway.runwayMonths < 6 ? 'destructive' : 'warning'} className="text-[9px] font-black uppercase tracking-wider py-0.5">
-                                {customRunway.runwayMonths === 'Infinite' 
-                                  ? 'Profitable' 
-                                  : `${customRunway.runwayMonths} Mo. Runway`}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-
-                        {isParamsOpen && (
-                          <div className="mb-5 p-5 rounded-xl border border-border bg-black/15 space-y-5 animate-in slide-in-from-top duration-200">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                              <div className="space-y-2">
-                                <div className="flex justify-between items-center text-[10px] font-bold">
-                                  <span className="text-muted-foreground uppercase">Revenue Growth Rate</span>
-                                  <span className="text-primary font-black">{revGrowth >= 0 ? '+' : ''}{revGrowth}% MoM</span>
-                                </div>
-                                <Slider 
-                                  min={-10}
-                                  max={20}
-                                  step={0.5}
-                                  value={[revGrowth]}
-                                  onValueChange={(val) => setRevGrowth(val[0])}
-                                  className="py-2"
-                                />
-                                <p className="text-[9px] text-muted-foreground/60 font-semibold">Compounds baseline monthly revenue.</p>
-                              </div>
-
-                              <div className="space-y-2">
-                                <div className="flex justify-between items-center text-[10px] font-bold">
-                                  <span className="text-muted-foreground uppercase">Expense Growth Rate</span>
-                                  <span className="text-foreground/80 font-black">{expGrowth >= 0 ? '+' : ''}{expGrowth}% MoM</span>
-                                </div>
-                                <Slider 
-                                  min={-10}
-                                  max={20}
-                                  step={0.5}
-                                  value={[expGrowth]}
-                                  onValueChange={(val) => setExpGrowth(val[0])}
-                                  className="py-2"
-                                />
-                                <p className="text-[9px] text-muted-foreground/60 font-semibold">Compounds baseline monthly expenses.</p>
-                              </div>
-
-                              <div className="space-y-2">
-                                <label className="block text-[10px] text-muted-foreground font-bold uppercase tracking-widest pl-0.5">Seasonality Profile</label>
-                                <Select 
-                                  value={seasonalityProfile} 
-                                  onValueChange={(val) => setSeasonalityProfile(val)}
-                                >
-                                  <SelectTrigger className="w-full text-xs h-9 uppercase font-bold tracking-wider">
-                                    <SelectValue placeholder="Profile" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="steady">Steady state (No seasonality)</SelectItem>
-                                    <SelectItem value="growth">Hyper growth (Q3 surge)</SelectItem>
-                                    <SelectItem value="summer-dip">Summer Dip (August slump)</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        <RunwayProjectionChart projections={customRunway?.projections || []} />
-                      </Card>
-
-                      <div className="space-y-6">
-                        <Card className="p-6">
-                          <h3 className="text-base font-bold mb-4 text-foreground/90">SaaS Valuation Metrics</h3>
-                          <div className="space-y-4">
-                            <div className="space-y-1.5">
-                              <label className="block text-[10px] text-muted-foreground font-bold uppercase tracking-widest pl-0.5">Starting MRR (USD)</label>
-                              <Input 
-                                type="number"
-                                value={mrrInput || ''}
-                                onChange={(e) => setMrrInput(Number(e.target.value))}
-                              />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-1.5">
-                                <label className="block text-[10px] text-muted-foreground font-bold uppercase tracking-widest pl-0.5">Churn Rate (%)</label>
-                                <Input 
-                                  type="number"
-                                  step="0.1"
-                                  value={churnInput || ''}
-                                  onChange={(e) => setChurnInput(Number(e.target.value))}
-                                />
-                              </div>
-                              <div className="space-y-1.5">
-                                <label className="block text-[10px] text-muted-foreground font-bold uppercase tracking-widest pl-0.5">CAC (USD)</label>
-                                <Input 
-                                  type="number"
-                                  value={cacInput || ''}
-                                  onChange={(e) => setCacInput(Number(e.target.value))}
-                                />
-                              </div>
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="block text-[10px] text-muted-foreground font-bold uppercase tracking-widest pl-0.5">ARPU (USD)</label>
-                              <Input 
-                                type="number"
-                                value={arpuInput || ''}
-                                onChange={(e) => setArpuInput(Number(e.target.value))}
-                              />
-                            </div>
-                            <Button
-                              onClick={() => saasMutation.mutate({
-                                startingMrr: mrrInput * 100,
-                                churnRate: Math.round(churnInput * 100),
-                                cac: cacInput * 100,
-                                arpu: arpuInput * 100
-                              })}
-                              disabled={saasMutation.isPending}
-                              variant="outline"
-                              className="w-full h-10 text-xs font-bold"
-                            >
-                              {saasMutation.isPending ? "Updating..." : "Recalculate SaaS Model"}
-                            </Button>
-                          </div>
-                        </Card>
-                      </div>
-                    </div>
-                  </div>
+                  <ScenarioPlanner 
+                    baseline={runwayData} 
+                    onOpenChat={(seedPrompt) => {
+                      if (seedPrompt) {
+                        setChatSeedPrompt(seedPrompt);
+                      }
+                    }} 
+                  />
                 )}
               </div>
             )}

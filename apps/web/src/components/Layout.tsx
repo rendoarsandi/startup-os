@@ -264,7 +264,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeRole, setActiveR
                 <NavLink 
                   icon={<Calendar size={16} />} 
                   label="Attendance & Leaves" 
-                  active={currentView === 'attendance'}
+                  active={currentView === 'attendance' || currentView === 'leaves'}
                   onClick={() => onViewChange('attendance')}
                 />
                 <NavLink 
