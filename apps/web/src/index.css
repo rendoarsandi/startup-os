@@ -62,9 +62,25 @@
   --ring: 240 10% 3.9%;
 }
 
-:root.theme-marketer {}
-:root.theme-hr {}
-:root.theme-operations {}
+:root.theme-cfo {
+  --primary: 185 100% 50%; /* Cyber Cyan */
+  --ring: 185 100% 50%;
+}
+
+:root.theme-marketer {
+  --primary: 12 100% 60%; /* Hyper Coral */
+  --ring: 12 100% 60%;
+}
+
+:root.theme-hr {
+  --primary: 152 100% 50%; /* Vivid Emerald Mint */
+  --ring: 152 100% 50%;
+}
+
+:root.theme-operations {
+  --primary: 275 80% 60%; /* Neon Amethyst */
+  --ring: 275 80% 60%;
+}
 
 @theme {
   --color-background: hsl(var(--background));
