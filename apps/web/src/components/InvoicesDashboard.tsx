@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 
 interface InvoiceItem {
   description: string;
@@ -65,13 +65,16 @@ export const InvoicesDashboard: React.FC = () => {
 
   // AI Invoice Scanner State
   const [aiPrompt, setAiPrompt] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isAiScanning, setIsAiScanning] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [mathError, setMathError] = useState<string | null>(null);
 
   const handleAiScan = async () => {
     if (!aiPrompt.trim()) return;
     setIsAiScanning(true);
     setAiError(null);
+    setMathError(null);
     try {
       const res = await fetch('/api/cfo/parse-invoice', {
         method: 'POST',
@@ -97,6 +100,62 @@ export const InvoicesDashboard: React.FC = () => {
       setAiPrompt('');
     } catch (err: any) {
       setAiError(err.message || 'Error occurred during AI scan.');
+    } finally {
+      setIsAiScanning(false);
+    }
+  };
+
+  const handleFileUploadScan = async () => {
+    if (!selectedFile) return;
+    setIsAiScanning(true);
+    setAiError(null);
+    setMathError(null);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64String = reader.result as string;
+        const commaIndex = base64String.indexOf(',');
+        const cleanBase64 = base64String.slice(commaIndex + 1);
+        const mimeType = selectedFile.type;
+
+        try {
+          const res = await fetch('/api/cfo/parse-invoice-secure', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileBase64: cleanBase64, mimeType })
+          });
+          if (!res.ok) throw new Error('Failed to scan document with AI');
+          const data = await res.json();
+
+          if (data.clientName) setClientName(data.clientName);
+          if (data.type) setInvoiceType(data.type);
+          if (data.invoiceNumber) setInvoiceNumber(data.invoiceNumber);
+          if (data.dueDateOffsetDays) {
+            const d = new Date();
+            d.setDate(d.getDate() + data.dueDateOffsetDays);
+            setDueDate(d.toISOString().split('T')[0]);
+          }
+          if (data.items && data.items.length > 0) {
+            setLineItems(data.items.map((item: any) => ({
+              description: item.description || '',
+              qty: item.qty || 1,
+              rate: item.rate || 0
+            })));
+          }
+
+          if (data.isMathAccurate === false) {
+            setMathError(`Alert: The scanned invoice total ($${data.grandTotal}) does not mathematically match the sum of extracted line items ($${data.calculatedGrandTotal}). Please manually review details before compiling.`);
+          } else {
+            setMathError(null);
+          }
+          setSelectedFile(null);
+        } catch (e: any) {
+          setAiError(e.message || 'Verification scan failed.');
+        }
+      };
+      reader.readAsDataURL(selectedFile);
+    } catch (err: any) {
+      setAiError(err.message || 'Error occurred while uploading.');
     } finally {
       setIsAiScanning(false);
     }
@@ -156,6 +215,8 @@ export const InvoicesDashboard: React.FC = () => {
     setInvoiceType('sales');
     setDueDate('');
     setLineItems([{ description: '', qty: 1, rate: 0 }]);
+    setMathError(null);
+    setAiError(null);
   };
 
   const handleAddItem = () => {
@@ -550,28 +611,80 @@ export const InvoicesDashboard: React.FC = () => {
                 <Sparkles size={14} className="text-primary" />
                 <span className="text-xs font-bold text-foreground">AI Invoice Draft Assistant</span>
               </div>
-              <span className="text-[8px] font-black tracking-widest uppercase text-muted-foreground/80 bg-black/20 px-2 py-0.5 rounded border border-border/50">Gemini L4</span>
+              <span className="text-[8px] font-black tracking-widest uppercase text-muted-foreground/80 bg-black/20 px-2 py-0.5 rounded border border-border/50">Gemini 3.5 Flash (Flex)</span>
             </div>
-            <p className="text-[10px] text-muted-foreground">Paste receipt details, log summaries, or mail transcripts, and click draft to auto-populate fields instantly.</p>
-            <div className="flex gap-2.5">
-              <textarea 
-                placeholder="e.g. 'Acme Corp ordered 3 Consultation packages at $1500 each, bill due next week Wednesday'"
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                className="glass-input text-xs h-16 py-2 bg-black/20 resize-none font-medium text-foreground"
-              />
-              <Button
-                type="button"
-                onClick={handleAiScan}
-                disabled={isAiScanning || !aiPrompt.trim()}
-                className="h-auto flex flex-col justify-center items-center gap-1.5 px-4 text-[9px] shrink-0"
-              >
-                {isAiScanning ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-                <span>Draft</span>
-              </Button>
-            </div>
+
+            <Tabs defaultValue="upload" className="w-full space-y-3">
+              <TabsList className="grid grid-cols-2 w-full max-w-[240px] h-8 bg-black/10">
+                <TabsTrigger value="upload" className="py-1 text-[9px]">File Scan (OCR)</TabsTrigger>
+                <TabsTrigger value="text" className="py-1 text-[9px]">Text Draft</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="upload" className="space-y-3 focus-visible:outline-none">
+                <p className="text-[10px] text-muted-foreground">Upload any scanned receipt, quotation, or invoice (PDF, PNG, JPEG) for zero-hallucination structured visual processing.</p>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 relative">
+                    <input 
+                      type="file" 
+                      accept="application/pdf,image/png,image/jpeg"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setSelectedFile(e.target.files[0]);
+                        }
+                      }}
+                      className="hidden"
+                      id="invoice-file-upload"
+                    />
+                    <label 
+                      htmlFor="invoice-file-upload"
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-dashed border-border bg-black/10 hover:bg-black/20 text-xs font-bold cursor-pointer transition-all w-full text-center"
+                    >
+                      📁 {selectedFile ? selectedFile.name.toUpperCase() : "CHOOSE RECEIPT OR INVOICE FILE"}
+                    </label>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleFileUploadScan}
+                    disabled={isAiScanning || !selectedFile}
+                    className="h-10 text-xs font-bold gap-2 px-5"
+                  >
+                    {isAiScanning ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                    <span>Secure Scan</span>
+                  </Button>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="text" className="space-y-3 focus-visible:outline-none">
+                <p className="text-[10px] text-muted-foreground">Paste plain text receipt details or email transcript notes to draft a pre-filled invoice outline.</p>
+                <div className="flex gap-2.5">
+                  <textarea 
+                    placeholder="e.g. 'Wayne Enterprises billed us $500 for legal review on Q2 contracts, due in 30 days'"
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    className="glass-input text-xs h-16 py-2 bg-black/20 resize-none font-medium text-foreground"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleAiScan}
+                    disabled={isAiScanning || !aiPrompt.trim()}
+                    className="h-auto flex flex-col justify-center items-center gap-1.5 px-4 text-[9px] shrink-0"
+                  >
+                    {isAiScanning ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                    <span>Draft</span>
+                  </Button>
+                </div>
+              </TabsContent>
+            </Tabs>
+
             {aiError && (
               <p className="text-[10px] text-destructive font-semibold">{aiError}</p>
+            )}
+
+            {mathError && (
+              <div className="p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 text-[9.5px] text-amber-400 font-medium flex gap-2 items-start shadow-sm animate-in fade-in duration-200">
+                <span className="text-xs">⚠️</span>
+                <span>{mathError}</span>
+              </div>
             )}
           </div>
 

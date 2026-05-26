@@ -15,8 +15,14 @@ export class GeminiService {
 
   async generateResponse(prompt: string, context?: string, role: keyof typeof SYSTEM_PROMPTS = 'cfo'): Promise<string> {
     const modelWithSystem = this.genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
-      systemInstruction: SYSTEM_PROMPTS[role] || SYSTEM_PROMPTS.cfo
+      model: "gemini-3.5-flash",
+      systemInstruction: SYSTEM_PROMPTS[role] || SYSTEM_PROMPTS.cfo,
+      generationConfig: {
+        serviceTier: "flex",
+        thinkingConfig: {
+          thinkingLevel: "MEDIUM"
+        }
+      } as any
     });
 
     const fullPrompt = context 
@@ -35,8 +41,14 @@ export class GeminiService {
     role: keyof typeof SYSTEM_PROMPTS = 'cfo'
   ): Promise<string> {
     const modelWithSystem = this.genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
-      systemInstruction: SYSTEM_PROMPTS[role] || SYSTEM_PROMPTS.cfo
+      model: "gemini-3.5-flash",
+      systemInstruction: SYSTEM_PROMPTS[role] || SYSTEM_PROMPTS.cfo,
+      generationConfig: {
+        serviceTier: "flex",
+        thinkingConfig: {
+          thinkingLevel: "MEDIUM"
+        }
+      } as any
     });
 
     const chatSession = modelWithSystem.startChat({
@@ -60,6 +72,30 @@ export class GeminiService {
       : message;
 
     const result = await chatSession.sendMessage(finalMessage);
+    const response = await result.response;
+    return response.text();
+  }
+
+  async generateMultimodalResponse(prompt: string, fileBase64: string, mimeType: string, role: keyof typeof SYSTEM_PROMPTS = 'cfo'): Promise<string> {
+    const modelWithSystem = this.genAI.getGenerativeModel({ 
+      model: "gemini-3.5-flash",
+      systemInstruction: SYSTEM_PROMPTS[role] || SYSTEM_PROMPTS.cfo,
+      generationConfig: {
+        serviceTier: "flex",
+        thinkingConfig: {
+          thinkingLevel: "MEDIUM"
+        }
+      } as any
+    });
+
+    const filePart = {
+      inlineData: {
+        data: fileBase64,
+        mimeType: mimeType
+      }
+    };
+
+    const result = await modelWithSystem.generateContent([prompt, filePart]);
     const response = await result.response;
     return response.text();
   }

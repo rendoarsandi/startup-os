@@ -1355,6 +1355,66 @@ app.post("/api/cfo/parse-invoice", async (c) => {
   }
 });
 
+app.post("/api/cfo/parse-invoice-secure", async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+  const gemini = new GeminiService(c.env.GEMINI_API_KEY);
+  try {
+    const { fileBase64, mimeType } = await c.req.json();
+    if (!fileBase64 || !mimeType) {
+      return c.json({ error: "Missing fileBase64 or mimeType payload." }, 400);
+    }
+
+    const prompt = `You are a professional CFO billing assistant. Read this scanned invoice/receipt/quotation document.
+    Extract the billing entities accurately to a raw JSON object. Do not calculate or change any values.
+    
+    You MUST respond with a raw JSON object containing ONLY the following keys:
+    - clientName: string (the name of the client/vendor)
+    - type: 'sales' | 'purchase'
+    - invoiceNumber: string (extracted invoice or document number, e.g. INV-1002, default empty string if not found)
+    - dueDateOffsetDays: number (due date relative to today in days, default to 14 if not mentioned)
+    - taxAmount: number (tax listed in dollars, e.g. 10.50, default to 0)
+    - grandTotal: number (total/grand total amount listed in dollars, e.g. 150.00, default to 0)
+    - items: array of objects containing:
+      * description: string
+      * qty: number
+      * rate: number (unit rate in USD dollars, e.g. 15.00)
+
+    Do not wrap the response in markdown code blocks or add any additional chat text. Return strictly the raw JSON object.`;
+
+    const responseText = await gemini.generateMultimodalResponse(prompt, fileBase64, mimeType, "cfo");
+    
+    // Clean up potential markdown formatting in response
+    const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(cleanJson);
+
+    // Deterministic Math Verification
+    const taxCents = Math.round((parsed.taxAmount || 0) * 100);
+    const grandTotalCents = Math.round((parsed.grandTotal || 0) * 100);
+    
+    let computedSubtotalCents = 0;
+    const items = parsed.items || [];
+    for (const item of items) {
+      const rateCents = Math.round((item.rate || 0) * 100);
+      const qty = item.qty || 1;
+      computedSubtotalCents += qty * rateCents;
+    }
+
+    const computedGrandTotalCents = computedSubtotalCents + taxCents;
+    const isMathAccurate = Math.abs(computedGrandTotalCents - grandTotalCents) < 2;
+
+    return c.json({
+      ...parsed,
+      isMathAccurate,
+      calculatedGrandTotal: computedGrandTotalCents / 100,
+      requiresManualReview: !isMathAccurate
+    });
+  } catch (error: any) {
+    console.error("AI parse secure invoice failed:", error);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
 app.put("/api/cfo/invoices/:id/status", async (c) => {
   const userId = await getUserId(c);
   if (!userId) return c.json({ error: "Unauthorized" }, 401);
