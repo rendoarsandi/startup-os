@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { 
   LayoutDashboard, Wallet, PieChart, TrendingUp, Settings, LogOut, Bell, Search, 
-  Users, Sparkles, Briefcase, Award, Menu, Package, FileText, CheckSquare, Ticket, ChevronDown, Calendar
+  Users, Sparkles, Briefcase, Award, Menu, Package, FileText, CheckSquare, Ticket, ChevronDown, Calendar, Sun, Moon
 } from 'lucide-react';
 import { Button } from './ui/button';
 import {
@@ -32,6 +32,20 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children, activeRole, setActiveRole, userName, onSignOut, currentView, onViewChange }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('sys_theme');
+    return (saved as 'light' | 'dark') || 'dark';
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'light') {
+      root.classList.add('light');
+    } else {
+      root.classList.remove('light');
+    }
+    localStorage.setItem('sys_theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -337,6 +351,26 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeRole, setActiveR
                 <div className="text-[9px] text-muted-foreground uppercase tracking-widest font-black mt-0.5">Enterprise Suite</div>
               </div>
               
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
+                    className="h-9 w-9"
+                  >
+                    {theme === 'dark' ? (
+                      <Sun size={16} className="text-muted-foreground hover:text-foreground" />
+                    ) : (
+                      <Moon size={16} className="text-muted-foreground hover:text-foreground" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{theme === 'dark' ? "Light Mode" : "Dark Mode"}</p>
+                </TooltipContent>
+              </Tooltip>
+
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative h-9 w-9">

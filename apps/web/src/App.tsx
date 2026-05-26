@@ -44,7 +44,7 @@ function App() {
 
   // View states to toggle between original AI dashboard and clean structured ERP registers
   const [cfoView, setCfoView] = useState<'overview' | 'invoices'>('overview');
-  const [cmoView, setCmoView] = useState<'campaigns' | 'crm'>('crm');
+  const [cmoView, setCmoView] = useState<'analytics' | 'brainstorm'>('analytics');
 
   const [currentView, setCurrentView] = useState<string>('dashboard');
 
@@ -655,21 +655,19 @@ function App() {
                 {currentView === 'dashboard' && (
                   <Tabs 
                     value={cmoView} 
-                    onValueChange={(val) => {
-                      setCmoView(val as any);
-                      if (val === 'crm') setCurrentView('crm');
-                      else if (val === 'campaigns') setCurrentView('campaigns');
-                    }} 
+                    onValueChange={(val) => setCmoView(val as any)} 
                     className="w-full sm:w-auto self-start"
                   >
                     <TabsList className="grid grid-cols-2 w-full sm:w-80 h-9 bg-black/10">
-                      <TabsTrigger value="crm" className="py-1 text-[10px]">CRM Lead Pipeline</TabsTrigger>
-                      <TabsTrigger value="campaigns" className="py-1 text-[10px]">AI Marketing Campaigns</TabsTrigger>
+                      <TabsTrigger value="analytics" className="py-1 text-[10px]">Growth Analytics</TabsTrigger>
+                      <TabsTrigger value="brainstorm" className="py-1 text-[10px]">Campaign Brainstormer</TabsTrigger>
                     </TabsList>
                   </Tabs>
                 )}
-                {(currentView === 'dashboard' || currentView === 'crm') && cmoView === 'crm' && <CRMPipeline />}
-                {(currentView === 'dashboard' || currentView === 'campaigns') && cmoView === 'campaigns' && <MarketingDashboard />}
+                {currentView === 'dashboard' && cmoView === 'analytics' && <MarketingDashboard showOnlyAnalytics={true} />}
+                {currentView === 'dashboard' && cmoView === 'brainstorm' && <MarketingDashboard showOnlyBrainstorm={true} />}
+                {currentView === 'crm' && <CRMPipeline />}
+                {currentView === 'campaigns' && <MarketingDashboard showOnlyBrainstorm={true} />}
                 {currentView === 'funnel' && <FunnelAnalysis />}
               </div>
             )}

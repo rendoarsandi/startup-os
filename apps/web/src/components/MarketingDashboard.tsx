@@ -36,7 +36,12 @@ interface Campaign {
   roas: number; // e.g. 420 is 4.2x
 }
 
-export const MarketingDashboard: React.FC = () => {
+interface MarketingDashboardProps {
+  showOnlyAnalytics?: boolean;
+  showOnlyBrainstorm?: boolean;
+}
+
+export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnlyAnalytics, showOnlyBrainstorm }) => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -178,22 +183,48 @@ export const MarketingDashboard: React.FC = () => {
     ROAS: c.roas / 100
   }));
 
+  const getHeaderInfo = () => {
+    if (showOnlyBrainstorm) {
+      return {
+        title: "AI Creative Studio",
+        subtitle: "Generate campaign blueprints and ad concepts using Gemini AI.",
+        showNewCampaign: false
+      };
+    }
+    if (showOnlyAnalytics) {
+      return {
+        title: "Marketing & Growth Hub",
+        subtitle: "Track growth spends, CAC, ROAS, and monitor active campaign performance.",
+        showNewCampaign: true
+      };
+    }
+    return {
+      title: "CMO Growth Room",
+      subtitle: "Brainstorm concepts, track returns, and align growth strategies with Gemini AI.",
+      showNewCampaign: true
+    };
+  };
+
+  const headerInfo = getHeaderInfo();
+
   return (
     <div className="space-y-8">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold mb-1.5 text-foreground tracking-tight">
-            CMO Growth Room
+            {headerInfo.title}
           </h2>
-          <p className="text-muted-foreground text-sm font-medium">Brainstorm concepts, track returns, and align growth strategies with Gemini AI.</p>
+          <p className="text-muted-foreground text-sm font-medium">{headerInfo.subtitle}</p>
         </div>
-        <Button 
-          onClick={() => setIsFormOpen(!isFormOpen)}
-          className="h-10 text-xs font-bold gap-2 self-start md:self-auto"
-        >
-          <Plus size={14} />
-          <span>New Campaign</span>
-        </Button>
+        {headerInfo.showNewCampaign && (
+          <Button 
+            onClick={() => setIsFormOpen(!isFormOpen)}
+            className="h-10 text-xs font-bold gap-2 self-start md:self-auto"
+          >
+            <Plus size={14} />
+            <span>New Campaign</span>
+          </Button>
+        )}
       </header>
 
       {/* New Campaign Modal / Form Panel */}
@@ -269,65 +300,68 @@ export const MarketingDashboard: React.FC = () => {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-5 hover:border-primary/30 transition-all cursor-default relative overflow-hidden group">
-          <div className="absolute -right-3 -top-3 w-14 h-14 rounded-full bg-primary/5 group-hover:scale-105 transition-transform flex items-center justify-center border border-border/30">
-            <DollarSign size={18} className="text-primary" />
-          </div>
-          <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-2">Growth Spend</p>
-          <h4 className="text-2xl font-black tracking-tight text-foreground">${totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
-          <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-3.5">
-            <div className="w-full bg-black/30 h-1.5 rounded-full overflow-hidden border border-border/50">
-              <div 
-                className="bg-primary h-full transition-all duration-1000" 
-                style={{ width: `${Math.min((totalSpend / (totalBudget || 1)) * 100, 100)}%` }}
-              />
+      {!showOnlyBrainstorm && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="p-5 hover:border-primary/30 transition-all cursor-default relative overflow-hidden group">
+            <div className="absolute -right-3 -top-3 w-14 h-14 rounded-full bg-primary/5 group-hover:scale-105 transition-transform flex items-center justify-center border border-border/30">
+              <DollarSign size={18} className="text-primary" />
             </div>
-            <span className="shrink-0 font-bold">{Math.round((totalSpend / (totalBudget || 1)) * 100)}%</span>
-          </div>
-          <p className="text-[9px] text-muted-foreground/60 mt-2 uppercase tracking-widest font-black">Limit: ${totalBudget.toLocaleString()}</p>
-        </Card>
-
-        <Card className="p-5 hover:border-primary/30 transition-all cursor-default relative overflow-hidden group">
-          <div className="absolute -right-3 -top-3 w-14 h-14 rounded-full bg-primary/5 group-hover:scale-105 transition-transform flex items-center justify-center border border-border/30">
-            <Target size={18} className="text-primary" />
-          </div>
-          <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-2">Blended CAC</p>
-          <h4 className="text-2xl font-black tracking-tight text-foreground">${blendedCAC.toFixed(2)}</h4>
-          <Badge variant="success" className="text-[9px] font-black uppercase tracking-wider mt-3.5">
-            Target &lt; $45.00
-          </Badge>
-          <p className="text-[9px] text-muted-foreground/60 mt-2.5 uppercase tracking-widest font-black">Optimized dynamically</p>
-        </Card>
-
-        <Card className="p-5 hover:border-primary/30 transition-all cursor-default relative overflow-hidden group">
-          <div className="absolute -right-3 -top-3 w-14 h-14 rounded-full bg-primary/5 group-hover:scale-105 transition-transform flex items-center justify-center border border-border/30">
-            <TrendingUp size={18} className="text-primary" />
-          </div>
-          <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-2">Blended ROAS</p>
-          <h4 className="text-2xl font-black tracking-tight text-foreground">{avgRoasVal.toFixed(1)}x</h4>
-          <Badge variant="success" className="text-[9px] font-black uppercase tracking-wider mt-3.5">
-            Excellent Efficiency
-          </Badge>
-          <p className="text-[9px] text-muted-foreground/60 mt-2.5 uppercase tracking-widest font-black">Calculated last 30d</p>
-        </Card>
-
-        <Card className="p-5 hover:border-primary/30 transition-all cursor-default relative overflow-hidden group">
-          <div className="absolute -right-3 -top-3 w-14 h-14 rounded-full bg-primary/5 group-hover:scale-105 transition-transform flex items-center justify-center border border-border/30">
-            <Percent size={18} className="text-primary" />
-          </div>
-          <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-2">LTV / CAC Ratio</p>
-          <h4 className="text-2xl font-black tracking-tight text-foreground">{ltvToCac.toFixed(1)}x</h4>
-          <Badge variant="success" className="text-[9px] font-black uppercase tracking-wider mt-3.5">
-            Healthy Unit Model
-          </Badge>
-          <p className="text-[9px] text-muted-foreground/60 mt-2.5 uppercase tracking-widest font-black">Benchmark: 3.0x</p>
-        </Card>
-      </div>
+            <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-2">Growth Spend</p>
+            <h4 className="text-2xl font-black tracking-tight text-foreground">${totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-3.5">
+              <div className="w-full bg-black/30 h-1.5 rounded-full overflow-hidden border border-border/50">
+                <div 
+                  className="bg-primary h-full transition-all duration-1000" 
+                  style={{ width: `${Math.min((totalSpend / (totalBudget || 1)) * 100, 100)}%` }}
+                />
+              </div>
+              <span className="shrink-0 font-bold">{Math.round((totalSpend / (totalBudget || 1)) * 100)}%</span>
+            </div>
+            <p className="text-[9px] text-muted-foreground/60 mt-2 uppercase tracking-widest font-black">Limit: ${totalBudget.toLocaleString()}</p>
+          </Card>
+  
+          <Card className="p-5 hover:border-primary/30 transition-all cursor-default relative overflow-hidden group">
+            <div className="absolute -right-3 -top-3 w-14 h-14 rounded-full bg-primary/5 group-hover:scale-105 transition-transform flex items-center justify-center border border-border/30">
+              <Target size={18} className="text-primary" />
+            </div>
+            <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-2">Blended CAC</p>
+            <h4 className="text-2xl font-black tracking-tight text-foreground">${blendedCAC.toFixed(2)}</h4>
+            <Badge variant="success" className="text-[9px] font-black uppercase tracking-wider mt-3.5">
+              Target &lt; $45.00
+            </Badge>
+            <p className="text-[9px] text-muted-foreground/60 mt-2.5 uppercase tracking-widest font-black">Optimized dynamically</p>
+          </Card>
+  
+          <Card className="p-5 hover:border-primary/30 transition-all cursor-default relative overflow-hidden group">
+            <div className="absolute -right-3 -top-3 w-14 h-14 rounded-full bg-primary/5 group-hover:scale-105 transition-transform flex items-center justify-center border border-border/30">
+              <TrendingUp size={18} className="text-primary" />
+            </div>
+            <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-2">Blended ROAS</p>
+            <h4 className="text-2xl font-black tracking-tight text-foreground">{avgRoasVal.toFixed(1)}x</h4>
+            <Badge variant="success" className="text-[9px] font-black uppercase tracking-wider mt-3.5">
+              Excellent Efficiency
+            </Badge>
+            <p className="text-[9px] text-muted-foreground/60 mt-2.5 uppercase tracking-widest font-black">Calculated last 30d</p>
+          </Card>
+  
+          <Card className="p-5 hover:border-primary/30 transition-all cursor-default relative overflow-hidden group">
+            <div className="absolute -right-3 -top-3 w-14 h-14 rounded-full bg-primary/5 group-hover:scale-105 transition-transform flex items-center justify-center border border-border/30">
+              <Percent size={18} className="text-primary" />
+            </div>
+            <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-2">LTV / CAC Ratio</p>
+            <h4 className="text-2xl font-black tracking-tight text-foreground">{ltvToCac.toFixed(1)}x</h4>
+            <Badge variant="success" className="text-[9px] font-black uppercase tracking-wider mt-3.5">
+              Healthy Unit Model
+            </Badge>
+            <p className="text-[9px] text-muted-foreground/60 mt-2.5 uppercase tracking-widest font-black">Benchmark: 3.0x</p>
+          </Card>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Table & Chart */}
-        <div className="lg:col-span-2 space-y-6">
+        {!showOnlyBrainstorm && (
+          <div className={showOnlyAnalytics ? "lg:col-span-3 space-y-6" : "lg:col-span-2 space-y-6"}>
           {/* Ad Channels Spend Chart */}
           <Card className="p-6 relative overflow-hidden shadow-md">
             <div className="flex items-center justify-between mb-6">
@@ -483,9 +517,11 @@ export const MarketingDashboard: React.FC = () => {
             )}
           </Card>
         </div>
+        )}
 
         {/* Campaign Ideas Brainstormer */}
-        <div className="space-y-6">
+        {!showOnlyAnalytics && (
+          <div className={showOnlyBrainstorm ? "lg:col-span-3 space-y-6" : "space-y-6"}>
           <Card className="p-6 relative overflow-hidden shadow-md">
             <div className="flex items-center gap-2.5 border-b border-border pb-4 mb-4">
               <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
@@ -584,7 +620,8 @@ export const MarketingDashboard: React.FC = () => {
               </div>
             )}
           </Card>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

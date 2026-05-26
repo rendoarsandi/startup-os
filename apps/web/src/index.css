@@ -2,79 +2,69 @@
 @plugin "tailwindcss-animate";
 
 :root {
-  /* Default CFO (Finance) theme: Sleek Dark Blue / Slate */
-  --background: 224 71% 4%;
-  --foreground: 210 40% 98%;
+  /* Default: Dark Mode (Linear Sleek Black) */
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
   
-  --card: 224 71% 6%;
-  --card-foreground: 210 40% 98%;
+  --card: 240 10% 5.9%;
+  --card-foreground: 0 0% 98%;
   
-  --popover: 224 71% 4%;
-  --popover-foreground: 210 40% 98%;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
   
-  --primary: 217.2 91.2% 59.8%; /* Finance Blue */
-  --primary-foreground: 222.2 47.4% 11.2%;
+  --primary: 0 0% 100%;
+  --primary-foreground: 240 10% 3.9%;
   
-  --secondary: 215 25% 15%;
-  --secondary-foreground: 210 40% 98%;
+  --secondary: 240 5% 15%;
+  --secondary-foreground: 0 0% 98%;
   
-  --muted: 215 25% 12%;
-  --muted-foreground: 215 16% 65%;
+  --muted: 240 5% 10%;
+  --muted-foreground: 240 5% 65%;
   
-  --accent: 217 32% 17%;
-  --accent-foreground: 210 40% 98%;
+  --accent: 240 5% 12%;
+  --accent-foreground: 0 0% 98%;
   
-  --destructive: 346.8 77.2% 49.8%;
+  --destructive: 0 84% 60%;
   --destructive-foreground: 355.7 100% 97.3%;
   
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 217.2 91.2% 59.8%;
+  --border: 240 5% 15%;
+  --input: 240 5% 12%;
+  --ring: 0 0% 100%;
   
-  --radius: 0.75rem;
+  --radius: 0.5rem;
 }
 
-:root.theme-marketer {
-  /* Marketer (Growth) theme: Sleek Dark Violet */
-  --background: 262 71% 4%;
-  --card: 262 71% 6%;
-  --popover: 262 71% 4%;
-  --primary: 262.1 83.3% 57.8%; /* Violet */
-  --primary-foreground: 210 40% 98%;
-  --secondary: 262 25% 15%;
-  --accent: 262 32% 17%;
-  --border: 262 32.6% 17.5%;
-  --input: 262 32.6% 17.5%;
-  --ring: 262.1 83.3% 57.8%;
+:root.light {
+  /* Light Mode (Linear Sleek White) */
+  --background: 0 0% 98%;
+  --foreground: 240 10% 3.9%;
+  
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 3.9%;
+  
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 3.9%;
+  
+  --primary: 240 10% 3.9%;
+  --primary-foreground: 0 0% 98%;
+  
+  --secondary: 240 4.8% 95.9%;
+  --secondary-foreground: 240 5.9% 10%;
+  
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 3.8% 46.1%;
+  
+  --accent: 240 4.8% 90%;
+  --accent-foreground: 240 5.9% 10%;
+  
+  --border: 240 5.9% 90%;
+  --input: 240 5.9% 90%;
+  --ring: 240 10% 3.9%;
 }
 
-:root.theme-hr {
-  /* HR (People Ops) theme: Sleek Dark Emerald */
-  --background: 142 60% 3%;
-  --card: 142 60% 5%;
-  --popover: 142 60% 3%;
-  --primary: 142.1 70.6% 45.3%; /* Emerald */
-  --primary-foreground: 142 80% 2%;
-  --secondary: 142 20% 12%;
-  --accent: 142 25% 15%;
-  --border: 142 25% 15%;
-  --input: 142 25% 15%;
-  --ring: 142.1 70.6% 45.3%;
-}
-
-:root.theme-operations {
-  /* Operations (COO) theme: Sleek Dark Amber */
-  --background: 24 60% 4%;
-  --card: 24 60% 6%;
-  --popover: 24 60% 4%;
-  --primary: 24.6 95% 53.1%; /* Amber */
-  --primary-foreground: 24 95% 4%;
-  --secondary: 24 20% 15%;
-  --accent: 24 25% 17%;
-  --border: 24 25% 16%;
-  --input: 24 25% 16%;
-  --ring: 24.6 95% 53.1%;
-}
+:root.theme-marketer {}
+:root.theme-hr {}
+:root.theme-operations {}
 
 @theme {
   --color-background: hsl(var(--background));
