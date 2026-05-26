@@ -3,7 +3,7 @@
   "name": "api",
   "main": "apps/api/src/index.ts",
   "build": {
-    "command": "cd apps/web && npm run build"
+    "command": "bun run --filter web build"
   },
   "compatibility_date": "2026-05-20",
   "compatibility_flags": [
