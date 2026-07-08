@@ -1,19 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
-  FileText, Plus, Search, Loader2, AlertCircle, CheckCircle2, Clock, Trash2, Printer, Eye, X, ArrowUpRight, ArrowDownLeft, Sparkles
+  FileText, Plus, Search, Loader2, AlertCircle, CheckCircle2, Clock, Trash2, Printer, Eye, X, ArrowUpRight, ArrowDownLeft, Sparkles, ArrowUpDown, Calendar, Tag, Briefcase
 } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
+import { useInvoices } from '../hooks/useInvoices';
+import { useForm } from '@tanstack/react-form';
+import { 
+  useReactTable, 
+  getCoreRowModel, 
+  getSortedRowModel, 
+  flexRender, 
+  createColumnHelper 
+} from '@tanstack/react-table';
+import type { SortingState } from '@tanstack/react-table';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from './ui/table';
 import {
   Dialog,
   DialogContent,
@@ -28,40 +30,20 @@ import {
   SelectValue,
 } from './ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
+import type { Invoice, InvoiceItem } from '../utils/db';
 
-interface InvoiceItem {
-  description: string;
-  qty: number;
-  rate: number; // in cents
-}
-
-interface Invoice {
-  id: string;
-  invoiceNumber: string;
-  clientName: string;
-  type: 'sales' | 'purchase';
-  amount: number; // in cents
-  status: 'paid' | 'unpaid' | 'overdue';
-  issueDate: string;
-  dueDate: string;
-  items: string; // JSON string of InvoiceItem[]
-}
+const columnHelper = createColumnHelper<Invoice>();
 
 export const InvoicesDashboard: React.FC = () => {
-  const queryClient = useQueryClient();
+  const { invoices = [], isLoading, refetch } = useInvoices();
+
   const [filterType, setFilterType] = useState<'all' | 'sales' | 'purchase'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'paid' | 'unpaid' | 'overdue'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   
-  // Invoice Creator State
+  // Dialog visibility state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [invoiceNumber, setInvoiceNumber] = useState('');
-  const [clientName, setClientName] = useState('');
-  const [invoiceType, setInvoiceType] = useState<'sales' | 'purchase'>('sales');
-  const [dueDate, setDueDate] = useState('');
-  const [lineItems, setLineItems] = useState<InvoiceItem[]>([{ description: '', qty: 1, rate: 0 }]);
-  const [isSaving, setIsSaving] = useState(false);
 
   // AI Invoice Scanner State
   const [aiPrompt, setAiPrompt] = useState('');
@@ -69,6 +51,39 @@ export const InvoicesDashboard: React.FC = () => {
   const [isAiScanning, setIsAiScanning] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [mathError, setMathError] = useState<string | null>(null);
+
+  // Setup TanStack Form
+  const form = useForm({
+    defaultValues: {
+      clientName: '',
+      invoiceType: 'sales' as 'sales' | 'purchase',
+      invoiceNumber: '',
+      dueDate: '',
+      lineItems: [{ description: '', qty: 1, rate: 0 }] as InvoiceItem[],
+    },
+    onSubmit: async ({ value }) => {
+      // Calculate total amount in cents
+      const totalAmountCents = value.lineItems.reduce((sum, item) => sum + (item.qty * (item.rate * 100)), 0);
+      
+      // Format items
+      const itemsFormatted = value.lineItems.map(item => ({
+        description: item.description || "General Services",
+        qty: item.qty,
+        rate: item.rate * 100 // convert dollars to cents
+      }));
+
+      await saveMutation.mutateAsync({
+        invoiceNumber: value.invoiceNumber.trim() || `INV-${Date.now().toString().slice(-6)}`,
+        clientName: value.clientName,
+        type: value.invoiceType,
+        amount: totalAmountCents,
+        dueDate: value.dueDate ? new Date(value.dueDate).toISOString() : undefined,
+        items: itemsFormatted
+      });
+    },
+  });
+
+  const liveLineItems = form.useStore((state) => state.values.lineItems) || [];
 
   const handleAiScan = async () => {
     if (!aiPrompt.trim()) return;
@@ -83,15 +98,15 @@ export const InvoicesDashboard: React.FC = () => {
       });
       if (!res.ok) throw new Error('Failed to parse invoice with AI');
       const data = await res.json();
-      if (data.clientName) setClientName(data.clientName);
-      if (data.type) setInvoiceType(data.type);
+      if (data.clientName) form.setFieldValue('clientName', data.clientName);
+      if (data.type) form.setFieldValue('invoiceType', data.type);
       if (data.dueDateOffsetDays) {
         const d = new Date();
         d.setDate(d.getDate() + data.dueDateOffsetDays);
-        setDueDate(d.toISOString().split('T')[0]);
+        form.setFieldValue('dueDate', d.toISOString().split('T')[0]);
       }
       if (data.items && data.items.length > 0) {
-        setLineItems(data.items.map((item: any) => ({
+        form.setFieldValue('lineItems', data.items.map((item: any) => ({
           description: item.description || '',
           qty: item.qty || 1,
           rate: item.rate || 0
@@ -127,16 +142,16 @@ export const InvoicesDashboard: React.FC = () => {
           if (!res.ok) throw new Error('Failed to scan document with AI');
           const data = await res.json();
 
-          if (data.clientName) setClientName(data.clientName);
-          if (data.type) setInvoiceType(data.type);
-          if (data.invoiceNumber) setInvoiceNumber(data.invoiceNumber);
+          if (data.clientName) form.setFieldValue('clientName', data.clientName);
+          if (data.type) form.setFieldValue('invoiceType', data.type);
+          if (data.invoiceNumber) form.setFieldValue('invoiceNumber', data.invoiceNumber);
           if (data.dueDateOffsetDays) {
             const d = new Date();
             d.setDate(d.getDate() + data.dueDateOffsetDays);
-            setDueDate(d.toISOString().split('T')[0]);
+            form.setFieldValue('dueDate', d.toISOString().split('T')[0]);
           }
           if (data.items && data.items.length > 0) {
-            setLineItems(data.items.map((item: any) => ({
+            form.setFieldValue('lineItems', data.items.map((item: any) => ({
               description: item.description || '',
               qty: item.qty || 1,
               rate: item.rate || 0
@@ -161,16 +176,6 @@ export const InvoicesDashboard: React.FC = () => {
     }
   };
 
-  // Fetch Invoices
-  const { data: invoices = [], isLoading, error } = useQuery<Invoice[]>({
-    queryKey: ['invoices'],
-    queryFn: async () => {
-      const res = await fetch('/api/cfo/invoices');
-      if (!res.ok) throw new Error('Failed to fetch invoices');
-      return res.json();
-    }
-  });
-
   // Mutate Invoice Status
   const statusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string, status: string }) => {
@@ -183,7 +188,7 @@ export const InvoicesDashboard: React.FC = () => {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      refetch();
       // Update currently selected invoice details
       if (selectedInvoice) {
         setSelectedInvoice(prev => prev ? { ...prev, status: prev.status === 'paid' ? 'unpaid' : 'paid' } as Invoice : null);
@@ -203,72 +208,39 @@ export const InvoicesDashboard: React.FC = () => {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      refetch();
       setIsCreateOpen(false);
       resetForm();
     }
   });
 
   const resetForm = () => {
-    setInvoiceNumber('');
-    setClientName('');
-    setInvoiceType('sales');
-    setDueDate('');
-    setLineItems([{ description: '', qty: 1, rate: 0 }]);
+    form.reset();
     setMathError(null);
     setAiError(null);
   };
 
   const handleAddItem = () => {
-    setLineItems([...lineItems, { description: '', qty: 1, rate: 0 }]);
+    const current = form.getFieldValue('lineItems') || [];
+    form.setFieldValue('lineItems', [...current, { description: '', qty: 1, rate: 0 }]);
   };
 
   const handleRemoveItem = (index: number) => {
-    if (lineItems.length === 1) return;
-    setLineItems(lineItems.filter((_, i) => i !== index));
+    const current = form.getFieldValue('lineItems') || [];
+    if (current.length === 1) return;
+    form.setFieldValue('lineItems', current.filter((_, i) => i !== index));
   };
 
   const handleItemChange = (index: number, field: keyof InvoiceItem, val: string | number) => {
-    const updated = [...lineItems];
+    const current = [...(form.getFieldValue('lineItems') || [])];
     if (field === 'qty') {
-      updated[index].qty = Math.max(1, Number(val));
+      current[index].qty = Math.max(1, Number(val));
     } else if (field === 'rate') {
-      updated[index].rate = Math.max(0, Number(val)); // rate input as regular dollars
+      current[index].rate = Math.max(0, Number(val));
     } else {
-      updated[index].description = String(val);
+      current[index].description = String(val);
     }
-    setLineItems(updated);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!clientName.trim()) return;
-
-    setIsSaving(true);
-    // Calculate total amount in cents
-    const totalAmountCents = lineItems.reduce((sum, item) => sum + (item.qty * (item.rate * 100)), 0);
-    
-    // Format items
-    const itemsFormatted = lineItems.map(item => ({
-      description: item.description || "General Services",
-      qty: item.qty,
-      rate: item.rate * 100 // convert dollars to cents
-    }));
-
-    try {
-      await saveMutation.mutateAsync({
-        invoiceNumber: invoiceNumber.trim() || `INV-${Date.now().toString().slice(-6)}`,
-        clientName,
-        type: invoiceType,
-        amount: totalAmountCents,
-        dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
-        items: itemsFormatted
-      });
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsSaving(false);
-    }
+    form.setFieldValue('lineItems', current);
   };
 
   // Calculations
@@ -279,13 +251,15 @@ export const InvoicesDashboard: React.FC = () => {
   const totalSalesOutstanding = salesInvoices.filter(inv => inv.status !== 'paid').reduce((sum, inv) => sum + inv.amount, 0) / 100;
 
   // Filtered list
-  const filteredInvoices = invoices.filter(inv => {
-    const matchesType = filterType === 'all' || inv.type === filterType;
-    const matchesStatus = filterStatus === 'all' || inv.status === filterStatus;
-    const matchesSearch = inv.clientName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesType && matchesStatus && matchesSearch;
-  });
+  const filteredInvoices = useMemo(() => {
+    return invoices.filter(inv => {
+      const matchesType = filterType === 'all' || inv.type === filterType;
+      const matchesStatus = filterStatus === 'all' || inv.status === filterStatus;
+      const matchesSearch = inv.clientName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesType && matchesStatus && matchesSearch;
+    });
+  }, [invoices, filterType, filterStatus, searchQuery]);
 
   const getStatusBadge = (status: 'paid' | 'unpaid' | 'overdue') => {
     switch (status) {
@@ -305,6 +279,134 @@ export const InvoicesDashboard: React.FC = () => {
       return [];
     }
   };
+
+  // Setup TanStack Table Columns
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'invoiceNumber', desc: true }]);
+
+  const columns = useMemo(() => [
+    columnHelper.accessor('invoiceNumber', {
+      header: ({ column }) => (
+        <button
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="flex items-center gap-1 hover:text-foreground transition-colors uppercase text-[10px] tracking-wider font-black text-muted-foreground/70 pl-5 text-left"
+        >
+          Invoice #
+          <ArrowUpDown size={10} className="ml-1 text-muted-foreground/40" />
+        </button>
+      ),
+      cell: (info) => (
+        <span className="font-bold text-foreground pl-5 block">{info.getValue()}</span>
+      )
+    }),
+    columnHelper.accessor('clientName', {
+      header: ({ column }) => (
+        <button
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="flex items-center gap-1 hover:text-foreground transition-colors uppercase text-[10px] tracking-wider font-black text-muted-foreground/70 text-left"
+        >
+          Party / Client
+          <ArrowUpDown size={10} className="ml-1 text-muted-foreground/40" />
+        </button>
+      ),
+      cell: (info) => {
+        const row = info.row.original;
+        return (
+          <div>
+            <div className="font-bold text-foreground/80">{info.getValue()}</div>
+            <div className="text-[10px] text-muted-foreground mt-0.5 font-semibold">
+              Due: {new Date(row.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </div>
+          </div>
+        );
+      }
+    }),
+    columnHelper.accessor('type', {
+      header: ({ column }) => (
+        <button
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="flex items-center gap-1 hover:text-foreground transition-colors uppercase text-[10px] tracking-wider font-black text-muted-foreground/70 justify-center w-full"
+        >
+          Type
+          <ArrowUpDown size={10} className="ml-1 text-muted-foreground/40" />
+        </button>
+      ),
+      cell: (info) => {
+        const type = info.getValue();
+        return (
+          <div className="flex justify-center">
+            {type === 'sales' ? (
+              <Badge variant="outline" className="text-[9px] font-black uppercase text-primary border-primary/20 bg-primary/5 gap-0.5"><ArrowUpRight size={8} /> Sales</Badge>
+            ) : (
+              <Badge variant="outline" className="text-[9px] font-black uppercase text-amber-500 border-amber-500/20 bg-amber-500/5 gap-0.5"><ArrowDownLeft size={8} /> Bill</Badge>
+            )}
+          </div>
+        );
+      }
+    }),
+    columnHelper.accessor('amount', {
+      header: ({ column }) => (
+        <button
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="flex items-center gap-1 hover:text-foreground transition-colors uppercase text-[10px] tracking-wider font-black text-muted-foreground/70 justify-end w-full text-right"
+        >
+          Amount
+          <ArrowUpDown size={10} className="ml-1 text-muted-foreground/40" />
+        </button>
+      ),
+      cell: (info) => (
+        <div className="text-right font-bold text-foreground">
+          ${(info.getValue() / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </div>
+      )
+    }),
+    columnHelper.accessor('status', {
+      header: ({ column }) => (
+        <button
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="flex items-center gap-1 hover:text-foreground transition-colors uppercase text-[10px] tracking-wider font-black text-muted-foreground/70 justify-center w-full text-center"
+        >
+          Status
+          <ArrowUpDown size={10} className="ml-1 text-muted-foreground/40" />
+        </button>
+      ),
+      cell: (info) => (
+        <div className="flex justify-center">
+          {getStatusBadge(info.getValue())}
+        </div>
+      )
+    }),
+    columnHelper.display({
+      id: 'actions',
+      header: () => <span className="uppercase text-[10px] tracking-wider font-black text-muted-foreground/70 text-center block w-full pr-5">Action</span>,
+      cell: (info) => {
+        const row = info.row.original;
+        return (
+          <div className="flex justify-center pr-5" onClick={(e) => e.stopPropagation()}>
+            <Button 
+              variant="ghost"
+              size="icon"
+              onClick={() => setSelectedInvoice(row)}
+              className="w-7 h-7 hover:bg-accent/40 text-muted-foreground hover:text-foreground"
+              title="Printable Preview"
+            >
+              <Eye size={12} />
+            </Button>
+          </div>
+        );
+      }
+    })
+  ], [selectedInvoice]);
+
+  const table = useReactTable({
+    data: filteredInvoices,
+    columns,
+    state: {
+      sorting,
+    },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
 
   return (
     <div className="space-y-6">
@@ -407,15 +509,10 @@ export const InvoicesDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* List Table */}
+          {/* List Table using TanStack Table */}
           {isLoading ? (
             <div className="h-64 border border-border rounded-xl bg-card/40 flex items-center justify-center">
               <Loader2 className="animate-spin text-primary" size={24} />
-            </div>
-          ) : error ? (
-            <div className="p-4 border border-destructive/20 bg-destructive/10 text-destructive rounded-xl text-xs font-semibold flex items-center gap-2">
-              <AlertCircle size={16} />
-              <span>Failed to fetch invoice register.</span>
             </div>
           ) : filteredInvoices.length === 0 ? (
             <div className="h-64 border border-border rounded-xl bg-card/40 flex flex-col items-center justify-center text-center p-6 shadow-sm">
@@ -425,57 +522,41 @@ export const InvoicesDashboard: React.FC = () => {
             </div>
           ) : (
             <div className="border border-border rounded-xl bg-card/40 backdrop-blur-md overflow-hidden shadow-md">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-24 pl-5">Invoice #</TableHead>
-                    <TableHead>Party / Client</TableHead>
-                    <TableHead className="text-center w-20">Type</TableHead>
-                    <TableHead className="text-right w-32">Amount</TableHead>
-                    <TableHead className="text-center w-28">Status</TableHead>
-                    <TableHead className="text-center w-16 pr-5">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredInvoices.map((inv) => (
-                    <TableRow 
-                      key={inv.id} 
-                      onClick={() => setSelectedInvoice(inv)}
-                      className={`cursor-pointer ${selectedInvoice?.id === inv.id ? 'bg-primary/5 hover:bg-primary/10 border-primary/20' : ''}`}
-                    >
-                      <TableCell className="font-bold text-foreground pl-5">{inv.invoiceNumber}</TableCell>
-                      <TableCell>
-                        <div className="font-bold text-foreground/80">{inv.clientName}</div>
-                        <div className="text-[10px] text-muted-foreground mt-0.5 font-semibold">Due: {new Date(inv.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {inv.type === 'sales' ? (
-                          <Badge variant="outline" className="text-[9px] font-black uppercase text-primary border-primary/20 bg-primary/5 gap-0.5"><ArrowUpRight size={8} /> Sales</Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-[9px] font-black uppercase text-amber-500 border-amber-500/20 bg-amber-500/5 gap-0.5"><ArrowDownLeft size={8} /> Bill</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-foreground">
-                        ${(inv.amount / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {getStatusBadge(inv.status)}
-                      </TableCell>
-                      <TableCell className="text-center pr-5" onClick={(e) => e.stopPropagation()}>
-                        <Button 
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setSelectedInvoice(inv)}
-                          className="w-7 h-7 hover:bg-accent/40 text-muted-foreground hover:text-foreground"
-                          title="Printable Preview"
-                        >
-                          <Eye size={12} />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  {table.getHeaderGroups().map(headerGroup => (
+                    <tr key={headerGroup.id} className="border-b border-border/40 bg-white/[0.02]">
+                      {headerGroup.headers.map(header => (
+                        <th key={header.id} className="p-3.5 font-black">
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </th>
+                      ))}
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
+                </thead>
+                <tbody className="divide-y divide-border/30">
+                  {table.getRowModel().rows.map(row => (
+                    <tr 
+                      key={row.id} 
+                      onClick={() => setSelectedInvoice(row.original)}
+                      className={`hover:bg-white/[0.01] transition-colors duration-150 group cursor-pointer ${
+                        selectedInvoice?.id === row.original.id ? 'bg-primary/5 hover:bg-primary/10 border-primary/20' : ''
+                      }`}
+                    >
+                      {row.getVisibleCells().map(cell => (
+                        <td key={cell.id} className="p-3.5 align-middle">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -688,66 +769,125 @@ export const InvoicesDashboard: React.FC = () => {
             )}
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              form.handleSubmit();
+            }} 
+            className="space-y-4 relative z-10 pt-2"
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Client / Vendor Name</label>
-                <Input 
-                  type="text"
-                  required
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                  placeholder="e.g. Wayne Enterprises"
-                />
-              </div>
+              {/* Client Name Field */}
+              <form.Field
+                name="clientName"
+                validators={{
+                  onChange: ({ value }) => !value ? 'Client / Vendor name is required' : undefined,
+                }}
+                children={(field) => (
+                  <div className="space-y-1.5">
+                    <label htmlFor={field.name} className="text-[10px] text-muted-foreground uppercase tracking-widest font-black flex items-center gap-1.5 pl-0.5">
+                      <Briefcase size={10} /> Client / Vendor Name
+                    </label>
+                    <Input 
+                      id={field.name}
+                      type="text" 
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      placeholder="e.g. Wayne Enterprises"
+                    />
+                    {field.state.meta.errors.length > 0 ? (
+                      <p className="text-[10px] text-rose-400 font-bold tracking-tight mt-1">
+                        {field.state.meta.errors.join(', ')}
+                      </p>
+                    ) : null}
+                  </div>
+                )}
+              />
 
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Document Type</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    variant={invoiceType === 'sales' ? 'default' : 'outline'}
-                    onClick={() => setInvoiceType('sales')}
-                    className="h-10 text-xs font-bold"
-                  >
-                    Sales Invoice
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={invoiceType === 'purchase' ? 'default' : 'outline'}
-                    onClick={() => setInvoiceType('purchase')}
-                    className="h-10 text-xs font-bold"
-                  >
-                    Purchase Bill
-                  </Button>
-                </div>
-              </div>
+              {/* Invoice Type Field */}
+              <form.Field
+                name="invoiceType"
+                children={(field) => (
+                  <div className="space-y-1.5">
+                    <label htmlFor={field.name} className="text-[10px] text-muted-foreground uppercase tracking-widest font-black flex items-center gap-1.5 pl-0.5">
+                      <Tag size={10} /> Document Type
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant={field.state.value === 'sales' ? 'default' : 'outline'}
+                        onClick={() => field.handleChange('sales')}
+                        className="h-10 text-xs font-bold"
+                      >
+                        Sales Invoice
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={field.state.value === 'purchase' ? 'default' : 'outline'}
+                        onClick={() => field.handleChange('purchase')}
+                        className="h-10 text-xs font-bold"
+                      >
+                        Purchase Bill
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              />
 
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Invoice Number (Optional)</label>
-                <Input 
-                  type="text"
-                  value={invoiceNumber}
-                  onChange={(e) => setInvoiceNumber(e.target.value)}
-                  placeholder="e.g. INV-2026-004 (Auto)"
-                />
-              </div>
+              {/* Invoice Number Field */}
+              <form.Field
+                name="invoiceNumber"
+                children={(field) => (
+                  <div className="space-y-1.5">
+                    <label htmlFor={field.name} className="text-[10px] text-muted-foreground uppercase tracking-widest font-black flex items-center gap-1.5 pl-0.5">
+                      <FileText size={10} /> Invoice Number (Optional)
+                    </label>
+                    <Input 
+                      id={field.name}
+                      type="text" 
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      placeholder="e.g. INV-2026-004 (Auto)"
+                    />
+                  </div>
+                )}
+              />
 
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Payment Due Date</label>
-                <Input 
-                  type="date"
-                  required
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="cursor-pointer"
-                />
-              </div>
+              {/* Due Date Field */}
+              <form.Field
+                name="dueDate"
+                validators={{
+                  onChange: ({ value }) => !value ? 'Payment due date is required' : undefined,
+                }}
+                children={(field) => (
+                  <div className="space-y-1.5">
+                    <label htmlFor={field.name} className="text-[10px] text-muted-foreground uppercase tracking-widest font-black flex items-center gap-1.5 pl-0.5">
+                      <Calendar size={10} /> Payment Due Date
+                    </label>
+                    <Input 
+                      id={field.name}
+                      type="date" 
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      className="cursor-pointer"
+                    />
+                    {field.state.meta.errors.length > 0 ? (
+                      <p className="text-[10px] text-rose-400 font-bold tracking-tight mt-1">
+                        {field.state.meta.errors.join(', ')}
+                      </p>
+                    ) : null}
+                  </div>
+                )}
+              />
 
             </div>
 
-            {/* Line Items */}
+            {/* Line Items using TanStack form array synchronization */}
             <div className="space-y-3 pt-2">
               <div className="flex justify-between items-center border-b border-border pb-2">
                 <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Invoice Billing Line Items</span>
@@ -761,8 +901,8 @@ export const InvoicesDashboard: React.FC = () => {
               </div>
 
               <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-1">
-                {lineItems.map((item, i) => (
-                  <div key={i} className="flex gap-2 items-center">
+                {liveLineItems.map((item, i) => (
+                  <div key={i} className="flex gap-2 items-center animate-in fade-in duration-150">
                     <div className="flex-1">
                       <Input 
                         type="text"
@@ -799,7 +939,7 @@ export const InvoicesDashboard: React.FC = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      disabled={lineItems.length === 1}
+                      disabled={liveLineItems.length === 1}
                       onClick={() => handleRemoveItem(i)}
                       className="w-9 h-9 border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 text-muted-foreground p-0 flex items-center justify-center shrink-0"
                     >
@@ -810,21 +950,21 @@ export const InvoicesDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Subtotal */}
+            {/* Estimated Grand Total */}
             <div className="border-t border-border pt-4 flex justify-between items-center text-xs font-bold text-muted-foreground">
               <span>ESTIMATED GRAND TOTAL:</span>
               <span className="text-sm font-black text-foreground">
-                ${lineItems.reduce((sum, item) => sum + (item.qty * (item.rate || 0)), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} USD
+                ${liveLineItems.reduce((sum, item) => sum + (item.qty * (item.rate || 0)), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} USD
               </span>
             </div>
 
             <div className="flex gap-2 pt-2">
               <Button 
                 type="submit" 
-                disabled={isSaving}
+                disabled={saveMutation.isPending}
                 className="flex-1 h-10 text-xs font-bold gap-1.5"
               >
-                {isSaving ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
+                {saveMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
                 <span>Generate Official Record</span>
               </Button>
               <Button 

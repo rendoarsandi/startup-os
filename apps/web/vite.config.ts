@@ -6,6 +6,9 @@ import tailwindcss from '@tailwindcss/vite';
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  resolve: {
+    dedupe: ['react', 'react-dom'],
+  },
 
   server: {
     proxy: {
@@ -19,5 +22,10 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/setupTests.ts'],
+    server: {
+      deps: {
+        inline: [/react/, /react-dom/],
+      },
+    },
   },
 } as any);
