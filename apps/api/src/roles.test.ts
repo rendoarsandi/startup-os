@@ -48,6 +48,18 @@ describe('Multi-Role Executive API Endpoints', () => {
     expect(data.response).toBe('Hello from Mocked Gemini!');
   });
 
+  test('POST /api/chat supports operations role', async () => {
+    const res = await app.request('/api/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message: 'Hello Operations', role: 'operations' }),
+      headers: { 'Content-Type': 'application/json' },
+    }, mockEnv);
+
+    expect(res.status).toBe(200);
+    const data = await res.json() as any;
+    expect(data.response).toBe('Hello from Mocked Gemini!');
+  });
+
   test('GET /api/marketing/campaigns returns campaigns', async () => {
     const res = await app.request('/api/marketing/campaigns', {
       method: 'GET',

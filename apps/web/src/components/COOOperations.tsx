@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  Plus, Loader2, ShoppingBag, Ticket, Clock, AlertTriangle
+  Plus, Loader2, ShoppingBag, Ticket, Clock, AlertTriangle, Play, Trash2, Cpu, CheckCircle2, RefreshCw, Sliders
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from './ui/button';
@@ -70,11 +70,11 @@ interface SupportTicket {
 }
 
 export const COOOperations: React.FC<{
-  activeTab?: 'inventory' | 'projects' | 'tickets';
-  onTabChange?: (tab: 'inventory' | 'projects' | 'tickets') => void;
+  activeTab?: 'inventory' | 'projects' | 'tickets' | 'autopilot';
+  onTabChange?: (tab: 'inventory' | 'projects' | 'tickets' | 'autopilot') => void;
 }> = ({ activeTab: propActiveTab, onTabChange }) => {
   const queryClient = useQueryClient();
-  const [localActiveTab, setLocalActiveTab] = useState<'inventory' | 'projects' | 'tickets'>('inventory');
+  const [localActiveTab, setLocalActiveTab] = useState<'inventory' | 'projects' | 'tickets' | 'autopilot'>('inventory');
   
   const activeTab = propActiveTab || localActiveTab;
   const setActiveTab = onTabChange || setLocalActiveTab;
@@ -108,6 +108,16 @@ export const COOOperations: React.FC<{
   const [tPriority, setTPriority] = useState<'low' | 'medium' | 'high'>('medium');
 
   const [isSaving, setIsSaving] = useState(false);
+
+  // Autopilot states
+  const [isRuleOpen, setIsRuleOpen] = useState(false);
+  const [ruleName, setRuleName] = useState('');
+  const [ruleTriggerType, setRuleTriggerType] = useState<'runway_low' | 'low_stock' | 'high_priority_ticket' | 'mrr_surge'>('runway_low');
+  const [ruleTriggerValue, setRuleTriggerValue] = useState('6');
+  const [ruleActionType, setRuleActionType] = useState<'ai_audit' | 'auto_task' | 'ai_reply' | 'webhook_alert'>('ai_audit');
+  const [ruleActionTarget, setRuleActionTarget] = useState('');
+  const [executionLogs, setExecutionLogs] = useState<any[]>([]);
+  const [isRunningChecks, setIsRunningChecks] = useState(false);
 
   // Queries
   const { data: employees = [] } = useQuery<Employee[]>({
@@ -273,6 +283,97 @@ export const COOOperations: React.FC<{
     }
   });
 
+  // Autopilot Queries & Mutations
+  const { data: autopilotRulesList = [], isLoading: autopilotLoading } = useQuery<any[]>({
+    queryKey: ['autopilotRules'],
+    queryFn: async () => {
+      const res = await fetch('/api/operations/autopilot');
+      if (!res.ok) throw new Error('Failed to fetch autopilot rules');
+      return res.json();
+    }
+  });
+
+  const saveRuleMutation = useMutation({
+    mutationFn: async (ruleData: any) => {
+      const res = await fetch('/api/operations/autopilot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ruleData)
+      });
+      if (!res.ok) throw new Error('Failed to save autopilot rule');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['autopilotRules'] });
+      setIsRuleOpen(false);
+      setRuleName('');
+      setRuleTriggerValue('6');
+      setRuleActionTarget('');
+    }
+  });
+
+  const toggleRuleMutation = useMutation({
+    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
+      const res = await fetch(`/api/operations/autopilot/${id}/toggle`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active })
+      });
+      if (!res.ok) throw new Error('Failed to toggle rule');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['autopilotRules'] });
+    }
+  });
+
+  const deleteRuleMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/operations/autopilot/${id}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) throw new Error('Failed to delete rule');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['autopilotRules'] });
+    }
+  });
+
+  const handleRuleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ruleName.trim()) return;
+    setIsSaving(true);
+    try {
+      await saveRuleMutation.mutateAsync({
+        name: ruleName,
+        triggerType: ruleTriggerType,
+        triggerValue: ruleTriggerValue,
+        actionType: ruleActionType,
+        actionTarget: ruleActionTarget,
+        active: true
+      });
+    } catch (err) {}
+    setIsSaving(false);
+  };
+
+  const handleRunChecks = async () => {
+    setIsRunningChecks(true);
+    try {
+      const res = await fetch('/api/operations/autopilot/run-checks', {
+        method: 'POST'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.logs) {
+          setExecutionLogs(data.logs);
+        }
+      }
+    } catch (err) {}
+    setIsRunningChecks(false);
+    queryClient.invalidateQueries({ queryKey: ['autopilotRules'] });
+  };
+
   // Helpers
   const resetItemForm = () => {
     setItemSku('');
@@ -403,10 +504,11 @@ export const COOOperations: React.FC<{
         onValueChange={(val) => setActiveTab(val as any)} 
         className="w-full space-y-6"
       >
-        <TabsList className="grid grid-cols-3 w-full sm:w-[480px] h-10 bg-black/10">
+        <TabsList className="grid grid-cols-4 w-full sm:w-[640px] h-10 bg-black/10">
           <TabsTrigger value="inventory" className="py-2 text-[10px]">Inventory & Stock</TabsTrigger>
           <TabsTrigger value="projects" className="py-2 text-[10px]">Projects & Tasks</TabsTrigger>
           <TabsTrigger value="tickets" className="py-2 text-[10px]">Support Helpdesk</TabsTrigger>
+          <TabsTrigger value="autopilot" className="py-2 text-[10px]">Autopilot Orchestrator</TabsTrigger>
         </TabsList>
 
         <TabsContent value="inventory" className="focus-visible:outline-none space-y-6 animate-in fade-in duration-200">
@@ -871,6 +973,193 @@ export const COOOperations: React.FC<{
             </div>
           </div>
         </TabsContent>
+
+        <TabsContent value="autopilot" className="focus-visible:outline-none space-y-6 animate-in fade-in duration-200">
+          {/* Autopilot Overview Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 border border-border rounded-xl bg-card divide-y md:divide-y-0 md:divide-x divide-border overflow-hidden shadow-md">
+            <div className="p-5 space-y-1 bg-black/10">
+              <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">Active Safeguards</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black text-foreground">
+                  {autopilotRulesList.filter((r: any) => r.active).length} Rules
+                </span>
+                <span className="text-[10px] text-emerald-500 font-bold flex items-center gap-0.5">
+                  <Cpu size={10} /> Enabled
+                </span>
+              </div>
+            </div>
+            <div className="p-5 space-y-1 bg-black/10">
+              <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">Systems Integrated</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black text-foreground">3 Modules</span>
+                <span className="text-[10px] text-muted-foreground font-bold">CFO, Inventory, Support</span>
+              </div>
+            </div>
+            <div className="p-5 space-y-1 bg-black/10">
+              <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">Engine State</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black text-emerald-500">Autonomous</span>
+                <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-0.5">
+                  <Play size={10} className="animate-pulse" /> Active
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Rules Grid (8-col) */}
+            <div className="lg:col-span-8 space-y-6">
+              <div className="flex justify-between items-center border-b border-border pb-3">
+                <h3 className="font-bold text-sm text-foreground flex items-center gap-1.5">
+                  <Sliders size={14} className="text-primary" /> Core Automations & Policies
+                </h3>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={handleRunChecks} 
+                    disabled={isRunningChecks}
+                    variant="outline"
+                    className="h-8 text-[10px] font-bold flex items-center gap-1 bg-black/10 border-border"
+                  >
+                    {isRunningChecks ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      <RefreshCw size={12} />
+                    )}
+                    Run Checks Now
+                  </Button>
+                  <Button 
+                    onClick={() => setIsRuleOpen(true)}
+                    className="h-8 text-[10px] font-bold flex items-center gap-1"
+                  >
+                    <Plus size={12} /> Add Rule
+                  </Button>
+                </div>
+              </div>
+
+              {autopilotLoading ? (
+                <div className="flex items-center justify-center p-12 text-xs text-muted-foreground gap-2">
+                  <Loader2 size={14} className="animate-spin" /> Fetching autopilot settings...
+                </div>
+              ) : autopilotRulesList.length === 0 ? (
+                <div className="text-center p-12 border border-dashed border-border rounded-xl bg-card/20 space-y-2">
+                  <p className="text-xs text-muted-foreground font-bold">No custom autopilot rules created.</p>
+                  <Button size="sm" onClick={() => setIsRuleOpen(true)} className="text-[10px] h-8 font-bold">
+                    Create your first safeguard
+                  </Button>
+                </div>
+              ) : (
+                <div className="border border-border rounded-xl bg-card/60 overflow-hidden shadow-sm">
+                  <Table>
+                    <TableHeader className="bg-black/20">
+                      <TableRow className="border-b border-border">
+                        <TableHead className="text-[9px] font-extrabold text-muted-foreground tracking-wider uppercase h-10">Rule Name</TableHead>
+                        <TableHead className="text-[9px] font-extrabold text-muted-foreground tracking-wider uppercase h-10">Trigger Condition</TableHead>
+                        <TableHead className="text-[9px] font-extrabold text-muted-foreground tracking-wider uppercase h-10">Autonomous Action</TableHead>
+                        <TableHead className="text-[9px] font-extrabold text-muted-foreground tracking-wider uppercase h-10 text-center">Status</TableHead>
+                        <TableHead className="text-[9px] font-extrabold text-muted-foreground tracking-wider uppercase h-10 text-right">Delete</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {autopilotRulesList.map((rule: any) => {
+                        return (
+                          <TableRow key={rule.id} className="border-b border-border hover:bg-black/5 transition-colors">
+                            <TableCell className="py-3 font-bold text-xs text-foreground uppercase tracking-wide">
+                              {rule.name}
+                            </TableCell>
+                            <TableCell className="py-3 text-[10px] font-medium text-muted-foreground">
+                              {rule.triggerType === 'runway_low' && `Runway drops below ${rule.triggerValue} months`}
+                              {rule.triggerType === 'low_stock' && `Inventory qty drops below ${rule.triggerValue}`}
+                              {rule.triggerType === 'high_priority_ticket' && `Urgent / high-priority ticket opened`}
+                              {rule.triggerType === 'mrr_surge' && `Monthly Recurring Revenue surge detected`}
+                            </TableCell>
+                            <TableCell className="py-3 text-[10px] font-bold text-foreground">
+                              {rule.actionType === 'ai_audit' && (
+                                <span className="flex items-center gap-1 text-sky-400">
+                                  <Cpu size={12} /> AI expense audit
+                                </span>
+                              )}
+                              {rule.actionType === 'auto_task' && (
+                                <span className="flex items-center gap-1 text-amber-500">
+                                  <Clock size={12} /> Auto-create staff task
+                                </span>
+                              )}
+                              {rule.actionType === 'ai_reply' && (
+                                <span className="flex items-center gap-1 text-emerald-400">
+                                  <CheckCircle2 size={12} /> Autoreply customer
+                                </span>
+                              )}
+                              {rule.actionType === 'webhook_alert' && (
+                                <span className="flex items-center gap-1 text-purple-400">
+                                  <AlertTriangle size={12} /> Slack Hook Alert
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="py-3 text-center">
+                              <Button
+                                size="sm"
+                                variant={rule.active ? "default" : "outline"}
+                                onClick={() => toggleRuleMutation.mutate({ id: rule.id, active: !rule.active })}
+                                className={`h-6 text-[9px] px-2.5 font-bold uppercase ${rule.active ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border-emerald-500/30" : "text-muted-foreground border-border"}`}
+                              >
+                                {rule.active ? "ENABLED" : "DISABLED"}
+                              </Button>
+                            </TableCell>
+                            <TableCell className="py-3 text-right">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => deleteRuleMutation.mutate(rule.id)}
+                                className="h-6 w-6 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                              >
+                                <Trash2 size={12} />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+
+            {/* Terminal logs panel (4-col) */}
+            <Card className="lg:col-span-4 border-border bg-card/60 p-5 space-y-4 shadow-inner">
+              <h3 className="font-bold text-sm text-foreground border-b border-border pb-2.5 flex items-center gap-1.5">
+                <Cpu size={14} className="text-emerald-500" /> Autopilot Output Logs
+              </h3>
+
+              <div className="bg-black/40 rounded-xl p-4 border border-border/80 font-mono text-[10px] space-y-3 h-[320px] overflow-y-auto shadow-inner text-emerald-400/90 custom-scrollbar">
+                <div className="text-muted-foreground text-[9px] border-b border-border/20 pb-1.5 mb-2 flex justify-between items-center">
+                  <span>TERMINAL LOGS PANEL</span>
+                  <span>v1.0.0</span>
+                </div>
+                {executionLogs.length === 0 ? (
+                  <div className="text-muted-foreground/60 h-full flex flex-col items-center justify-center text-center px-4 space-y-2">
+                    <Cpu size={24} className="text-muted-foreground/30 animate-pulse" />
+                    <p className="text-[11px] font-bold">Autopilot Engine Idle</p>
+                    <p className="text-[9px]">Click &quot;Run Checks Now&quot; above to trigger active safeguard checks and stream operational logs here.</p>
+                  </div>
+                ) : (
+                  executionLogs.map((log: any, index: number) => {
+                    return (
+                      <div key={index} className="space-y-1 leading-normal border-b border-border/10 pb-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-extrabold text-foreground tracking-tight">{log.name}</span>
+                          <span className={`text-[8px] font-bold px-1 rounded-sm ${log.triggered ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" : "bg-black/30 text-muted-foreground/70"}`}>
+                            {log.triggered ? "TRIGGERED" : "NORMAL"}
+                          </span>
+                        </div>
+                        <p className="text-muted-foreground/90">{log.actionTaken}</p>
+                        <p className="text-[8px] text-muted-foreground/50 text-right">{new Date(log.timestamp).toLocaleTimeString()}</p>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </Card>
+          </div>
+        </TabsContent>
       </Tabs>
 
       {/* New Project Creator Drawer Overlay */}
@@ -962,6 +1251,89 @@ export const COOOperations: React.FC<{
             <div className="flex gap-2 pt-2">
               <Button type="submit" disabled={isSaving} className="flex-1 h-10 text-xs font-bold">Commit Hours</Button>
               <Button type="button" variant="outline" onClick={() => setIsLogOpen(false)} className="h-10 px-4 text-xs font-bold">Cancel</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Autopilot Rule Overlay */}
+      <Dialog open={isRuleOpen} onOpenChange={(open) => { if (!open) setIsRuleOpen(false); }}>
+        <DialogContent className="max-w-md w-full border-border bg-card p-6 shadow-2xl relative overflow-hidden">
+          <DialogHeader className="border-b border-border pb-4 mb-2">
+            <DialogTitle className="text-base font-extrabold text-foreground">Create Autopilot Policy</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleRuleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Policy / Rule Name</label>
+              <Input 
+                type="text" 
+                required 
+                value={ruleName} 
+                onChange={(e) => setRuleName(e.target.value)} 
+                placeholder="e.g. Low Cash Runway Burn Audit" 
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Trigger Condition</label>
+              <Select 
+                value={ruleTriggerType} 
+                onValueChange={(val) => setRuleTriggerType(val as any)}
+              >
+                <SelectTrigger className="w-full text-xs font-bold uppercase tracking-wider h-10">
+                  <SelectValue placeholder="TRIGGER TYPE" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="runway_low">RUNWAY DROPS LOW</SelectItem>
+                  <SelectItem value="low_stock">LOW STOCK COUNT</SelectItem>
+                  <SelectItem value="high_priority_ticket">HIGH PRIORITY TICKET OPENED</SelectItem>
+                  <SelectItem value="mrr_surge">MRR GROWTH SURGE (+20%)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Threshold / Trigger Value</label>
+              <Input 
+                type="text" 
+                required 
+                value={ruleTriggerValue} 
+                onChange={(e) => setRuleTriggerValue(e.target.value)} 
+                placeholder="e.g. 6 (months) or 10 (items)" 
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Autonomous Action</label>
+              <Select 
+                value={ruleActionType} 
+                onValueChange={(val) => setRuleActionType(val as any)}
+              >
+                <SelectTrigger className="w-full text-xs font-bold uppercase tracking-wider h-10">
+                  <SelectValue placeholder="ACTION TYPE" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ai_audit">RUN AI EXPENSE/BURN AUDIT</SelectItem>
+                  <SelectItem value="auto_task">AUTO-CREATE STAFF ASSIGNMENT TASK</SelectItem>
+                  <SelectItem value="ai_reply">SEND AI HELP DESK AUTOREPLY</SelectItem>
+                  <SelectItem value="webhook_alert">DISPATCH EXTERNAL WEBHOOK ALERT</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Action Target / Webhook URL (Optional)</label>
+              <Input 
+                type="text" 
+                value={ruleActionTarget} 
+                onChange={(e) => setRuleActionTarget(e.target.value)} 
+                placeholder="e.g. emp-1 or slack webhook URL" 
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button type="submit" disabled={isSaving} className="flex-1 h-10 text-xs font-bold">Deploy Policy</Button>
+              <Button type="button" variant="outline" onClick={() => setIsRuleOpen(false)} className="h-10 px-4 text-xs font-bold">Cancel</Button>
             </div>
           </form>
         </DialogContent>

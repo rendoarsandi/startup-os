@@ -265,4 +265,19 @@ export const supportTickets = sqliteTable('support_ticket', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
+export const autopilotRules = sqliteTable('autopilot_rule', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  name: text('name').notNull(),
+  triggerType: text('trigger_type').notNull(), // 'runway_low' | 'low_stock' | 'high_priority_ticket' | 'mrr_surge'
+  triggerValue: text('trigger_value').notNull(), // stringified threshold value
+  actionType: text('action_type').notNull(), // 'ai_audit' | 'auto_task' | 'ai_reply' | 'webhook_alert'
+  actionTarget: text('action_target'), // e.g. employeeId, webhookUrl, or empty
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  lastTriggeredAt: integer('last_triggered_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+
 
