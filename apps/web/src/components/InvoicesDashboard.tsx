@@ -63,13 +63,13 @@ export const InvoicesDashboard: React.FC = () => {
     },
     onSubmit: async ({ value }) => {
       // Calculate total amount in cents
-      const totalAmountCents = value.lineItems.reduce((sum, item) => sum + (item.qty * (item.rate * 100)), 0);
+      const totalAmountCents = value.lineItems.reduce((sum, item) => sum + (item.qty * Math.round(item.rate * 100)), 0);
       
       // Format items
       const itemsFormatted = value.lineItems.map(item => ({
         description: item.description || "General Services",
         qty: item.qty,
-        rate: item.rate * 100 // convert dollars to cents
+        rate: Math.round(item.rate * 100) // convert dollars to cents
       }));
 
       await saveMutation.mutateAsync({
@@ -126,51 +126,52 @@ export const InvoicesDashboard: React.FC = () => {
     setAiError(null);
     setMathError(null);
     try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64String = reader.result as string;
-        const commaIndex = base64String.indexOf(',');
-        const cleanBase64 = base64String.slice(commaIndex + 1);
-        const mimeType = selectedFile.type;
-
-        try {
-          const res = await fetch('/api/cfo/parse-invoice-secure', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fileBase64: cleanBase64, mimeType })
+      const base64Data = await new Promise<{ cleanBase64: string; mimeType: string }>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64String = reader.result as string;
+          const commaIndex = base64String.indexOf(',');
+          resolve({
+            cleanBase64: base64String.slice(commaIndex + 1),
+            mimeType: selectedFile.type,
           });
-          if (!res.ok) throw new Error('Failed to scan document with AI');
-          const data = await res.json();
+        };
+        reader.onerror = () => reject(new Error('Failed to read file.'));
+        reader.readAsDataURL(selectedFile);
+      });
 
-          if (data.clientName) form.setFieldValue('clientName', data.clientName);
-          if (data.type) form.setFieldValue('invoiceType', data.type);
-          if (data.invoiceNumber) form.setFieldValue('invoiceNumber', data.invoiceNumber);
-          if (data.dueDateOffsetDays) {
-            const d = new Date();
-            d.setDate(d.getDate() + data.dueDateOffsetDays);
-            form.setFieldValue('dueDate', d.toISOString().split('T')[0]);
-          }
-          if (data.items && data.items.length > 0) {
-            form.setFieldValue('lineItems', data.items.map((item: any) => ({
-              description: item.description || '',
-              qty: item.qty || 1,
-              rate: item.rate || 0
-            })));
-          }
+      const res = await fetch('/api/cfo/parse-invoice-secure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileBase64: base64Data.cleanBase64, mimeType: base64Data.mimeType })
+      });
+      if (!res.ok) throw new Error('Failed to scan document with AI');
+      const data = await res.json();
 
-          if (data.isMathAccurate === false) {
-            setMathError(`Alert: The scanned invoice total ($${data.grandTotal}) does not mathematically match the sum of extracted line items ($${data.calculatedGrandTotal}). Please manually review details before compiling.`);
-          } else {
-            setMathError(null);
-          }
-          setSelectedFile(null);
-        } catch (e: any) {
-          setAiError(e.message || 'Verification scan failed.');
-        }
-      };
-      reader.readAsDataURL(selectedFile);
+      if (data.clientName) form.setFieldValue('clientName', data.clientName);
+      if (data.type) form.setFieldValue('invoiceType', data.type);
+      if (data.invoiceNumber) form.setFieldValue('invoiceNumber', data.invoiceNumber);
+      if (data.dueDateOffsetDays) {
+        const d = new Date();
+        d.setDate(d.getDate() + data.dueDateOffsetDays);
+        form.setFieldValue('dueDate', d.toISOString().split('T')[0]);
+      }
+      if (data.items && data.items.length > 0) {
+        form.setFieldValue('lineItems', data.items.map((item: any) => ({
+          description: item.description || '',
+          qty: item.qty || 1,
+          rate: item.rate || 0
+        })));
+      }
+
+      if (data.isMathAccurate === false) {
+        setMathError(`Alert: The scanned invoice total ($${data.grandTotal}) does not mathematically match the sum of extracted line items ($${data.calculatedGrandTotal}). Please manually review details before compiling.`);
+      } else {
+        setMathError(null);
+      }
+      setSelectedFile(null);
     } catch (err: any) {
-      setAiError(err.message || 'Error occurred while uploading.');
+      setAiError(err.message || 'Verification scan failed.');
     } finally {
       setIsAiScanning(false);
     }
