@@ -1,8 +1,8 @@
 import { expect, test, describe, vi } from 'vitest';
-import app from './index';
+import { handleApiRequest } from '../server/dispatcher';
 
 // Mock the PlaidService for Hono endpoint testing
-vi.mock('./plaid', () => {
+vi.mock('../server/plaid', () => {
   return {
     PlaidService: class {
       createLinkToken = vi.fn().mockResolvedValue('link-sandbox-test-token')
@@ -45,9 +45,9 @@ vi.mock('./plaid', () => {
 
 describe('Plaid Endpoint Routing Tests', () => {
   test('POST /api/plaid/create-link-token returns a link token', async () => {
-    const res = await app.request('/api/plaid/create-link-token', {
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/plaid/create-link-token', {
       method: 'POST',
-    }, {
+    }), {
       PLAID_CLIENT_ID: 'test-client-id',
       PLAID_SECRET: 'test-secret',
       PLAID_ENV: 'sandbox',
@@ -65,11 +65,11 @@ describe('Plaid Endpoint Routing Tests', () => {
   });
 
   test('POST /api/plaid/exchange-token performs flow successfully', async () => {
-    const res = await app.request('/api/plaid/exchange-token', {
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/plaid/exchange-token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ publicToken: 'mock_public_token_chase', institutionName: 'Chase Bank' }),
-    }, {
+    }), {
       PLAID_CLIENT_ID: 'test-client-id',
       PLAID_SECRET: 'test-secret',
       PLAID_ENV: 'sandbox',
@@ -97,9 +97,9 @@ describe('Plaid Endpoint Routing Tests', () => {
   });
 
   test('POST /api/plaid/sync-transactions synchronizes accounts and transactions', async () => {
-    const res = await app.request('/api/plaid/sync-transactions', {
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/plaid/sync-transactions', {
       method: 'POST',
-    }, {
+    }), {
       PLAID_CLIENT_ID: 'test-client-id',
       PLAID_SECRET: 'test-secret',
       PLAID_ENV: 'sandbox',

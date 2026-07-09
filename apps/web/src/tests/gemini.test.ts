@@ -1,5 +1,5 @@
 import { expect, test, describe, vi } from 'vitest';
-import { GeminiService } from './gemini';
+import { GeminiService } from '../server/gemini';
 
 vi.mock('@google/generative-ai', () => {
   const mockGenerateContent = vi.fn().mockResolvedValue({

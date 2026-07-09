@@ -1,5 +1,5 @@
 import { expect, test, describe } from 'vitest';
-import { PlaidService } from './plaid';
+import { PlaidService } from '../server/plaid';
 
 describe('Plaid Service Layer Direct Tests', () => {
   test('PlaidService handles mock token exchange fallback correctly', async () => {

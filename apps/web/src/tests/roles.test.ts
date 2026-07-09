@@ -1,7 +1,7 @@
 import { expect, test, describe, vi } from 'vitest';
-import app from './index';
+import { handleApiRequest } from '../server/dispatcher';
 
-vi.mock('./gemini', () => {
+vi.mock('../server/gemini', () => {
   return {
     GeminiService: class {
       chat = vi.fn().mockResolvedValue('Hello from Mocked Gemini!');
@@ -16,7 +16,7 @@ describe('Multi-Role Executive API Endpoints', () => {
     DB: {
       prepare: vi.fn().mockReturnValue({
         bind: vi.fn().mockReturnThis(),
-        all: vi.fn().mockResolvedValue([]),
+        all: vi.fn().mockResolvedValue({ results: [] }),
         get: vi.fn().mockResolvedValue(null),
         raw: vi.fn().mockResolvedValue([]),
         run: vi.fn().mockResolvedValue({ success: true }),
@@ -25,11 +25,11 @@ describe('Multi-Role Executive API Endpoints', () => {
   } as any;
 
   test('POST /api/chat supports marketer role', async () => {
-    const res = await app.request('/api/chat', {
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/chat', {
       method: 'POST',
       body: JSON.stringify({ message: 'Hello Marketer', role: 'marketer' }),
       headers: { 'Content-Type': 'application/json' },
-    }, mockEnv);
+    }), mockEnv);
 
     expect(res.status).toBe(200);
     const data = await res.json() as any;
@@ -37,11 +37,11 @@ describe('Multi-Role Executive API Endpoints', () => {
   });
 
   test('POST /api/chat supports hr role', async () => {
-    const res = await app.request('/api/chat', {
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/chat', {
       method: 'POST',
       body: JSON.stringify({ message: 'Hello HR', role: 'hr' }),
       headers: { 'Content-Type': 'application/json' },
-    }, mockEnv);
+    }), mockEnv);
 
     expect(res.status).toBe(200);
     const data = await res.json() as any;
@@ -49,11 +49,11 @@ describe('Multi-Role Executive API Endpoints', () => {
   });
 
   test('POST /api/chat supports operations role', async () => {
-    const res = await app.request('/api/chat', {
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/chat', {
       method: 'POST',
       body: JSON.stringify({ message: 'Hello Operations', role: 'operations' }),
       headers: { 'Content-Type': 'application/json' },
-    }, mockEnv);
+    }), mockEnv);
 
     expect(res.status).toBe(200);
     const data = await res.json() as any;
@@ -61,9 +61,22 @@ describe('Multi-Role Executive API Endpoints', () => {
   });
 
   test('GET /api/marketing/campaigns returns campaigns', async () => {
-    const res = await app.request('/api/marketing/campaigns', {
+    const mockEnvWithCampaigns = {
+      ...mockEnv,
+      DB: {
+        prepare: vi.fn().mockReturnValue({
+          bind: vi.fn().mockReturnThis(),
+          all: vi.fn().mockResolvedValue({ results: [] }),
+          raw: vi.fn().mockResolvedValue([['mc-1', 'test-user', 'Mock Campaign', 'active', 500000, 0, 0, 0, new Date().toISOString(), new Date().toISOString()]]),
+          get: vi.fn().mockResolvedValue(null),
+          run: vi.fn().mockResolvedValue({ success: true }),
+        }),
+      },
+    } as any;
+
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/marketing/campaigns', {
       method: 'GET',
-    }, mockEnv);
+    }), mockEnvWithCampaigns);
 
     expect(res.status).toBe(200);
     const data = await res.json() as any;
@@ -73,11 +86,11 @@ describe('Multi-Role Executive API Endpoints', () => {
   });
 
   test('POST /api/marketing/campaigns adds/updates campaign', async () => {
-    const res = await app.request('/api/marketing/campaigns', {
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/marketing/campaigns', {
       method: 'POST',
       body: JSON.stringify({ name: 'New Ad Campaign', budget: 100000 }),
       headers: { 'Content-Type': 'application/json' },
-    }, mockEnv);
+    }), mockEnv);
 
     expect(res.status).toBe(201);
     const data = await res.json() as any;
@@ -86,11 +99,11 @@ describe('Multi-Role Executive API Endpoints', () => {
   });
 
   test('POST /api/marketing/generate-ideas returns ideas from Gemini', async () => {
-    const res = await app.request('/api/marketing/generate-ideas', {
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/marketing/generate-ideas', {
       method: 'POST',
       body: JSON.stringify({ productDescription: 'A Cool App', targetAudience: 'Teens' }),
       headers: { 'Content-Type': 'application/json' },
-    }, mockEnv);
+    }), mockEnv);
 
     expect(res.status).toBe(200);
     const data = await res.json() as any;
@@ -98,9 +111,22 @@ describe('Multi-Role Executive API Endpoints', () => {
   });
 
   test('GET /api/hr/employees returns employee roster', async () => {
-    const res = await app.request('/api/hr/employees', {
+    const mockEnvWithEmployees = {
+      ...mockEnv,
+      DB: {
+        prepare: vi.fn().mockReturnValue({
+          bind: vi.fn().mockReturnThis(),
+          all: vi.fn().mockResolvedValue({ results: [] }),
+          raw: vi.fn().mockResolvedValue([['emp-1', 'test-user', 'Mock Employee', 'Developer', 'Engineering', 10000000, 'active', new Date().toISOString(), new Date().toISOString(), new Date().toISOString()]]),
+          get: vi.fn().mockResolvedValue(null),
+          run: vi.fn().mockResolvedValue({ success: true }),
+        }),
+      },
+    } as any;
+
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/hr/employees', {
       method: 'GET',
-    }, mockEnv);
+    }), mockEnvWithEmployees);
 
     expect(res.status).toBe(200);
     const data = await res.json() as any;
@@ -110,11 +136,11 @@ describe('Multi-Role Executive API Endpoints', () => {
   });
 
   test('POST /api/hr/employees adds/updates employee', async () => {
-    const res = await app.request('/api/hr/employees', {
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/hr/employees', {
       method: 'POST',
       body: JSON.stringify({ name: 'Frank Ocean', role: 'Musician', department: 'Arts', salary: 20000000 }),
       headers: { 'Content-Type': 'application/json' },
-    }, mockEnv);
+    }), mockEnv);
 
     expect(res.status).toBe(201);
     const data = await res.json() as any;
@@ -123,11 +149,11 @@ describe('Multi-Role Executive API Endpoints', () => {
   });
 
   test('POST /api/hr/generate-doc returns generated document from Gemini', async () => {
-    const res = await app.request('/api/hr/generate-doc', {
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/hr/generate-doc', {
       method: 'POST',
       body: JSON.stringify({ docType: 'offer_letter', title: 'Developer', department: 'Engineering', salary: '$100,000' }),
       headers: { 'Content-Type': 'application/json' },
-    }, mockEnv);
+    }), mockEnv);
 
     expect(res.status).toBe(200);
     const data = await res.json() as any;

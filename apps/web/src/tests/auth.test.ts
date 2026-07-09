@@ -1,5 +1,5 @@
 import { expect, test, describe, vi } from 'vitest';
-import app from './index';
+import { handleApiRequest } from '../server/dispatcher';
 
 describe('Authentication Integration', () => {
   test('GET /api/auth/get-session returns 401/unauthorized when no session exists', async () => {
@@ -11,11 +11,11 @@ describe('Authentication Integration', () => {
       bind: vi.fn().mockReturnThis(),
     };
 
-    const res = await app.request('/api/auth/get-session', {
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/auth/get-session', {
       headers: {
         'Content-Type': 'application/json',
       },
-    }, { 
+    }), { 
       DB: mockDb,
       BETTER_AUTH_URL: 'http://localhost:3000',
       BETTER_AUTH_SECRET: 'test-secret'

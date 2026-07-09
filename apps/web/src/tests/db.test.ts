@@ -1,5 +1,5 @@
 import { expect, test, describe, vi } from 'vitest';
-import app from './index';
+import { handleApiRequest } from '../server/dispatcher';
 
 describe('Database Integration', () => {
   test('GET /api/users returns empty list initially', async () => {
@@ -12,7 +12,7 @@ describe('Database Integration', () => {
       }),
     };
 
-    const res = await app.request('/api/users', {}, { DB: mockDb } as any);
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/users', {}), { DB: mockDb } as any);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(Array.isArray(body)).toBe(true);

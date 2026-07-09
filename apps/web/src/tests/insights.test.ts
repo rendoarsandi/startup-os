@@ -1,7 +1,7 @@
 import { expect, test, describe, vi } from 'vitest';
-import app from './index';
+import { handleApiRequest } from '../server/dispatcher';
 
-vi.mock('./gemini', () => ({
+vi.mock('../server/gemini', () => ({
   GeminiService: class {
     generateResponse = vi.fn().mockResolvedValue('Invest more in your savings!')
   }
@@ -9,7 +9,7 @@ vi.mock('./gemini', () => ({
 
 describe('Insights Endpoint', () => {
   test('GET /api/insights returns advice', async () => {
-    const res = await app.request('/api/insights', {}, {
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/insights', {}), {
       DB: {
         prepare: vi.fn().mockReturnValue({
           bind: vi.fn().mockReturnThis(),

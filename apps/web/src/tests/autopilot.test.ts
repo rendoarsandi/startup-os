@@ -1,5 +1,5 @@
 import { expect, test, describe, vi } from 'vitest';
-import app from './index';
+import { handleApiRequest } from '../server/dispatcher';
 
 describe('COO Autopilot Rules API Endpoints', () => {
   const mockEnv = {
@@ -16,9 +16,9 @@ describe('COO Autopilot Rules API Endpoints', () => {
   } as any;
 
   test('GET /api/operations/autopilot returns rule list', async () => {
-    const res = await app.request('/api/operations/autopilot', {
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/operations/autopilot', {
       method: 'GET',
-    }, mockEnv);
+    }), mockEnv);
 
     expect(res.status).toBe(200);
     const data = await res.json() as any;
@@ -28,7 +28,7 @@ describe('COO Autopilot Rules API Endpoints', () => {
   });
 
   test('POST /api/operations/autopilot creates or updates rule', async () => {
-    const res = await app.request('/api/operations/autopilot', {
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/operations/autopilot', {
       method: 'POST',
       body: JSON.stringify({
         name: 'Urgent Ticket Alert Hook',
@@ -38,7 +38,7 @@ describe('COO Autopilot Rules API Endpoints', () => {
         actionTarget: 'https://hooks.slack.com/services/test'
       }),
       headers: { 'Content-Type': 'application/json' },
-    }, mockEnv);
+    }), mockEnv);
 
     expect(res.status).toBe(201);
     const data = await res.json() as any;
@@ -48,11 +48,11 @@ describe('COO Autopilot Rules API Endpoints', () => {
   });
 
   test('PUT /api/operations/autopilot/:id/toggle toggles rule state', async () => {
-    const res = await app.request('/api/operations/autopilot/rule-1/toggle', {
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/operations/autopilot/rule-1/toggle', {
       method: 'PUT',
       body: JSON.stringify({ active: false }),
       headers: { 'Content-Type': 'application/json' },
-    }, mockEnv);
+    }), mockEnv);
 
     expect(res.status).toBe(200);
     const data = await res.json() as any;
@@ -61,9 +61,9 @@ describe('COO Autopilot Rules API Endpoints', () => {
   });
 
   test('POST /api/operations/autopilot/run-checks evaluates autopilot triggers', async () => {
-    const res = await app.request('/api/operations/autopilot/run-checks', {
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/operations/autopilot/run-checks', {
       method: 'POST',
-    }, mockEnv);
+    }), mockEnv);
 
     expect(res.status).toBe(200);
     const data = await res.json() as any;

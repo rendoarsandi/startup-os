@@ -1,7 +1,7 @@
 import { expect, test, describe, vi } from 'vitest';
-import app from './index';
+import { handleApiRequest } from '../server/dispatcher';
 
-vi.mock('./gemini', () => ({
+vi.mock('../server/gemini', () => ({
   GeminiService: class {
     generateResponse = vi.fn().mockResolvedValue('Food')
   }
@@ -9,11 +9,11 @@ vi.mock('./gemini', () => ({
 
 describe('Transactions & Accounts Endpoints', () => {
   test('POST /api/accounts creates an account', async () => {
-    const res = await app.request('/api/accounts', {
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/accounts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'Checking', type: 'checking', balance: 100000 }),
-    }, {
+    }), {
       DB: {
         prepare: vi.fn().mockReturnValue({
           bind: vi.fn().mockReturnThis(),
@@ -28,7 +28,7 @@ describe('Transactions & Accounts Endpoints', () => {
   });
 
   test('POST /api/transactions creates a transaction with AI categorization', async () => {
-    const res = await app.request('/api/transactions', {
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/transactions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
@@ -36,7 +36,7 @@ describe('Transactions & Accounts Endpoints', () => {
         amount: -5000, 
         merchant: 'McDonalds' 
       }),
-    }, {
+    }), {
       GEMINI_API_KEY: 'test-key',
       DB: {
         prepare: vi.fn().mockReturnValue({

@@ -1,7 +1,7 @@
 import { expect, test, describe, vi } from 'vitest';
-import app from './index';
+import { handleApiRequest } from '../server/dispatcher';
 
-vi.mock('./gemini', () => {
+vi.mock('../server/gemini', () => {
   return {
     GeminiService: class {
       chat = vi.fn().mockResolvedValue('Hello from Mocked Gemini!')
@@ -11,13 +11,13 @@ vi.mock('./gemini', () => {
 
 describe('Chat Endpoint', () => {
   test('POST /api/chat returns response from Gemini', async () => {
-    const res = await app.request('/api/chat', {
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/chat', {
       method: 'POST',
       body: JSON.stringify({ message: 'Hello' }),
       headers: {
         'Content-Type': 'application/json',
       },
-    }, {
+    }), {
       GEMINI_API_KEY: 'test-key',
       DB: {
         prepare: vi.fn().mockReturnValue({
