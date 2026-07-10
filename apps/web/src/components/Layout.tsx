@@ -190,6 +190,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeRole, setActiveR
               active={currentView === 'dashboard'} 
               onClick={() => onViewChange('dashboard')}
             />
+            <NavLink 
+              icon={<Sparkles size={16} className="text-[#9D4EDD]" />} 
+              label="AI Boardroom" 
+              active={currentView === 'ai-boardroom'} 
+              onClick={() => onViewChange('ai-boardroom')}
+            />
             
             {activeRole === 'cfo' && (
               <>
@@ -217,6 +223,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeRole, setActiveR
                   active={currentView === 'forecasting'}
                   onClick={() => onViewChange('forecasting')}
                 />
+                <NavLink 
+                  icon={<TrendingUp size={16} />} 
+                  label="SaaS Economics" 
+                  active={currentView === 'saas-economics'}
+                  onClick={() => onViewChange('saas-economics')}
+                />
               </>
             )}
             {activeRole === 'marketer' && (
@@ -238,6 +250,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeRole, setActiveR
                   label="Funnel Analysis" 
                   active={currentView === 'funnel'}
                   onClick={() => onViewChange('funnel')}
+                />
+                <NavLink 
+                  icon={<TrendingUp size={16} />} 
+                  label="SaaS Economics" 
+                  active={currentView === 'saas-economics'}
+                  onClick={() => onViewChange('saas-economics')}
                 />
               </>
             )}

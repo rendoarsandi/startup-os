@@ -15,7 +15,9 @@ import { COOOperations } from './components/COOOperations'
 import { SystemSettings } from './components/SystemSettings'
 import { FunnelAnalysis } from './components/FunnelAnalysis'
 import { HRBoardroom } from './components/HRBoardroom'
+import { AIBoardroom } from './components/AIBoardroom'
 import { ScenarioPlanner } from './components/ScenarioPlanner'
+import { SaaSEconomics } from './components/SaaSEconomics'
 import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 
@@ -229,6 +231,8 @@ function App() {
       <div className="space-y-6">
         {currentView === 'settings' ? (
           <SystemSettings />
+        ) : currentView === 'ai-boardroom' ? (
+          <AIBoardroom />
         ) : (
           <>
             {activeRole === 'cfo' && (
@@ -518,6 +522,10 @@ function App() {
                     }} 
                   />
                 )}
+
+                {currentView === 'saas-economics' && (
+                  <SaaSEconomics />
+                )}
               </div>
             )}
 
@@ -540,6 +548,10 @@ function App() {
                 {currentView === 'crm' && <CRMPipeline />}
                 {currentView === 'campaigns' && <MarketingDashboard showOnlyBrainstorm={true} />}
                 {currentView === 'funnel' && <FunnelAnalysis />}
+                
+                {currentView === 'saas-economics' && (
+                  <SaaSEconomics />
+                )}
               </div>
             )}
 
