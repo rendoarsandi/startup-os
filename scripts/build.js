@@ -20,6 +20,6 @@ if (hasBun) {
   process.exit(result.status ?? 0);
 } else {
   console.log('[Resilient Build] Bun not found in PATH. Falling back to NPM/Node...');
-  const result = spawnSync('npm run build --prefix apps/web', { shell, stdio: 'inherit' });
+  const result = spawnSync('npm run build --workspace=web', { shell, stdio: 'inherit' });
   process.exit(result.status ?? 0);
 }

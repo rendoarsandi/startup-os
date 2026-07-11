@@ -6,11 +6,10 @@
   "scripts": {
     "dev": "vite dev --port 3000",
     "build": "vite build",
-    "build:cloudflare": "CF_BUILD=1 vite build",
     "start": "node .output/server/index.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
-    "deploy": "npm run build:cloudflare && wrangler deploy",
+    "deploy": "CF_BUILD=1 npm run build && wrangler deploy --config ../../wrangler.jsonc",
     "test": "vitest run"
   },
   "dependencies": {
