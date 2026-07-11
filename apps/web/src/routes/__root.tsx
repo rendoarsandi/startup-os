@@ -1,7 +1,6 @@
-import { Outlet, ScrollRestoration, createRootRoute } from '@tanstack/react-router'
-import { Meta, Scripts } from '@tanstack/react-start'
+import { Outlet, ScrollRestoration, createRootRoute, HeadContent, Scripts } from '@tanstack/react-router'
 import * as React from 'react'
-import indexCss from '../index.css?url'
+import '../index.css'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -11,7 +10,11 @@ export const Route = createRootRoute({
       { title: 'Startup OS' },
     ],
     links: [
-      { rel: 'stylesheet', href: indexCss },
+      { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+      { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
+      { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700;800&display=swap' },
+      // Inject the Vite-compiled stylesheet with the correct query param that Vite needs
+      { rel: 'stylesheet', href: '/@tanstack-start/styles.css?routes=__root__%2C%2F' },
     ],
   }),
   component: RootComponent,
@@ -21,7 +24,7 @@ function RootComponent() {
   return (
     <html lang="en" className="dark">
       <head>
-        <Meta />
+        <HeadContent />
       </head>
       <body className="bg-[#030303] text-foreground antialiased min-h-screen">
         <Outlet />

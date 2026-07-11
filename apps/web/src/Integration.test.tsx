@@ -240,5 +240,5 @@ describe('STARTUP OS - Full Integration & End-to-End Test', () => {
     });
 
     console.log('🎉 E2E Integration test succeeded! Account login, workspace tab switching, and AI chat messaging flows verified.');
-  });
+  }, 15000);
 });

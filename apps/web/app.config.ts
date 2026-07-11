@@ -9,6 +9,10 @@ const appConfig = defineConfig({
     resolve: {
       dedupe: ['react', 'react-dom'],
     },
+    esbuild: {
+      jsx: 'automatic',
+      jsxImportSource: 'react',
+    },
     test: {
       globals: true,
       environment: 'jsdom',
