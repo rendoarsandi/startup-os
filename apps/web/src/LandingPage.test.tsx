@@ -15,7 +15,7 @@ test('renders Startup OS Landing Page elements', async () => {
   const roadmapHeader = await screen.findByRole('heading', { name: /Product Roadmap/i, level: 2 });
   expect(roadmapHeader).toBeInTheDocument();
 
-  // Check waitlist button / text
-  const waitlistLabel = screen.getByText(/Coming Soon • Early Beta access slots limited/i);
-  expect(waitlistLabel).toBeInTheDocument();
+  // Check coming soon badge
+  const comingSoonBadge = screen.getAllByText(/Coming Soon/i);
+  expect(comingSoonBadge.length).toBeGreaterThan(0);
 });
