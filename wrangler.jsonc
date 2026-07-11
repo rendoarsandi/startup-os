@@ -1,10 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "api",
-  "main": "apps/api/src/index.ts",
-  "build": {
-    "command": "node scripts/build.js"
-  },
+  "name": "startup-os",
+  "main": "@tanstack/react-start/server-entry",
   "compatibility_date": "2026-05-20",
   "compatibility_flags": [
     "nodejs_compat"
@@ -16,16 +13,5 @@
       "database_id": "d34b94ac-e688-442a-a866-70e5c19d42ac",
       "migrations_dir": "packages/db/drizzle"
     }
-  ],
-  "vars": {
-    "BETTER_AUTH_URL": "https://api.rendoarsandi.workers.dev"
-  },
-  "assets": {
-    "directory": "apps/web/dist",
-    "binding": "ASSETS",
-    "not_found_handling": "single-page-application",
-    "run_worker_first": [
-      "/api/*"
-    ]
-  }
+  ]
 }
