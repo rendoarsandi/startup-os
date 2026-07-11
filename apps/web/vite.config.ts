@@ -6,7 +6,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const rootWranglerConfig = path.resolve(__dirname, '../../wrangler.jsonc')
+const wranglerConfig = path.resolve(__dirname, 'wrangler.jsonc')
 
 function shouldUseCloudflare() {
   if (process.env.CF_BUILD === '1') return true
@@ -23,7 +23,7 @@ export default defineConfig(async () => {
     plugins.push(
       cloudflare({
         viteEnvironment: { name: 'ssr' },
-        configPath: rootWranglerConfig,
+        configPath: wranglerConfig,
       }),
     )
   }

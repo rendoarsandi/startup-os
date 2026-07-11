@@ -9,7 +9,7 @@
     "start": "node .output/server/index.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
-    "deploy": "CF_BUILD=1 npm run build && wrangler deploy --config ../../wrangler.jsonc",
+    "deploy": "CF_BUILD=1 npm run build && wrangler deploy --config dist/server/wrangler.json",
     "test": "vitest run"
   },
   "dependencies": {
