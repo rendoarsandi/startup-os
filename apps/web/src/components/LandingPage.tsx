@@ -1,9 +1,18 @@
+import { useEffect } from 'react';
 import { BoomerangVideoBg } from './BoomerangVideoBg';
 import { Sparkles, ShieldCheck, Cpu } from 'lucide-react';
 
 const BG_VIDEO = 'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260511_131941_d136af49-e243-493a-be14-6ff3f24e09e6.mp4';
 
 export function LandingPage() {
+  // Enable scrolling on the body for the Landing Page, restoring the original overflow on unmount
+  useEffect(() => {
+    const originalStyle = document.body.style.overflow;
+    document.body.style.overflow = 'auto';
+    return () => {
+      document.body.style.overflow = originalStyle;
+    };
+  }, []);
 
   const roadmapItems = [
     {
@@ -37,15 +46,16 @@ export function LandingPage() {
       {/* Decorative Noise Background */}
       <div className="absolute inset-0 bg-noise opacity-[0.02] pointer-events-none z-50" />
       
+      {/* Background Video (Fixed behind all elements) */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <BoomerangVideoBg src={BG_VIDEO} className="absolute inset-0 w-full h-full" />
+        {/* Subtle Dark Radial Vignette */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/70" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-black/20 to-black" />
+      </div>
+
       {/* Hero Section Container */}
       <header className="relative w-full flex flex-col overflow-hidden">
-        {/* Background Video */}
-        <div className="absolute inset-0 z-0">
-          <BoomerangVideoBg src={BG_VIDEO} className="absolute inset-0 w-full h-full" />
-          {/* Subtle Dark Radial Vignette */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/70" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-black/20 to-black" />
-        </div>
 
         {/* Centered Hero Body */}
         <div className="relative z-10 flex flex-col justify-center items-center text-center px-4 max-w-5xl mx-auto pt-24 pb-20">
@@ -91,7 +101,7 @@ export function LandingPage() {
       </header>
 
       {/* Main Content Body */}
-      <main className="relative z-10 bg-black pt-12 pb-24 space-y-24">
+      <main className="relative z-10 bg-transparent pt-12 pb-24 space-y-24">
         
         {/* Distribution Vision Section */}
         <section id="distribution" className="max-w-7xl mx-auto px-6 md:px-12 space-y-16">
@@ -278,7 +288,7 @@ export function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 bg-black border-t border-white/5 py-12 text-center text-[10px] text-[#E1E0CC]/40 uppercase tracking-widest font-bold">
+      <footer className="relative z-10 bg-transparent border-t border-white/5 py-12 text-center text-[10px] text-[#E1E0CC]/40 uppercase tracking-widest font-bold">
         <div className="max-w-7xl mx-auto px-6 md:px-12 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2.5">
             <span className="text-[#DEDBC8]">STARTUP OS</span> &bull; <span>Autonomous C-Suite</span>

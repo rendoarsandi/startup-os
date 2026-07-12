@@ -72,6 +72,20 @@ export function BoomerangVideoBg({ src, className }: Props) {
     };
 
     const onLoaded = () => {
+      // Draw first frame immediately to canvas so user doesn't see a blank background
+      const canvas = displayCanvasRef.current;
+      if (canvas && video.videoWidth && video.videoHeight) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const scale = Math.min(1, MAX_WIDTH / video.videoWidth);
+          canvas.width = Math.round(video.videoWidth * scale);
+          canvas.height = Math.round(video.videoHeight * scale);
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        }
+      }
+
+      // Fast-forward playback rate to capture frames quickly in background
+      video.playbackRate = 3.0;
       video.play().catch(() => {});
       if (hasVFC) {
         vfcVideo.requestVideoFrameCallback!(vfcLoop);
@@ -106,30 +120,30 @@ export function BoomerangVideoBg({ src, className }: Props) {
     canvas.width = first.width;
     canvas.height = first.height;
 
-    let index = 0;
-    let direction = 1;
-    let last = performance.now();
-    const interval = 1000 / 30;
-    let rafId = 0;
-
-    const render = (now: number) => {
-      if (now - last >= interval) {
-        last = now;
-        ctx.drawImage(frames[index], 0, 0);
-        index += direction;
-        if (index >= frames.length - 1) {
-          index = frames.length - 1;
-          direction = -1;
-        } else if (index <= 0) {
-          index = 0;
-          direction = 1;
-        }
-      }
-      rafId = requestAnimationFrame(render);
+    const handleScroll = () => {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+      
+      // Calculate fraction of page scrolled (bound between 0 and 1)
+      const scrollFraction = scrollHeight > 0 ? Math.max(0, Math.min(1, scrollTop / scrollHeight)) : 0;
+      
+      // Map scroll fraction to frame index
+      const index = Math.min(frames.length - 1, Math.floor(scrollFraction * frames.length));
+      
+      // Draw the selected frame
+      ctx.drawImage(frames[index], 0, 0);
     };
 
-    rafId = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(rafId);
+    // Draw initial frame based on current scroll position
+    handleScroll();
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
   }, [framesReady]);
 
   return (
@@ -137,18 +151,16 @@ export function BoomerangVideoBg({ src, className }: Props) {
       <video
         ref={videoRef}
         src={src}
-        className="w-full h-full object-cover"
-        style={{ display: framesReady ? 'none' : 'block' }}
+        style={{ display: 'none' }}
         muted
         playsInline
         preload="auto"
         crossOrigin="anonymous"
-        loop={!framesReady}
+        loop={false}
       />
       <canvas
         ref={displayCanvasRef}
         className="w-full h-full object-cover"
-        style={{ display: framesReady ? 'block' : 'none' }}
       />
     </div>
   );

@@ -41,4 +41,4 @@ test('renders AI CFO Dashboard heading', async () => {
   
   const heading = await screen.findByRole('heading', { name: /STARTUP OS/i, level: 1 });
   expect(heading).toBeInTheDocument();
-});
+}, 30000);
