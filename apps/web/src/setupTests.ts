@@ -1,25 +1,10 @@
 import '@testing-library/jest-dom/vitest';
-import { vi, beforeAll } from 'vitest';
+import { beforeAll, afterEach, afterAll } from 'vitest';
+import { server } from './tests/mocks/server';
 
 beforeAll(() => {
-  globalThis.fetch = vi.fn().mockImplementation((url: string) => {
-    if (url.includes('/api/transactions')) {
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve([]),
-      });
-    }
-    if (url.includes('/api/chat')) {
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ response: 'Mock AI response' }),
-      });
-    }
-    return Promise.resolve({
-      ok: true,
-      json: () => Promise.resolve({}),
-    });
-  }) as any;
+  // Start Mock Service Worker
+  server.listen({ onUnhandledRequest: 'bypass' });
 
   class ResizeObserverMock {
     observe() {}
@@ -41,3 +26,14 @@ beforeAll(() => {
   Object.defineProperty(globalThis, 'localStorage', { value: new StorageMock(), writable: true });
   Object.defineProperty(globalThis, 'sessionStorage', { value: new StorageMock(), writable: true });
 });
+
+afterEach(() => {
+  // Reset MSW handlers to clear runtime changes
+  server.resetHandlers();
+});
+
+afterAll(() => {
+  // Close MSW server
+  server.close();
+});
+

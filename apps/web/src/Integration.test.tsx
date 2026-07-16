@@ -4,6 +4,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { expect, test, vi, beforeEach, describe } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
+import { setSessionUser } from './tests/mocks/handlers';
 
 // Setup query client
 const createQueryClient = () => new QueryClient({
@@ -16,136 +17,10 @@ const createQueryClient = () => new QueryClient({
 
 describe('STARTUP OS - Full Integration & End-to-End Test', () => {
   let queryClient: QueryClient;
-  let fetchMock: any;
-
-  let isLoggedIn = false;
 
   beforeEach(() => {
     queryClient = createQueryClient();
-    isLoggedIn = false;
-    
-    // Reset/Setup Fetch Mock for all API calls
-    fetchMock = vi.fn().mockImplementation((url: string, _options?: any) => {
-      // Mock Session Endpoint - first returns null (requires login)
-      if (url === '/api/auth/get-session') {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(isLoggedIn ? {
-            user: {
-              id: 'test-user-id',
-              email: 'ceo@teststartup.com',
-              name: 'Jane Doe'
-            }
-          } : null)
-        } as any);
-      }
-      
-      // Mock Sign Up Endpoint
-      if (url === '/api/auth/sign-up/email') {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ success: true })
-        } as any);
-      }
-      
-      // Mock Sign In Endpoint
-      if (url === '/api/auth/sign-in/email') {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({
-            user: {
-              id: 'test-user-id',
-              email: 'ceo@teststartup.com',
-              name: 'Jane Doe'
-            }
-          })
-        } as any);
-      }
-
-      // Mock Accounts Endpoint
-      if (url === '/api/accounts') {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve([
-            { id: 'acc-1', name: 'Silicon Valley Bank checking', balance: 250000, type: 'depository' },
-            { id: 'acc-2', name: 'Brex Credit Card', balance: -15000, type: 'credit' }
-          ])
-        } as any);
-      }
-
-      // Mock Insights Endpoint
-      if (url === '/api/insights') {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({
-            advice: 'Burn rate is healthy. Suggest shifting 10% cash to yield checking.',
-            items: []
-          })
-        } as any);
-      }
-
-      // Mock Runway and Burn Rate Endpoint
-      if (url === '/api/cfo/runway') {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({
-            cashBalance: 235000,
-            fixedCosts: { payroll: 18000, subscriptions: 2000, total: 20000 },
-            variableExpenses: 5000,
-            monthlyRevenue: 12000,
-            netBurn: 13000,
-            runwayMonths: 18,
-            projections: [
-              { month: 'May', balance: 235000 },
-              { month: 'Jun', balance: 222000 },
-              { month: 'Jul', balance: 209000 }
-            ]
-          })
-        } as any);
-      }
-
-      // Mock SaaS Config Endpoint
-      if (url === '/api/cfo/saas-config') {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({
-            startingMrr: 1200000,
-            churnRate: 250,
-            cac: 50000,
-            arpu: 15000
-          })
-        } as any);
-      }
-
-      // Mock Transactions Endpoint
-      if (url.includes('/api/transactions')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve([
-            { id: 't-1', date: '2026-05-20', description: 'AWS Cloud Hosting', amount: -2000, category: 'Technology' },
-            { id: 't-2', date: '2026-05-19', description: 'Stripe Payout - Customers', amount: 12000, category: 'Revenue' }
-          ])
-        } as any);
-      }
-
-      // Mock Chat Endpoint
-      if (url.includes('/api/chat')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({
-            response: 'Here is your current burn rate and runway report: You have 18 months of runway left.'
-          })
-        } as any);
-      }
-
-      // Default fallback
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve([])
-      } as any);
-    });
-
-    globalThis.fetch = fetchMock;
+    setSessionUser(null);
   });
 
   test('User Registration, Log In, Workspace Tab Switching, and Chat Assistant interaction flow', async () => {
@@ -174,7 +49,13 @@ describe('STARTUP OS - Full Integration & End-to-End Test', () => {
     fireEvent.change(passwordInput, { target: { value: 'password123' } });
 
     // Mock session API to return active user ONCE register / sign-in is submitted
-    isLoggedIn = true;
+    setSessionUser({
+      user: {
+        id: 'test-user-id',
+        email: 'ceo@teststartup.com',
+        name: 'Jane Doe'
+      }
+    });
 
     // 5. Submit Registration form to register and log in
     const submitBtn = screen.getByRole('button', { name: /Create Workspace/i });

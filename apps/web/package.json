@@ -45,11 +45,10 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.21.0",
     "@eslint/js": "^10.0.1",
     "@tanstack/intent": "^0.1.1",
-    "@cloudflare/vite-plugin": "^1.21.0",
     "@tanstack/router-plugin": "^1.168.19",
-    "wrangler": "^4.54.0",
     "@types/node": "^24.12.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -58,8 +57,10 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "msw": "^2.15.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.12"
+    "vite": "^8.0.12",
+    "wrangler": "^4.54.0"
   }
 }
