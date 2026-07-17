@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const users = sqliteTable('user', {
   id: text('id').primaryKey(),
@@ -220,7 +220,7 @@ export const expenseClaims = sqliteTable('expense_claim', {
 export const inventoryItems = sqliteTable('inventory_item', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id),
-  sku: text('sku').notNull().unique(),
+  sku: text('sku').notNull(),
   name: text('name').notNull(),
   qty: integer('qty').notNull().default(0),
   rate: integer('rate').notNull(), // unit purchase rate in cents
@@ -228,7 +228,9 @@ export const inventoryItems = sqliteTable('inventory_item', {
   reorderLevel: integer('reorder_level').notNull().default(10),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
+}, (table) => [
+  uniqueIndex('inventory_item_user_sku_idx').on(table.userId, table.sku)
+]);
 
 export const projects = sqliteTable('project', {
   id: text('id').primaryKey(),

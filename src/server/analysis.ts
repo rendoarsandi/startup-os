@@ -1,4 +1,4 @@
-import { users, transactions, financialAccounts, employees, saasConfigs } from "@ai-cfo/db";
+import { users, transactions, financialAccounts, employees, saasConfigs } from "../db/schema";
 import { eq, desc } from "drizzle-orm";
 
 export class AnalysisService {

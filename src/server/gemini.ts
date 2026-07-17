@@ -59,7 +59,7 @@ export class GeminiService {
 
   async generateResponse(prompt: string, context?: string, role: keyof typeof SYSTEM_PROMPTS = 'cfo'): Promise<string> {
     const modelWithSystem = this.genAI.getGenerativeModel({ 
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       systemInstruction: SYSTEM_PROMPTS[role] || SYSTEM_PROMPTS.cfo,
       generationConfig: {
         serviceTier: "flex",
@@ -85,7 +85,7 @@ export class GeminiService {
     role: keyof typeof SYSTEM_PROMPTS = 'cfo'
   ): Promise<string> {
     const modelWithSystem = this.genAI.getGenerativeModel({ 
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       systemInstruction: SYSTEM_PROMPTS[role] || SYSTEM_PROMPTS.cfo,
       generationConfig: {
         serviceTier: "flex",
@@ -122,7 +122,7 @@ export class GeminiService {
 
   async generateMultimodalResponse(prompt: string, fileBase64: string, mimeType: string, role: keyof typeof SYSTEM_PROMPTS = 'cfo'): Promise<string> {
     const modelWithSystem = this.genAI.getGenerativeModel({ 
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       systemInstruction: SYSTEM_PROMPTS[role] || SYSTEM_PROMPTS.cfo,
       generationConfig: {
         serviceTier: "flex",

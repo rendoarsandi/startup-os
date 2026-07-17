@@ -4,25 +4,15 @@ import { render, screen } from '@testing-library/react';
 import { expect, test, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
+import { setSessionUser } from './tests/mocks/handlers';
 
 test('renders AI CFO Dashboard heading', async () => {
-  globalThis.fetch = vi.fn().mockImplementation((url: string) => {
-    if (url === '/api/auth/get-session') {
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({
-          user: {
-            id: 'test-user',
-            email: 'test@example.com',
-            name: 'Test User'
-          }
-        })
-      } as any);
+  setSessionUser({
+    user: {
+      id: 'test-user',
+      email: 'test@example.com',
+      name: 'Test User'
     }
-    return Promise.resolve({
-      ok: true,
-      json: () => Promise.resolve([])
-    } as any);
   });
 
   const queryClient = new QueryClient({

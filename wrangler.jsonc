@@ -1,17 +1,24 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "startup-os",
-  "main": "apps/web/dist/server/index.js",
+  "main": "dist/server/index.js",
   "compatibility_date": "2026-05-20",
   "compatibility_flags": [
     "nodejs_compat"
   ],
   "assets": {
-    "directory": "apps/web/dist/client",
+    "directory": "dist/client",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application"
   },
   "observability": {
     "enabled": true
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "startup-os-db",
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ]
 }

@@ -3,13 +3,42 @@ import { eq, and, desc } from 'drizzle-orm'
 import { 
   users, financialAccounts, transactions, budgets, marketingCampaigns, employees, plaidConnections, saasConfigs,
   invoices, crmLeads, attendance, leaveRequests, expenseClaims, inventoryItems, projects, projectTasks, supportTickets, autopilotRules
-} from "@ai-cfo/db";
+} from "../db/schema";
 import { getAuth } from './auth';
 import { GeminiService } from "./gemini";
 import { AnalysisService } from "./analysis";
 import { PlaidService } from "./plaid";
 import { v4 as uuidv4 } from 'uuid';
+import { 
+  decodeCreateAccount, decodeSaasConfig, decodeCreateTransaction, decodeCreateBudget, 
+  decodePlaidExchangeToken, decodeCreateInvoice, decodeParseInvoice, decodeParseInvoiceSecure, 
+  decodeUpdateInvoiceStatus, decodeCrmLead, decodeCreateCampaign, decodeGenerateIdeas, 
+  decodeEmployee, decodeGenerateDoc, decodeClockIn, decodeClockOut, decodeLeaveRequest, 
+  decodeUpdateLeaveStatus, decodeExpenseClaim, decodeUpdateExpenseStatus, decodeInventoryItem, 
+  decodeProject, decodeProjectTask, decodeUpdateTaskStatus, decodeLogTaskHours, decodeSupportTicket, 
+  decodeUpdateTicketStatus, decodeAutopilotRule, decodeAutopilotToggle, decodeChat
+} from "./schemas";
 
+class ValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ValidationError";
+  }
+}
+
+async function getValidatedBody<T>(request: Request, decoder: (input: unknown) => T): Promise<T> {
+  let body: any;
+  try {
+    body = await request.json();
+  } catch (err) {
+    throw new ValidationError("Invalid JSON payload");
+  }
+  try {
+    return decoder(body);
+  } catch (err: any) {
+    throw new ValidationError(err.message || "Validation failed");
+  }
+}
 
 function jsonResponse(data: any, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -60,9 +89,15 @@ async function getUserId(request: Request, env: any): Promise<string | null> {
   }
 }
 
+const seededUsers = new Set<string>();
+
 async function seedUser(db: any, userId: string) {
+  if (seededUsers.has(userId)) {
+    return;
+  }
   const existingAccounts = await db.select().from(financialAccounts).where(eq(financialAccounts.userId, userId)).limit(1).all();
   if (existingAccounts.length > 0) {
+    seededUsers.add(userId);
     return;
   }
 
@@ -231,6 +266,8 @@ async function seedUser(db: any, userId: string) {
     { id: uuidv4(), userId, customerName: "Globex Inc (HR Department)", subject: "Invoice calculation formula typo", description: "Invoice INV-2026-002 displays standard rate instead of contracted discount. Please review.", status: "replied", priority: "medium", createdAt: now, updatedAt: now },
     { id: uuidv4(), userId, customerName: "Pied Piper Dev Team", subject: "API Integration Token Reset", description: "Need to regenerate OAuth API tokens for the staging sandbox.", status: "resolved", priority: "low", createdAt: now, updatedAt: now }
   ]).run();
+
+  seededUsers.add(userId);
 }
 
 export async function handleApiRequest(request: Request, passedEnv?: any): Promise<Response> {
@@ -268,7 +305,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
         return jsonResponse(results);
       }
       if (method === 'POST') {
-        const body = await request.json() as any;
+        const body = await getValidatedBody(request, decodeCreateAccount);
         const newAccount = {
           id: uuidv4(),
           userId,
@@ -293,7 +330,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
         return jsonResponse(config);
       }
       if (method === 'POST') {
-        const { startingMrr, churnRate, cac, arpu } = await request.json() as any;
+        const { startingMrr, churnRate, cac, arpu } = await getValidatedBody(request, decodeSaasConfig);
         const existing = await db.select().from(saasConfigs).where(eq(saasConfigs.userId, userId)).get();
         const now = new Date();
         if (existing) {
@@ -367,7 +404,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
       if (method === 'POST') {
         const gemini = new GeminiService(env.GEMINI_API_KEY);
         const analysis = new AnalysisService(db);
-        const body = await request.json() as any;
+        const body = await getValidatedBody(request, decodeCreateTransaction);
         
         let category = body.category;
         if (!category || category === "Other") {
@@ -402,7 +439,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
         return jsonResponse(results);
       }
       if (method === 'POST') {
-        const body = await request.json() as any;
+        const body = await getValidatedBody(request, decodeCreateBudget);
         const newBudget = {
           id: uuidv4(),
           userId,
@@ -442,7 +479,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
       const analysis = new AnalysisService(db);
       const gemini = new GeminiService(env.GEMINI_API_KEY);
 
-      const { publicToken, institutionName } = await request.json() as any;
+      const { publicToken, institutionName } = await getValidatedBody(request, decodePlaidExchangeToken);
       const { accessToken, itemId } = await plaid.exchangePublicToken(publicToken);
       
       const connectionId = uuidv4();
@@ -631,7 +668,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
         return jsonResponse(results);
       }
       if (method === 'POST') {
-        const body = await request.json() as any;
+        const body = await getValidatedBody(request, decodeCreateInvoice);
         const newInvoice = {
           id: uuidv4(),
           userId,
@@ -653,7 +690,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
 
     if (path === '/api/cfo/parse-invoice' && method === 'POST') {
       const gemini = new GeminiService(env.GEMINI_API_KEY);
-      const { text } = await request.json() as any;
+      const { text } = await getValidatedBody(request, decodeParseInvoice);
       const prompt = `You are a professional CFO billing assistant. Extract invoice information from the following text and return a structured JSON object.
       Text to analyze: "${text}"
       
@@ -669,13 +706,17 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
       Do not wrap the response in markdown code blocks or add any additional chat text. Return strictly the raw JSON object.`;
       const responseText = await gemini.generateResponse(prompt, "", "cfo");
       const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleanJson);
-      return jsonResponse(parsed);
+      try {
+        const parsed = JSON.parse(cleanJson);
+        return jsonResponse(parsed);
+      } catch (e) {
+        return jsonResponse({ error: "Failed to parse invoice structure from LLM output" }, 422);
+      }
     }
 
     if (path === '/api/cfo/parse-invoice-secure' && method === 'POST') {
       const gemini = new GeminiService(env.GEMINI_API_KEY);
-      const { fileBase64, mimeType } = await request.json() as any;
+      const { fileBase64, mimeType } = await getValidatedBody(request, decodeParseInvoiceSecure);
       if (!fileBase64 || !mimeType) {
         return jsonResponse({ error: "Missing fileBase64 or mimeType payload." }, 400);
       }
@@ -699,7 +740,12 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
 
       const responseText = await gemini.generateMultimodalResponse(prompt, fileBase64, mimeType, "cfo");
       const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleanJson);
+      let parsed: any;
+      try {
+        parsed = JSON.parse(cleanJson);
+      } catch (e) {
+        return jsonResponse({ error: "Failed to parse invoice structure from LLM output" }, 422);
+      }
 
       const taxCents = Math.round((parsed.taxAmount || 0) * 100);
       const grandTotalCents = Math.round((parsed.grandTotal || 0) * 100);
@@ -724,7 +770,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
     const cfoInvoiceParams = matchRoute(path, '/api/cfo/invoices/:id/status');
     if (cfoInvoiceParams && method === 'PUT') {
       const id = cfoInvoiceParams.id;
-      const { status } = await request.json() as any;
+      const { status } = await getValidatedBody(request, decodeUpdateInvoiceStatus);
       await db.update(invoices).set({ status, updatedAt: new Date() }).where(and(eq(invoices.id, id), eq(invoices.userId, userId))).run();
       return jsonResponse({ success: true });
     }
@@ -736,7 +782,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
         return jsonResponse(results);
       }
       if (method === 'POST') {
-        const body = await request.json() as any;
+        const body = await getValidatedBody(request, decodeCrmLead);
         const newLead = {
           id: uuidv4(),
           userId,
@@ -757,7 +803,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
     const crmParams = matchRoute(path, '/api/marketing/crm/:id');
     if (crmParams && method === 'PUT') {
       const id = crmParams.id;
-      const body = await request.json() as any;
+      const body = await getValidatedBody(request, decodeCrmLead);
       await db.update(crmLeads).set({
         name: body.name,
         company: body.company,
@@ -777,7 +823,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
         return jsonResponse(results);
       }
       if (method === 'POST') {
-        const body = await request.json() as any;
+        const body = await getValidatedBody(request, decodeCreateCampaign);
         const newCampaign = {
           id: body.id || uuidv4(),
           userId,
@@ -810,7 +856,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
 
     if (path === '/api/marketing/generate-ideas' && method === 'POST') {
       const gemini = new GeminiService(env.GEMINI_API_KEY);
-      const { productDescription, targetAudience } = await request.json() as any;
+      const { productDescription, targetAudience } = await getValidatedBody(request, decodeGenerateIdeas);
       const prompt = `Brainstorm 4 creative marketing campaign concepts for this product: "${productDescription}" targeting this audience: "${targetAudience}". 
       For each campaign, provide:
       1. Campaign Name
@@ -828,7 +874,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
         return jsonResponse(results);
       }
       if (method === 'POST') {
-        const body = await request.json() as any;
+        const body = await getValidatedBody(request, decodeEmployee);
         const newEmployee = {
           id: body.id || uuidv4(),
           userId,
@@ -860,7 +906,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
 
     if (path === '/api/hr/generate-doc' && method === 'POST') {
       const gemini = new GeminiService(env.GEMINI_API_KEY);
-      const { docType, title, department, salary, details } = await request.json() as any;
+      const { docType, title, department, salary, details } = await getValidatedBody(request, decodeGenerateDoc);
       let prompt = "";
       if (docType === "job_description") {
         prompt = `Create a professional Job Description for a "${title}" in the "${department}" department. 
@@ -898,7 +944,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
     }
 
     if (path === '/api/hr/attendance/clock-in' && method === 'POST') {
-      const body = await request.json() as any;
+      const body = await getValidatedBody(request, decodeClockIn);
       const formatter = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
       const nowStr = formatter.format(new Date());
       const newLog = {
@@ -916,7 +962,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
     }
 
     if (path === '/api/hr/attendance/clock-out' && method === 'POST') {
-      const body = await request.json() as any;
+      const body = await getValidatedBody(request, decodeClockOut);
       const formatter = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
       const nowStr = formatter.format(new Date());
       const today = new Date();
@@ -942,7 +988,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
         return jsonResponse(results);
       }
       if (method === 'POST') {
-        const body = await request.json() as any;
+        const body = await getValidatedBody(request, decodeLeaveRequest);
         const newLeave = {
           id: uuidv4(),
           userId,
@@ -963,7 +1009,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
     const leaveParams = matchRoute(path, '/api/hr/leaves/:id/status');
     if (leaveParams && method === 'PUT') {
       const id = leaveParams.id;
-      const { status } = await request.json() as any;
+      const { status } = await getValidatedBody(request, decodeUpdateLeaveStatus);
       await db.update(leaveRequests).set({ status, updatedAt: new Date() }).where(and(eq(leaveRequests.id, id), eq(leaveRequests.userId, userId))).run();
       return jsonResponse({ success: true });
     }
@@ -974,7 +1020,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
         return jsonResponse(results);
       }
       if (method === 'POST') {
-        const body = await request.json() as any;
+        const body = await getValidatedBody(request, decodeExpenseClaim);
         const newClaim = {
           id: uuidv4(),
           userId,
@@ -994,7 +1040,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
     const expenseParams = matchRoute(path, '/api/hr/expenses/:id/status');
     if (expenseParams && method === 'PUT') {
       const id = expenseParams.id;
-      const { status } = await request.json() as any;
+      const { status } = await getValidatedBody(request, decodeUpdateExpenseStatus);
       await db.update(expenseClaims).set({ status }).where(and(eq(expenseClaims.id, id), eq(expenseClaims.userId, userId))).run();
       return jsonResponse({ success: true });
     }
@@ -1006,7 +1052,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
         return jsonResponse(results);
       }
       if (method === 'POST') {
-        const body = await request.json() as any;
+        const body = await getValidatedBody(request, decodeInventoryItem);
         const sku = body.sku.toUpperCase();
         const existing = await db.select().from(inventoryItems).where(and(eq(inventoryItems.sku, sku), eq(inventoryItems.userId, userId))).get();
         
@@ -1044,7 +1090,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
         return jsonResponse(results);
       }
       if (method === 'POST') {
-        const body = await request.json() as any;
+        const body = await getValidatedBody(request, decodeProject);
         const newProject = {
           id: uuidv4(),
           userId,
@@ -1066,7 +1112,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
         return jsonResponse(results);
       }
       if (method === 'POST') {
-        const body = await request.json() as any;
+        const body = await getValidatedBody(request, decodeProjectTask);
         const newTask = {
           id: uuidv4(),
           userId,
@@ -1086,7 +1132,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
     const taskParams = matchRoute(path, '/api/operations/tasks/:id/status');
     if (taskParams && method === 'PUT') {
       const id = taskParams.id;
-      const { status } = await request.json() as any;
+      const { status } = await getValidatedBody(request, decodeUpdateTaskStatus);
       await db.update(projectTasks).set({ status, updatedAt: new Date() }).where(and(eq(projectTasks.id, id), eq(projectTasks.userId, userId))).run();
       return jsonResponse({ success: true });
     }
@@ -1094,7 +1140,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
     const taskLogParams = matchRoute(path, '/api/operations/tasks/:id/log-hours');
     if (taskLogParams && method === 'POST') {
       const id = taskLogParams.id;
-      const { hours } = await request.json() as any;
+      const { hours } = await getValidatedBody(request, decodeLogTaskHours);
       const existing = await db.select().from(projectTasks).where(and(eq(projectTasks.id, id), eq(projectTasks.userId, userId))).get();
       if (existing) {
         const newHours = existing.hoursLogged + Number(hours);
@@ -1110,7 +1156,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
         return jsonResponse(results);
       }
       if (method === 'POST') {
-        const body = await request.json() as any;
+        const body = await getValidatedBody(request, decodeSupportTicket);
         const newTicket = {
           id: uuidv4(),
           userId,
@@ -1130,7 +1176,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
     const ticketParams = matchRoute(path, '/api/operations/tickets/:id/status');
     if (ticketParams && method === 'PUT') {
       const id = ticketParams.id;
-      const { status } = await request.json() as any;
+      const { status } = await getValidatedBody(request, decodeUpdateTicketStatus);
       await db.update(supportTickets).set({ status, updatedAt: new Date() }).where(and(eq(supportTickets.id, id), eq(supportTickets.userId, userId))).run();
       return jsonResponse({ success: true });
     }
@@ -1150,7 +1196,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
         return jsonResponse(mockRules);
       }
       if (method === 'POST') {
-        const body = await request.json() as any;
+        const body = await getValidatedBody(request, decodeAutopilotRule);
         const id = body.id || uuidv4();
         const newRule = {
           id,
@@ -1187,7 +1233,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
     const autopilotToggleParams = matchRoute(path, '/api/operations/autopilot/:id/toggle');
     if (autopilotToggleParams && method === 'PUT') {
       const id = autopilotToggleParams.id;
-      const { active } = await request.json() as any;
+      const { active } = await getValidatedBody(request, decodeAutopilotToggle);
       await db.update(autopilotRules).set({ active, updatedAt: new Date() }).where(and(eq(autopilotRules.id, id), eq(autopilotRules.userId, userId))).run();
       return jsonResponse({ success: true, active });
     }
@@ -1324,7 +1370,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
     if (path === '/api/chat' && method === 'POST') {
       const gemini = new GeminiService(env.GEMINI_API_KEY);
       const analysis = new AnalysisService(db);
-      const { message, history, role, activeScenario } = await request.json() as any;
+      const { message, history, role, activeScenario } = await getValidatedBody(request, decodeChat);
       
       let context = "";
       if (!role || role === 'cfo') {
@@ -1370,7 +1416,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
           
           context = `Operations & Inventory Profile:\n`;
           context += `Active Projects:\n` + (dbProjects.length > 0 ? dbProjects.map(p => `- ${p.name} (${p.status})`).join('\n') : '- No active projects') + `\n\n`;
-          context += `Recent Tasks:\n` + (dbTasks.length > 0 ? dbTasks.slice(0, 10).map(t => `- [${t.status}] ${t.name}`).join('\n') : '- No recent tasks') + `\n\n`;
+          context += `Recent Tasks:\n` + (dbTasks.length > 0 ? dbTasks.slice(0, 10).map(t => `- [${t.status}] ${t.title}`).join('\n') : '- No recent tasks') + `\n\n`;
           context += `Support Tickets:\n` + (dbTickets.length > 0 ? dbTickets.slice(0, 10).map(t => `- [${t.status}] [Priority: ${t.priority}] ${t.subject}`).join('\n') : '- No support tickets');
         } catch (dbError) {
           context = `Operations & Inventory Profile:\nStatus: Active\nProjects: 1 active\nRecent Tasks: 3 pending\nSupport Tickets: 2 unresolved`;
@@ -1383,6 +1429,9 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
 
     return jsonResponse({ error: `Not Found: ${method} ${path}` }, 404);
   } catch (error: any) {
+    if (error instanceof ValidationError) {
+      return jsonResponse({ error: error.message }, 400);
+    }
     console.error(`API Error on ${method} ${path}:`, error);
     return jsonResponse({ error: error.message }, 500);
   }
