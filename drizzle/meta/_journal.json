@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1784328627281,
+      "tag": "0000_striped_falcon",
+      "breakpoints": true
+    }
+  ]
+}

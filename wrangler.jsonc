@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "startup-os",
-  "main": "dist/server/index.js",
+  "main": "@tanstack/react-start/server-entry",
   "compatibility_date": "2026-05-20",
   "compatibility_flags": [
     "nodejs_compat"
@@ -18,7 +18,8 @@
     {
       "binding": "DB",
       "database_name": "startup-os-db",
-      "database_id": "00000000-0000-0000-0000-000000000000"
+      "database_id": "501fba8f-5c8d-4698-ac66-db8f1ff2e636",
+      "migrations_dir": "drizzle"
     }
   ]
 }
