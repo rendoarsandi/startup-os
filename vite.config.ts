@@ -9,10 +9,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const wranglerConfig = path.resolve(__dirname, 'wrangler.jsonc')
 
 function shouldUseCloudflare() {
-  if (process.env.CF_BUILD === '1') return true
-  if (process.env.CF_BUILD === '0') return false
-  // Cloudflare Workers Builds sets CI=true
-  return process.env.CI === 'true'
+  // workerd has no Android/Termux binary. Keep the Cloudflare plugin out of
+  // local builds; the deploy script explicitly sets CF_BUILD=1.
+  return process.env.CF_BUILD === '1'
 }
 
 export default defineConfig(async () => {
