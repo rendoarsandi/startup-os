@@ -74,7 +74,7 @@ describe('API Input Validation Tests via @effect/schema', () => {
   });
 
   describe('POST /api/cfo/saas-config', () => {
-    test('should succeed with valid numeric values (both number and string)', async () => {
+    test('should reject numeric strings', async () => {
       const res = await handleApiRequest(
         new Request('http://localhost/api/cfo/saas-config', {
           method: 'POST',
@@ -99,7 +99,7 @@ describe('API Input Validation Tests via @effect/schema', () => {
         } as any
       );
 
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(400);
     });
 
     test('should fail with missing config values', async () => {

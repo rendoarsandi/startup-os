@@ -1,6 +1,6 @@
 import React from 'react';
 import { Loader2, Sparkles, DollarSign, Calendar, Tag, Briefcase } from 'lucide-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from '@tanstack/react-form';
 import {
   Dialog,
@@ -26,9 +26,19 @@ interface TransactionModalProps {
 
 export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const queryClient = useQueryClient();
+  const { data: accounts = [] } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: async () => {
+      const response = await fetch('/api/accounts');
+      if (!response.ok) throw new Error('Failed to load accounts');
+      return response.json() as Promise<{ id: string }[]>;
+    },
+  });
 
   const mutation = useMutation({
     mutationFn: async (value: { merchant: string; amount: string; category: string; date: string }) => {
+      const accountId = accounts[0]?.id;
+      if (!accountId) throw new Error('Create an account before adding a transaction');
       const response = await fetch('/api/transactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -37,7 +47,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
           category: value.category,
           date: value.date,
           amount: Math.round(parseFloat(value.amount) * 100), // convert to cents
-          accountId: 'manual-account', // placeholder
+          accountId,
         }),
       });
 

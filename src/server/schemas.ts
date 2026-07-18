@@ -1,16 +1,16 @@
-import * as S from "@effect/schema/Schema";
+import * as S from "effect/Schema";
 
 // ==========================================
 // Generic Helper Types
 // ==========================================
-export const NumericValue = S.Union(S.Number, S.String);
+export const NumericValue = S.Finite;
 
 // ==========================================
 // Accounts Endpoints Schemas
 // ==========================================
 export const CreateAccountSchema = S.Struct({
   name: S.String,
-  type: S.String,
+  type: S.Literal("checking", "savings", "credit", "cash", "investment", "other"),
   balance: S.optional(S.Number),
   currency: S.optional(S.String),
 });
@@ -37,7 +37,7 @@ export const CreateTransactionSchema = S.Struct({
 export const CreateBudgetSchema = S.Struct({
   category: S.String,
   amount: S.Number,
-  period: S.optional(S.String),
+  period: S.optional(S.Literal("monthly", "quarterly", "annual")),
 });
 
 // ==========================================
@@ -54,9 +54,9 @@ export const PlaidExchangeTokenSchema = S.Struct({
 export const CreateInvoiceSchema = S.Struct({
   invoiceNumber: S.optional(S.String),
   clientName: S.String,
-  type: S.optional(S.String),
+  type: S.optional(S.Literal("sales", "purchase")),
   amount: NumericValue,
-  status: S.optional(S.String),
+  status: S.optional(S.Literal("paid", "unpaid", "overdue")),
   issueDate: S.optional(S.String),
   dueDate: S.optional(S.String),
   items: S.optional(S.Union(S.String, S.Array(S.Any))),
@@ -72,7 +72,7 @@ export const ParseInvoiceSecureSchema = S.Struct({
 });
 
 export const UpdateInvoiceStatusSchema = S.Struct({
-  status: S.String,
+  status: S.Literal("paid", "unpaid", "overdue"),
 });
 
 // ==========================================
@@ -84,7 +84,7 @@ export const CrmLeadSchema = S.Struct({
   email: S.optional(S.NullOr(S.String)),
   phone: S.optional(S.NullOr(S.String)),
   value: S.optional(NumericValue),
-  status: S.optional(S.String),
+  status: S.optional(S.Literal("lead", "contacted", "proposal", "won", "lost")),
 });
 
 // ==========================================
@@ -93,7 +93,7 @@ export const CrmLeadSchema = S.Struct({
 export const CreateCampaignSchema = S.Struct({
   id: S.optional(S.String),
   name: S.String,
-  status: S.optional(S.String),
+  status: S.optional(S.Literal("active", "paused")),
   budget: S.optional(NumericValue),
   spend: S.optional(NumericValue),
   conversions: S.optional(NumericValue),
@@ -114,7 +114,7 @@ export const EmployeeSchema = S.Struct({
   role: S.String,
   department: S.String,
   salary: NumericValue,
-  status: S.optional(S.String),
+  status: S.optional(S.Literal("active", "onboarding", "inactive")),
   startDate: S.optional(S.String),
 });
 
@@ -128,7 +128,7 @@ export const GenerateDocSchema = S.Struct({
 
 export const ClockInSchema = S.Struct({
   employeeId: S.String,
-  status: S.optional(S.String),
+  status: S.optional(S.Literal("present", "late")),
 });
 
 export const ClockOutSchema = S.Struct({
@@ -137,26 +137,26 @@ export const ClockOutSchema = S.Struct({
 
 export const LeaveRequestSchema = S.Struct({
   employeeId: S.String,
-  type: S.String,
+  type: S.Literal("vacation", "sick", "unpaid", "maternity"),
   startDate: S.String,
   endDate: S.String,
   reason: S.optional(S.NullOr(S.String)),
 });
 
 export const UpdateLeaveStatusSchema = S.Struct({
-  status: S.String,
+  status: S.Literal("pending", "approved", "rejected"),
 });
 
 export const ExpenseClaimSchema = S.Struct({
   employeeId: S.String,
   title: S.String,
   amount: NumericValue,
-  category: S.String,
+  category: S.Literal("travel", "meals", "supplies", "software", "other"),
   date: S.optional(S.String),
 });
 
 export const UpdateExpenseStatusSchema = S.Struct({
-  status: S.String,
+  status: S.Literal("pending", "approved", "rejected"),
 });
 
 // ==========================================
@@ -174,7 +174,7 @@ export const InventoryItemSchema = S.Struct({
 export const ProjectSchema = S.Struct({
   name: S.String,
   description: S.optional(S.NullOr(S.String)),
-  status: S.optional(S.String),
+  status: S.optional(S.Literal("active", "completed", "onhold")),
   dueDate: S.optional(S.NullOr(S.String)),
 });
 
@@ -185,22 +185,22 @@ export const ProjectTaskSchema = S.Struct({
 });
 
 export const UpdateTaskStatusSchema = S.Struct({
-  status: S.String,
+  status: S.Literal("todo", "inprogress", "completed"),
 });
 
 export const LogTaskHoursSchema = S.Struct({
-  hours: NumericValue,
+  hours: S.NonNegative,
 });
 
 export const SupportTicketSchema = S.Struct({
   customerName: S.String,
   subject: S.String,
   description: S.String,
-  priority: S.optional(S.String),
+  priority: S.optional(S.Literal("low", "medium", "high")),
 });
 
 export const UpdateTicketStatusSchema = S.Struct({
-  status: S.String,
+  status: S.Literal("open", "replied", "resolved"),
 });
 
 // ==========================================
@@ -209,9 +209,9 @@ export const UpdateTicketStatusSchema = S.Struct({
 export const AutopilotRuleSchema = S.Struct({
   id: S.optional(S.String),
   name: S.String,
-  triggerType: S.String,
+  triggerType: S.Literal("runway_low", "low_stock", "high_priority_ticket", "mrr_surge"),
   triggerValue: S.String,
-  actionType: S.String,
+  actionType: S.Literal("ai_audit", "auto_task", "ai_reply", "webhook_alert"),
   actionTarget: S.optional(S.String),
   active: S.optional(S.Boolean),
   lastTriggeredAt: S.optional(S.NullOr(S.String)),
@@ -234,33 +234,33 @@ export const ChatSchema = S.Struct({
 // ==========================================
 // Decoders
 // ==========================================
-export const decodeCreateAccount = S.decodeUnknownSync(CreateAccountSchema);
-export const decodeSaasConfig = S.decodeUnknownSync(SaasConfigSchema);
-export const decodeCreateTransaction = S.decodeUnknownSync(CreateTransactionSchema);
-export const decodeCreateBudget = S.decodeUnknownSync(CreateBudgetSchema);
-export const decodePlaidExchangeToken = S.decodeUnknownSync(PlaidExchangeTokenSchema);
-export const decodeCreateInvoice = S.decodeUnknownSync(CreateInvoiceSchema);
-export const decodeParseInvoice = S.decodeUnknownSync(ParseInvoiceSchema);
-export const decodeParseInvoiceSecure = S.decodeUnknownSync(ParseInvoiceSecureSchema);
-export const decodeUpdateInvoiceStatus = S.decodeUnknownSync(UpdateInvoiceStatusSchema);
-export const decodeCrmLead = S.decodeUnknownSync(CrmLeadSchema);
-export const decodeCreateCampaign = S.decodeUnknownSync(CreateCampaignSchema);
-export const decodeGenerateIdeas = S.decodeUnknownSync(GenerateIdeasSchema);
-export const decodeEmployee = S.decodeUnknownSync(EmployeeSchema);
-export const decodeGenerateDoc = S.decodeUnknownSync(GenerateDocSchema);
-export const decodeClockIn = S.decodeUnknownSync(ClockInSchema);
-export const decodeClockOut = S.decodeUnknownSync(ClockOutSchema);
-export const decodeLeaveRequest = S.decodeUnknownSync(LeaveRequestSchema);
-export const decodeUpdateLeaveStatus = S.decodeUnknownSync(UpdateLeaveStatusSchema);
-export const decodeExpenseClaim = S.decodeUnknownSync(ExpenseClaimSchema);
-export const decodeUpdateExpenseStatus = S.decodeUnknownSync(UpdateExpenseStatusSchema);
-export const decodeInventoryItem = S.decodeUnknownSync(InventoryItemSchema);
-export const decodeProject = S.decodeUnknownSync(ProjectSchema);
-export const decodeProjectTask = S.decodeUnknownSync(ProjectTaskSchema);
-export const decodeUpdateTaskStatus = S.decodeUnknownSync(UpdateTaskStatusSchema);
-export const decodeLogTaskHours = S.decodeUnknownSync(LogTaskHoursSchema);
-export const decodeSupportTicket = S.decodeUnknownSync(SupportTicketSchema);
-export const decodeUpdateTicketStatus = S.decodeUnknownSync(UpdateTicketStatusSchema);
-export const decodeAutopilotRule = S.decodeUnknownSync(AutopilotRuleSchema);
-export const decodeAutopilotToggle = S.decodeUnknownSync(AutopilotToggleSchema);
-export const decodeChat = S.decodeUnknownSync(ChatSchema);
+export const decodeCreateAccount = S.decodeUnknown(CreateAccountSchema);
+export const decodeSaasConfig = S.decodeUnknown(SaasConfigSchema);
+export const decodeCreateTransaction = S.decodeUnknown(CreateTransactionSchema);
+export const decodeCreateBudget = S.decodeUnknown(CreateBudgetSchema);
+export const decodePlaidExchangeToken = S.decodeUnknown(PlaidExchangeTokenSchema);
+export const decodeCreateInvoice = S.decodeUnknown(CreateInvoiceSchema);
+export const decodeParseInvoice = S.decodeUnknown(ParseInvoiceSchema);
+export const decodeParseInvoiceSecure = S.decodeUnknown(ParseInvoiceSecureSchema);
+export const decodeUpdateInvoiceStatus = S.decodeUnknown(UpdateInvoiceStatusSchema);
+export const decodeCrmLead = S.decodeUnknown(CrmLeadSchema);
+export const decodeCreateCampaign = S.decodeUnknown(CreateCampaignSchema);
+export const decodeGenerateIdeas = S.decodeUnknown(GenerateIdeasSchema);
+export const decodeEmployee = S.decodeUnknown(EmployeeSchema);
+export const decodeGenerateDoc = S.decodeUnknown(GenerateDocSchema);
+export const decodeClockIn = S.decodeUnknown(ClockInSchema);
+export const decodeClockOut = S.decodeUnknown(ClockOutSchema);
+export const decodeLeaveRequest = S.decodeUnknown(LeaveRequestSchema);
+export const decodeUpdateLeaveStatus = S.decodeUnknown(UpdateLeaveStatusSchema);
+export const decodeExpenseClaim = S.decodeUnknown(ExpenseClaimSchema);
+export const decodeUpdateExpenseStatus = S.decodeUnknown(UpdateExpenseStatusSchema);
+export const decodeInventoryItem = S.decodeUnknown(InventoryItemSchema);
+export const decodeProject = S.decodeUnknown(ProjectSchema);
+export const decodeProjectTask = S.decodeUnknown(ProjectTaskSchema);
+export const decodeUpdateTaskStatus = S.decodeUnknown(UpdateTaskStatusSchema);
+export const decodeLogTaskHours = S.decodeUnknown(LogTaskHoursSchema);
+export const decodeSupportTicket = S.decodeUnknown(SupportTicketSchema);
+export const decodeUpdateTicketStatus = S.decodeUnknown(UpdateTicketStatusSchema);
+export const decodeAutopilotRule = S.decodeUnknown(AutopilotRuleSchema);
+export const decodeAutopilotToggle = S.decodeUnknown(AutopilotToggleSchema);
+export const decodeChat = S.decodeUnknown(ChatSchema);

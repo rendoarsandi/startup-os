@@ -2,6 +2,16 @@ import { expect, test, describe, vi } from 'vitest';
 import { handleApiRequest } from '../server/dispatcher';
 
 describe('Authentication Integration', () => {
+  test('GET /api/accounts returns 401 when no user session is available', async () => {
+    const res = await handleApiRequest(
+      new Request('http://localhost/api/accounts'),
+      { TEST_USER_ID: null } as any,
+    );
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: 'Unauthorized' });
+  });
+
   test('GET /api/auth/get-session returns 401/unauthorized when no session exists', async () => {
     // Mock D1 binding
     const mockDb = {

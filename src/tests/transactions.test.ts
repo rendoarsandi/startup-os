@@ -41,6 +41,9 @@ describe('Transactions & Accounts Endpoints', () => {
       DB: {
         prepare: vi.fn().mockReturnValue({
           bind: vi.fn().mockReturnThis(),
+          raw: vi.fn().mockResolvedValue([
+            ['acc-123', 'test-user', 'Checking', 'checking', 0, 'USD', null, null, new Date(), new Date()],
+          ]),
           run: vi.fn().mockResolvedValue({ success: true }),
         }),
       },
@@ -50,5 +53,22 @@ describe('Transactions & Accounts Endpoints', () => {
     const data = await res.json() as any;
     expect(data.merchant).toBe('McDonalds');
     expect(data.category).toBe('Food'); // Mocked value
+  });
+
+  test('POST /api/transactions rejects an account outside the current user', async () => {
+    const res = await handleApiRequest(new Request('http://localhost/api/transactions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountId: 'other-user-account', amount: -5000, merchant: 'McDonalds' }),
+    }), {
+      DB: {
+        prepare: vi.fn().mockReturnValue({
+          bind: vi.fn().mockReturnThis(),
+          raw: vi.fn().mockResolvedValue([]),
+        }),
+      },
+    } as any);
+
+    expect(res.status).toBe(404);
   });
 });

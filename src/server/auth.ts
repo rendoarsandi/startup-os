@@ -3,11 +3,39 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
 
-async function sha256(message: string): Promise<string> {
-  const msgBuffer = new TextEncoder().encode(message);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+const PBKDF2_ITERATIONS = 600_000;
+
+function toHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function fromHex(value: string): Uint8Array {
+  if (!/^[0-9a-f]+$/i.test(value) || value.length % 2 !== 0) {
+    throw new Error("Invalid password hash encoding");
+  }
+
+  const bytes = new Uint8Array(value.length / 2);
+  for (let index = 0; index < bytes.length; index++) {
+    bytes[index] = Number.parseInt(value.slice(index * 2, index * 2 + 2), 16);
+  }
+  return bytes;
+}
+
+async function derivePasswordHash(password: string, salt: Uint8Array): Promise<string> {
+  const passwordBytes = new TextEncoder().encode(password);
+  const key = await crypto.subtle.importKey(
+    "raw",
+    passwordBytes.buffer as ArrayBuffer,
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", hash: "SHA-256", salt: salt.buffer as ArrayBuffer, iterations: PBKDF2_ITERATIONS },
+    key,
+    256,
+  );
+  return toHex(new Uint8Array(bits));
 }
 
 export const getAuth = (db: D1Database, url: string, secret?: string) => {
@@ -27,16 +55,18 @@ export const getAuth = (db: D1Database, url: string, secret?: string) => {
       enabled: true,
       password: {
         hash: async (password: string) => {
-          const salt = crypto.randomUUID();
-          const hash = await sha256(password + salt);
-          return `${salt}:${hash}`;
+          const salt = crypto.getRandomValues(new Uint8Array(16));
+          const hash = await derivePasswordHash(password, salt);
+          return `pbkdf2-sha256:${PBKDF2_ITERATIONS}:${toHex(salt)}:${hash}`;
         },
         verify: async ({ hash: storedHash, password }) => {
           try {
-            const [salt, hash] = storedHash.split(":");
-            if (!salt || !hash) return false;
-            const candidateHash = await sha256(password + salt);
-            return hash === candidateHash;
+            const [algorithm, iterations, salt, expectedHash] = storedHash.split(":");
+            if (algorithm !== "pbkdf2-sha256" || iterations !== String(PBKDF2_ITERATIONS) || !salt || !expectedHash) {
+              return false;
+            }
+            const candidateHash = await derivePasswordHash(password, fromHex(salt));
+            return candidateHash === expectedHash;
           } catch {
             return false;
           }
@@ -52,5 +82,3 @@ export const getAuth = (db: D1Database, url: string, secret?: string) => {
     ],
   });
 };
-
-

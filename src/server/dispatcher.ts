@@ -1,7 +1,8 @@
 import { drizzle } from 'drizzle-orm/d1'
 import { eq, and, desc } from 'drizzle-orm'
+import { Cause, Effect, Exit, Option } from 'effect'
 import { 
-  users, financialAccounts, transactions, budgets, marketingCampaigns, employees, plaidConnections, saasConfigs,
+  financialAccounts, transactions, budgets, marketingCampaigns, employees, plaidConnections, saasConfigs,
   invoices, crmLeads, attendance, leaveRequests, expenseClaims, inventoryItems, projects, projectTasks, supportTickets, autopilotRules
 } from "../db/schema";
 import { getAuth } from './auth';
@@ -26,18 +27,26 @@ class ValidationError extends Error {
   }
 }
 
-async function getValidatedBody<T>(request: Request, decoder: (input: unknown) => T): Promise<T> {
-  let body: any;
-  try {
-    body = await request.json();
-  } catch (err) {
-    throw new ValidationError("Invalid JSON payload");
-  }
-  try {
-    return decoder(body);
-  } catch (err: any) {
-    throw new ValidationError(err.message || "Validation failed");
-  }
+async function getValidatedBody<T>(
+  request: Request,
+  decoder: (input: unknown) => Effect.Effect<T, unknown, never>,
+): Promise<T> {
+  const program = Effect.tryPromise({
+    try: () => request.json(),
+    catch: () => new ValidationError("Invalid JSON payload"),
+  }).pipe(
+    Effect.flatMap(decoder),
+    Effect.mapError((error) => error instanceof ValidationError
+      ? error
+      : new ValidationError(error instanceof Error ? error.message : "Validation failed")),
+  );
+
+  const exit = await Effect.runPromiseExit(program);
+  if (Exit.isSuccess(exit)) return exit.value;
+
+  const failure = Cause.failureOption(exit.cause);
+  if (Option.isSome(failure)) throw failure.value;
+  throw Cause.squash(exit.cause);
 }
 
 function jsonResponse(data: any, status = 200) {
@@ -64,7 +73,7 @@ function matchRoute(path: string, pattern: string): Record<string, string> | nul
 
 async function getUserId(request: Request, env: any): Promise<string | null> {
   if (typeof process !== 'undefined' && process.env && process.env.VITEST) {
-    return "test-user";
+    return env.TEST_USER_ID === null ? null : env.TEST_USER_ID || "test-user";
   }
 
   try {
@@ -336,10 +345,10 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
         if (existing) {
           await db.update(saasConfigs)
             .set({
-              startingMrr: Number(startingMrr),
-              churnRate: Number(churnRate),
-              cac: Number(cac),
-              arpu: Number(arpu),
+              startingMrr,
+              churnRate,
+              cac,
+              arpu,
               updatedAt: now
             })
             .where(eq(saasConfigs.userId, userId))
@@ -349,10 +358,10 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
             .values({
               id: uuidv4(),
               userId,
-              startingMrr: Number(startingMrr),
-              churnRate: Number(churnRate),
-              cac: Number(cac),
-              arpu: Number(arpu),
+              startingMrr,
+              churnRate,
+              cac,
+              arpu,
               createdAt: now,
               updatedAt: now
             })
@@ -405,6 +414,10 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
         const gemini = new GeminiService(env.GEMINI_API_KEY);
         const analysis = new AnalysisService(db);
         const body = await getValidatedBody(request, decodeCreateTransaction);
+        const account = await db.select().from(financialAccounts).where(
+          and(eq(financialAccounts.id, body.accountId), eq(financialAccounts.userId, userId))
+        ).get();
+        if (!account) return jsonResponse({ error: "Account not found" }, 404);
         
         let category = body.category;
         if (!category || category === "Other") {
@@ -422,7 +435,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
           accountId: body.accountId,
           amount: body.amount,
           category,
-          merchant: body.merchant,
+          merchant: body.merchant || "Unknown Merchant",
           description: body.description,
           date: new Date(body.date || Date.now()),
           createdAt: new Date(),
@@ -452,11 +465,6 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
         await db.insert(budgets).values(newBudget).run();
         return jsonResponse(newBudget, 201);
       }
-    }
-
-    if (path === '/api/users' && method === 'GET') {
-      const allUsers = await db.select().from(users).all();
-      return jsonResponse(allUsers);
     }
 
     // 4. Plaid Endpoints
@@ -675,7 +683,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
           invoiceNumber: body.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
           clientName: body.clientName,
           type: body.type || 'sales',
-          amount: Number(body.amount),
+          amount: body.amount,
           status: body.status || 'unpaid',
           issueDate: body.issueDate ? new Date(body.issueDate) : new Date(),
           dueDate: body.dueDate ? new Date(body.dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -790,7 +798,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
           company: body.company,
           email: body.email || null,
           phone: body.phone || null,
-          value: Number(body.value || 0),
+          value: body.value ?? 0,
           status: body.status || 'lead',
           createdAt: new Date(),
           updatedAt: new Date()
@@ -809,7 +817,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
         company: body.company,
         email: body.email,
         phone: body.phone,
-        value: body.value !== undefined ? Number(body.value) : undefined,
+          value: body.value,
         status: body.status,
         updatedAt: new Date()
       }).where(and(eq(crmLeads.id, id), eq(crmLeads.userId, userId))).run();
@@ -829,10 +837,10 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
           userId,
           name: body.name,
           status: body.status || 'active',
-          budget: Number(body.budget) || 500000,
-          spend: Number(body.spend) || 0,
-          conversions: Number(body.conversions) || 0,
-          roas: Number(body.roas) || 0,
+          budget: body.budget ?? 500000,
+          spend: body.spend ?? 0,
+          conversions: body.conversions ?? 0,
+          roas: body.roas ?? 0,
           createdAt: new Date(),
           updatedAt: new Date()
         };
@@ -881,7 +889,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
           name: body.name,
           role: body.role,
           department: body.department,
-          salary: Number(body.salary),
+          salary: body.salary,
           status: body.status || 'active',
           startDate: body.startDate ? new Date(body.startDate) : new Date(),
           createdAt: new Date(),
@@ -945,6 +953,10 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
 
     if (path === '/api/hr/attendance/clock-in' && method === 'POST') {
       const body = await getValidatedBody(request, decodeClockIn);
+      const employee = await db.select().from(employees).where(
+        and(eq(employees.id, body.employeeId), eq(employees.userId, userId))
+      ).get();
+      if (!employee) return jsonResponse({ error: "Employee not found" }, 404);
       const formatter = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
       const nowStr = formatter.format(new Date());
       const newLog = {
@@ -989,6 +1001,10 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
       }
       if (method === 'POST') {
         const body = await getValidatedBody(request, decodeLeaveRequest);
+        const employee = await db.select().from(employees).where(
+          and(eq(employees.id, body.employeeId), eq(employees.userId, userId))
+        ).get();
+        if (!employee) return jsonResponse({ error: "Employee not found" }, 404);
         const newLeave = {
           id: uuidv4(),
           userId,
@@ -1021,12 +1037,16 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
       }
       if (method === 'POST') {
         const body = await getValidatedBody(request, decodeExpenseClaim);
+        const employee = await db.select().from(employees).where(
+          and(eq(employees.id, body.employeeId), eq(employees.userId, userId))
+        ).get();
+        if (!employee) return jsonResponse({ error: "Employee not found" }, 404);
         const newClaim = {
           id: uuidv4(),
           userId,
           employeeId: body.employeeId,
           title: body.title,
-          amount: Number(body.amount),
+          amount: body.amount,
           category: body.category,
           status: 'pending',
           date: body.date ? new Date(body.date) : new Date(),
@@ -1057,10 +1077,10 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
         const existing = await db.select().from(inventoryItems).where(and(eq(inventoryItems.sku, sku), eq(inventoryItems.userId, userId))).get();
         
         if (existing) {
-          const newQty = body.qty !== undefined ? Number(body.qty) : existing.qty;
+          const newQty = body.qty ?? existing.qty;
           await db.update(inventoryItems).set({
             qty: newQty,
-            rate: body.rate !== undefined ? Number(body.rate) : existing.rate,
+            rate: body.rate ?? existing.rate,
             warehouse: body.warehouse || existing.warehouse,
             updatedAt: new Date()
           }).where(eq(inventoryItems.id, existing.id)).run();
@@ -1070,11 +1090,11 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
             id: uuidv4(),
             userId,
             sku,
-            name: body.name,
-            qty: Number(body.qty || 0),
-            rate: Number(body.rate),
+            name: body.name || sku,
+            qty: body.qty ?? 0,
+            rate: body.rate ?? 0,
             warehouse: body.warehouse || 'Main Warehouse',
-            reorderLevel: Number(body.reorderLevel || 10),
+            reorderLevel: body.reorderLevel ?? 10,
             createdAt: new Date(),
             updatedAt: new Date()
           };
@@ -1113,6 +1133,16 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
       }
       if (method === 'POST') {
         const body = await getValidatedBody(request, decodeProjectTask);
+        const project = await db.select().from(projects).where(
+          and(eq(projects.id, body.projectId), eq(projects.userId, userId))
+        ).get();
+        if (!project) return jsonResponse({ error: "Project not found" }, 404);
+        if (body.assignedEmployeeId) {
+          const employee = await db.select().from(employees).where(
+            and(eq(employees.id, body.assignedEmployeeId), eq(employees.userId, userId))
+          ).get();
+          if (!employee) return jsonResponse({ error: "Employee not found" }, 404);
+        }
         const newTask = {
           id: uuidv4(),
           userId,
@@ -1143,7 +1173,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
       const { hours } = await getValidatedBody(request, decodeLogTaskHours);
       const existing = await db.select().from(projectTasks).where(and(eq(projectTasks.id, id), eq(projectTasks.userId, userId))).get();
       if (existing) {
-        const newHours = existing.hoursLogged + Number(hours);
+        const newHours = existing.hoursLogged + hours;
         await db.update(projectTasks).set({ hoursLogged: newHours, updatedAt: new Date() }).where(eq(projectTasks.id, id)).run();
         return jsonResponse({ success: true, hoursLogged: newHours });
       }
@@ -1185,18 +1215,16 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
     if (path === '/api/operations/autopilot') {
       if (method === 'GET') {
         const results = await db.select().from(autopilotRules).where(eq(autopilotRules.userId, userId)).orderBy(desc(autopilotRules.createdAt)).all();
-        if (results.length > 0) {
-          return jsonResponse(results);
-        }
-        const mockRules = [
-          { id: "rule-1", userId, name: "Low Cash Runway Safeguard", triggerType: "runway_low", triggerValue: "6", actionType: "ai_audit", actionTarget: "", active: true, lastTriggeredAt: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-          { id: "rule-2", userId, name: "Restock Key Inventory Items", triggerType: "low_stock", triggerValue: "10", actionType: "auto_task", actionTarget: "emp-1", active: false, lastTriggeredAt: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-          { id: "rule-3", userId, name: "High Priority Ticket Auto-Reply", triggerType: "high_priority_ticket", triggerValue: "high", actionType: "ai_reply", actionTarget: "", active: true, lastTriggeredAt: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-        ];
-        return jsonResponse(mockRules);
+        return jsonResponse(results);
       }
       if (method === 'POST') {
         const body = await getValidatedBody(request, decodeAutopilotRule);
+        if (body.actionType === "auto_task" && body.actionTarget) {
+          const employee = await db.select().from(employees).where(
+            and(eq(employees.id, body.actionTarget), eq(employees.userId, userId))
+          ).get();
+          if (!employee) return jsonResponse({ error: "Employee not found" }, 404);
+        }
         const id = body.id || uuidv4();
         const newRule = {
           id,
@@ -1247,18 +1275,9 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
 
     if (path === '/api/operations/autopilot/run-checks' && method === 'POST') {
       const executionLogs: { ruleId: string; name: string; triggered: boolean; actionTaken: string; timestamp: string }[] = [];
-      let rules: any[] = [];
-      
       const allRules = await db.select().from(autopilotRules).where(eq(autopilotRules.userId, userId)).all();
-      if (allRules.length === 0) {
-        rules = [
-          { id: "rule-1", name: "Low Cash Runway Safeguard", triggerType: "runway_low", triggerValue: "6", actionType: "ai_audit", actionTarget: "", active: true },
-          { id: "rule-2", name: "Restock Key Inventory Items", triggerType: "low_stock", triggerValue: "10", actionType: "auto_task", actionTarget: "emp-1", active: false },
-          { id: "rule-3", name: "High Priority Ticket Auto-Reply", triggerType: "high_priority_ticket", triggerValue: "high", actionType: "ai_reply", actionTarget: "", active: true }
-        ].filter(r => r.active);
-      } else {
-        rules = allRules.filter(r => r.active);
-      }
+      const rules = allRules.filter(rule => rule.active);
+      if (rules.length === 0) return jsonResponse({ success: true, logs: executionLogs });
       
       let inventoryList: any[] = [];
       try {
@@ -1301,29 +1320,38 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
         else if (rule.triggerType === "low_stock") {
           const threshold = Number(rule.triggerValue) || 10;
           const lowItems = inventoryList.filter(item => item.qty <= threshold);
-          if (lowItems.length > 0 || inventoryList.length === 0) {
+          if (lowItems.length > 0) {
             triggered = true;
             if (rule.actionType === "auto_task") {
-              const taskId = uuidv4();
+              const taskTitle = `[AUTOPILOT] Reorder low-stock SKUs (${lowItems.map(i => i.sku).join(', ')})`;
               try {
-                const projs = await db.select().from(projects).where(eq(projects.userId, userId)).limit(1).all();
-                const projId = projs.length > 0 ? projs[0].id : uuidv4();
-                if (projs.length === 0) {
-                  await db.insert(projects).values({ id: projId, userId, name: "General Operations", status: "active", createdAt: new Date(), updatedAt: new Date() }).run();
+                const openTasks = await db.select().from(projectTasks).where(
+                  and(eq(projectTasks.userId, userId), eq(projectTasks.status, "todo"))
+                ).all();
+                if (openTasks.some(task => task.title === taskTitle)) {
+                  actionTaken = "A matching restock task is already open.";
+                } else {
+                  const projs = await db.select().from(projects).where(eq(projects.userId, userId)).limit(1).all();
+                  const projId = projs.length > 0 ? projs[0].id : uuidv4();
+                  if (projs.length === 0) {
+                    await db.insert(projects).values({ id: projId, userId, name: "General Operations", status: "active", createdAt: new Date(), updatedAt: new Date() }).run();
+                  }
+                  await db.insert(projectTasks).values({
+                    id: uuidv4(),
+                    userId,
+                    projectId: projId,
+                    title: taskTitle,
+                    assignedEmployeeId: rule.actionTarget || null,
+                    status: "todo",
+                    hoursLogged: 0,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                  }).run();
+                  actionTaken = "Created a purchase-order task for the low-stock items.";
                 }
-                await db.insert(projectTasks).values({
-                  id: taskId,
-                  userId,
-                  projectId: projId,
-                  title: `[AUTOPILOT] Reorder low-stock SKUs (${lowItems.map(i => i.sku).join(', ') || 'DEMO-SKU'})`,
-                  assignedEmployeeId: rule.actionTarget || null,
-                  status: "todo",
-                  hoursLogged: 0,
-                  createdAt: new Date(),
-                  updatedAt: new Date()
-                }).run();
-              } catch(err) {}
-              actionTaken = "Auto-assigned purchase-order task to staff to restock low quantities.";
+              } catch(err) {
+                actionTaken = "Unable to create a restock task.";
+              }
             } else {
               actionTaken = "Low stock threshold breached. Rule action initiated.";
             }
@@ -1350,8 +1378,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
           }
         }
         else if (rule.triggerType === "mrr_surge") {
-          triggered = true;
-          actionTaken = "Surge detected (+24% MRR). Automatically generated social congratulations post draft for approval.";
+          actionTaken = "MRR-surge checks require a recorded comparison period and are not configured.";
         }
 
         if (triggered) {

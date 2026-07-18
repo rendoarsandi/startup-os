@@ -38,6 +38,8 @@ export default defineConfig(async () => {
       globals: true,
       environment: 'jsdom',
       setupFiles: ['./src/setupTests.ts'],
+      pool: 'threads',
+      maxWorkers: 1,
       server: {
         deps: {
           inline: [/react/, /react-dom/],

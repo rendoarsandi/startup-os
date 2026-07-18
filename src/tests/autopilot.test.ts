@@ -23,8 +23,7 @@ describe('COO Autopilot Rules API Endpoints', () => {
     expect(res.status).toBe(200);
     const data = await res.json() as any;
     expect(Array.isArray(data)).toBe(true);
-    expect(data.length).toBeGreaterThan(0);
-    expect(data[0]).toHaveProperty('triggerType');
+    expect(data).toEqual([]);
   });
 
   test('POST /api/operations/autopilot creates or updates rule', async () => {
@@ -69,7 +68,6 @@ describe('COO Autopilot Rules API Endpoints', () => {
     const data = await res.json() as any;
     expect(data.success).toBe(true);
     expect(Array.isArray(data.logs)).toBe(true);
-    expect(data.logs.length).toBeGreaterThan(0);
-    expect(data.logs[0]).toHaveProperty('triggered');
+    expect(data.logs).toEqual([]);
   });
 });
