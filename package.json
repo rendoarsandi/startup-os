@@ -83,6 +83,11 @@
   "overrides": {
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "esbuild": "^0.25.0",
+    "jsondiffpatch": "^0.7.2",
+    "@ai-sdk/provider-utils": "^4.0.0",
+    "@tanstack/form-core": "^0.42.1",
+    "turbo-stream": "^3.0.0"
   }
 }
