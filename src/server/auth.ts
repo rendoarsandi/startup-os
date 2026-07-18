@@ -21,17 +21,17 @@ function fromHex(value: string): Uint8Array {
   return bytes;
 }
 
-async function derivePasswordHash(password: string, salt: Uint8Array): Promise<string> {
+async function derivePasswordHash(password: string, salt: Uint8Array, iterations: number): Promise<string> {
   const passwordBytes = new TextEncoder().encode(password);
   const key = await crypto.subtle.importKey(
     "raw",
-    passwordBytes.buffer as ArrayBuffer,
+    passwordBytes,
     "PBKDF2",
     false,
     ["deriveBits"],
   );
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", hash: "SHA-256", salt: salt.buffer as ArrayBuffer, iterations: PBKDF2_ITERATIONS },
+    { name: "PBKDF2", hash: "SHA-256", salt, iterations },
     key,
     256,
   );
@@ -56,16 +56,20 @@ export const getAuth = (db: D1Database, url: string, secret?: string) => {
       password: {
         hash: async (password: string) => {
           const salt = crypto.getRandomValues(new Uint8Array(16));
-          const hash = await derivePasswordHash(password, salt);
+          const hash = await derivePasswordHash(password, salt, PBKDF2_ITERATIONS);
           return `pbkdf2-sha256:${PBKDF2_ITERATIONS}:${toHex(salt)}:${hash}`;
         },
         verify: async ({ hash: storedHash, password }) => {
           try {
-            const [algorithm, iterations, salt, expectedHash] = storedHash.split(":");
-            if (algorithm !== "pbkdf2-sha256" || iterations !== String(PBKDF2_ITERATIONS) || !salt || !expectedHash) {
+            const [algorithm, iterationsStr, salt, expectedHash] = storedHash.split(":");
+            if (algorithm !== "pbkdf2-sha256" || !iterationsStr || !salt || !expectedHash) {
               return false;
             }
-            const candidateHash = await derivePasswordHash(password, fromHex(salt));
+            const iterations = Number.parseInt(iterationsStr, 10);
+            if (Number.isNaN(iterations) || iterations <= 0) {
+              return false;
+            }
+            const candidateHash = await derivePasswordHash(password, fromHex(salt), iterations);
             return candidateHash === expectedHash;
           } catch {
             return false;

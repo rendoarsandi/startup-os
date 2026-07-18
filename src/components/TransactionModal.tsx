@@ -103,6 +103,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
           }} 
           className="space-y-4 relative z-10"
         >
+          {accounts.length === 0 && (
+            <div className="p-3 mb-2 text-xs rounded-lg border border-amber-200/50 bg-amber-50 text-amber-800 dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-300">
+              You need to create a financial account first before adding transactions.
+            </div>
+          )}
+
           {/* Merchant Field */}
           <form.Field
             name="merchant"
@@ -232,7 +238,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
 
           <Button 
             type="submit" 
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || accounts.length === 0}
             className="w-full mt-2 h-11 font-bold"
           >
             {mutation.isPending ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
