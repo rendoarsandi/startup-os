@@ -10,8 +10,11 @@ const wranglerConfig = path.resolve(__dirname, 'wrangler.jsonc')
 
 function shouldUseCloudflare() {
   // workerd has no Android/Termux binary. Keep the Cloudflare plugin out of
-  // local builds; the deploy script explicitly sets CF_BUILD=1.
-  return process.env.CF_BUILD === '1'
+  // local Android builds unless CF_BUILD=1 is explicitly set.
+  if (process.platform === 'android') {
+    return process.env.CF_BUILD === '1'
+  }
+  return true
 }
 
 export default defineConfig(async () => {
@@ -23,6 +26,9 @@ export default defineConfig(async () => {
       cloudflare({
         viteEnvironment: { name: 'ssr' },
         configPath: wranglerConfig,
+        config: {
+          main: '@tanstack/react-start/server-entry',
+        },
       }),
     )
   }
