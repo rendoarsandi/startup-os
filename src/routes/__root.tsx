@@ -12,7 +12,6 @@ export const Route = createRootRoute({
       { name: 'keywords', content: 'Startup OS, Autonomous CFO, Autonomous CMO, Autonomous CHRO, AI Executive, Ledger-first business automation, fractional CFO' },
       { name: 'author', content: 'Rendo Arsandi' },
       { name: 'robots', content: 'index, follow' },
-      { name: 'google-site-verification', content: 'YOUR_GOOGLE_VERIFICATION_TOKEN_HERE' },
       { property: 'og:type', content: 'website' },
       { property: 'og:title', content: 'Startup OS | Autonomous C-Suite Command Engine' },
       { property: 'og:description', content: 'A unified network of autonomous AI C-suite agents running on real-time transaction ledgers.' },
