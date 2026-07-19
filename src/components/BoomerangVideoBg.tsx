@@ -10,6 +10,7 @@ export function BoomerangVideoBg({ src, className }: Props) {
   const displayCanvasRef = useRef<HTMLCanvasElement>(null);
   const [framesReady, setFramesReady] = useState(false);
   const framesRef = useRef<HTMLCanvasElement[]>([]);
+  const scrollFractionRef = useRef(0);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -19,11 +20,18 @@ export function BoomerangVideoBg({ src, className }: Props) {
     let capturing = true;
     let lastTime = -1;
     const MAX_WIDTH = 960;
+    const TARGET_FRAMES = 80; // Capture at most 80 frames for smooth performance & low memory
+    let minTimeDelta = 0.05; // Default safe fallback (seconds)
 
     const captureFrame = () => {
       if (!capturing || video.readyState < 2) return;
-      if (video.currentTime === lastTime) return;
-      lastTime = video.currentTime;
+      
+      const currentTime = video.currentTime;
+      // Skip if video time hasn't changed or hasn't advanced enough
+      if (currentTime === lastTime || (lastTime !== -1 && currentTime - lastTime < minTimeDelta)) {
+        return;
+      }
+      lastTime = currentTime;
 
       const vw = video.videoWidth;
       const vh = video.videoHeight;
@@ -41,6 +49,32 @@ export function BoomerangVideoBg({ src, className }: Props) {
 
       ctx.drawImage(video, 0, 0, w, h);
       frames.push(canvas);
+      framesRef.current = frames; // Expose frames in real-time
+
+      // Redraw the canvas immediately to match the scroll position using the newly captured frame
+      drawCurrentFrame();
+    };
+
+    const drawCurrentFrame = () => {
+      const canvas = displayCanvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const currentFrames = framesRef.current;
+      if (currentFrames.length === 0) return;
+
+      // Ensure canvas size is set to the first frame size
+      if (canvas.width !== currentFrames[0].width) {
+        canvas.width = currentFrames[0].width;
+        canvas.height = currentFrames[0].height;
+      }
+
+      const fraction = scrollFractionRef.current;
+      const index = Math.min(currentFrames.length - 1, Math.floor(fraction * currentFrames.length));
+      if (index >= 0) {
+        ctx.drawImage(currentFrames[index], 0, 0);
+      }
     };
 
     type VFCVideo = HTMLVideoElement & {
@@ -72,6 +106,11 @@ export function BoomerangVideoBg({ src, className }: Props) {
     };
 
     const onLoaded = () => {
+      // Calculate optimal frame interval based on duration
+      if (video.duration && video.duration > 0) {
+        minTimeDelta = video.duration / TARGET_FRAMES;
+      }
+
       // Draw first frame immediately to canvas so user doesn't see a blank background
       const canvas = displayCanvasRef.current;
       if (canvas && video.videoWidth && video.videoHeight) {
@@ -84,8 +123,8 @@ export function BoomerangVideoBg({ src, className }: Props) {
         }
       }
 
-      // Fast-forward playback rate to capture frames quickly in background
-      video.playbackRate = 3.0;
+      // Play at normal or slightly elevated rate (1.5x instead of 3.0x to avoid heavy lag)
+      video.playbackRate = 1.5;
       video.play().catch(() => {});
       if (hasVFC) {
         vfcVideo.requestVideoFrameCallback!(vfcLoop);
@@ -107,18 +146,8 @@ export function BoomerangVideoBg({ src, className }: Props) {
   }, [src]);
 
   useEffect(() => {
-    if (!framesReady) return;
     const canvas = displayCanvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const frames = framesRef.current;
-    if (frames.length === 0) return;
-
-    const first = frames[0];
-    canvas.width = first.width;
-    canvas.height = first.height;
 
     const handleScroll = () => {
       const scrollTop = window.scrollY || document.documentElement.scrollTop;
@@ -126,11 +155,16 @@ export function BoomerangVideoBg({ src, className }: Props) {
       
       // Calculate fraction of page scrolled (bound between 0 and 1)
       const scrollFraction = scrollHeight > 0 ? Math.max(0, Math.min(1, scrollTop / scrollHeight)) : 0;
+      scrollFractionRef.current = scrollFraction;
       
-      // Map scroll fraction to frame index
-      const index = Math.min(frames.length - 1, Math.floor(scrollFraction * frames.length));
-      
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const frames = framesRef.current;
+      if (frames.length === 0) return;
+
       // Draw the selected frame
+      const index = Math.min(frames.length - 1, Math.floor(scrollFraction * frames.length));
       ctx.drawImage(frames[index], 0, 0);
     };
 
@@ -144,7 +178,7 @@ export function BoomerangVideoBg({ src, className }: Props) {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleScroll);
     };
-  }, [framesReady]);
+  }, []);
 
   return (
     <div className={className ?? 'absolute inset-0 w-full h-full'}>
@@ -165,3 +199,4 @@ export function BoomerangVideoBg({ src, className }: Props) {
     </div>
   );
 }
+
