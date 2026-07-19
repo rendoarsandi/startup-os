@@ -15,7 +15,7 @@ export const Route = createRootRoute({
       { property: 'og:type', content: 'website' },
       { property: 'og:title', content: 'Startup OS | Autonomous C-Suite Command Engine' },
       { property: 'og:description', content: 'A unified network of autonomous AI C-suite agents running on real-time transaction ledgers.' },
-      { property: 'og:url', content: 'https://ai-cfo-web.pages.dev' },
+      { property: 'og:url', content: 'https://startupos.my.id' },
       { property: 'og:image', content: '/logo.png' },
       { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:title', content: 'Startup OS | Autonomous C-Suite Command Engine' },
