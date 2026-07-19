@@ -12,6 +12,7 @@ export const Route = createRootRoute({
       { name: 'keywords', content: 'Startup OS, Autonomous CFO, Autonomous CMO, Autonomous CHRO, AI Executive, Ledger-first business automation, fractional CFO' },
       { name: 'author', content: 'Rendo Arsandi' },
       { name: 'robots', content: 'index, follow' },
+      { name: 'google-site-verification', content: 'YOUR_GOOGLE_VERIFICATION_TOKEN_HERE' },
       { property: 'og:type', content: 'website' },
       { property: 'og:title', content: 'Startup OS | Autonomous C-Suite Command Engine' },
       { property: 'og:description', content: 'A unified network of autonomous AI C-suite agents running on real-time transaction ledgers.' },
@@ -23,6 +24,7 @@ export const Route = createRootRoute({
       { name: 'twitter:image', content: '/logo.png' },
     ],
     links: [
+      { rel: 'canonical', href: 'https://startupos.my.id' },
       { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
       { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
       { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700;800&display=swap' },
@@ -38,6 +40,25 @@ function RootComponent() {
     <html lang="en" className="dark">
       <head>
         <HeadContent />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "SoftwareApplication",
+              "name": "Startup OS",
+              "applicationCategory": "BusinessApplication",
+              "operatingSystem": "All",
+              "url": "https://startupos.my.id",
+              "description": "An autonomous network of AI C-suite agents running on real-time transaction ledgers.",
+              "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD"
+              }
+            })
+          }}
+        />
       </head>
       <body className="bg-[#030303] text-foreground antialiased min-h-screen">
         <Outlet />

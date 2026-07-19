@@ -1,0 +1,17 @@
+# Startup OS
+
+Startup OS is an autonomous C-suite command engine designed to displace fragmented agency services and fractional executives with a unified network of AI agents running on real-time transaction ledgers.
+
+## Domain
+- Website: https://startupos.my.id
+
+## Core Modules
+- **CFO Module (Phase 1)**: Real-time cash runway analysis, SaaS valuation models, Plaid integration, and budget scenario planners.
+- **CMO Module (Phase 2)**: Autonomous marketing campaign optimization, programmatic display buying, and ad creative generation.
+- **CHRO Module (Phase 3)**: Hiring equity planners, workflow regulation compliance checkers, and candidate sourcing.
+- **COO Multi-Agent Mesh (Phase 4)**: Verifiable investor ledgers, lean capacity planners, and multi-agent boardroom simulations.
+
+## Tech Stack
+- Frontend: React, TanStack Start, TanStack Router, Tailwind CSS, Lucide Icons.
+- Database: SQLite via D1, Drizzle ORM.
+- AI: Google Gemini API.
