@@ -204,6 +204,29 @@ export const UpdateTicketStatusSchema = S.Struct({
 });
 
 // ==========================================
+// Contracts Schemas
+// ==========================================
+export const CreateContractSchema = S.Struct({
+  title: S.String,
+  description: S.optional(S.NullOr(S.String)),
+  status: S.optional(S.Literal("draft", "active", "completed", "terminated")),
+  value: S.optional(NumericValue), // stored in cents
+  clientId: S.optional(S.NullOr(S.String)),
+  startDate: S.optional(S.NullOr(S.String)), // expects ISO format date-time string
+  endDate: S.optional(S.NullOr(S.String)),
+});
+
+export const UpdateContractSchema = S.Struct({
+  title: S.optional(S.String),
+  description: S.optional(S.NullOr(S.String)),
+  status: S.optional(S.Literal("draft", "active", "completed", "terminated")),
+  value: S.optional(NumericValue),
+  clientId: S.optional(S.NullOr(S.String)),
+  startDate: S.optional(S.NullOr(S.String)),
+  endDate: S.optional(S.NullOr(S.String)),
+});
+
+// ==========================================
 // Autopilot Schemas
 // ==========================================
 export const AutopilotRuleSchema = S.Struct({
@@ -264,3 +287,6 @@ export const decodeUpdateTicketStatus = S.decodeUnknown(UpdateTicketStatusSchema
 export const decodeAutopilotRule = S.decodeUnknown(AutopilotRuleSchema);
 export const decodeAutopilotToggle = S.decodeUnknown(AutopilotToggleSchema);
 export const decodeChat = S.decodeUnknown(ChatSchema);
+export const decodeCreateContract = S.decodeUnknown(CreateContractSchema);
+export const decodeUpdateContract = S.decodeUnknown(UpdateContractSchema);
+

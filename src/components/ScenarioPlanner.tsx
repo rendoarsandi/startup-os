@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { 
   Sliders, Plus, Trash2, Calendar, 
-  Sparkles, TrendingUp, RefreshCw, MessageSquare, Users, Percent, ShieldAlert
+  Sparkles, TrendingUp, RefreshCw, MessageSquare, Users, Percent, ShieldAlert,
+  AlertTriangle, CheckCircle2, Target
 } from 'lucide-react';
 import { useScenario } from '../hooks/useScenario';
 import type { BaselineRunwayData } from '../hooks/useScenario';
@@ -34,6 +35,121 @@ export const ScenarioPlanner: React.FC<ScenarioPlannerProps> = ({ baseline, onOp
   const [hireDept, setHireDept] = useState('Engineering');
   const [hireSalary, setHireSalary] = useState('120000');
   const [hireStartMonth, setHireStartMonth] = useState('3');
+
+  // Baseline variables (fallback safe since !baseline returns early)
+  const basePayroll = baseline?.fixedCosts?.payroll || 0;
+  const baseRevenue = baseline?.monthlyRevenue || 1500000;
+
+  // 1. Burn & Runway Alert
+  const runwayMonths = scenario.runwayMonths;
+  let runwayStatus: 'healthy' | 'warning' | 'critical' = 'healthy';
+  let runwayTitle = 'Healthy Runway';
+  let runwayDescription = 'Your cash runway is stable or profitable.';
+  let runwayMitigation = '';
+
+  if (runwayMonths !== "Infinite") {
+    if (runwayMonths < 6) {
+      runwayStatus = 'critical';
+      runwayTitle = 'Critical Runway';
+      runwayDescription = `Cash depleting rapidly in ${runwayMonths} months.`;
+      runwayMitigation = 'Reduce non-payroll expenses immediately, freeze hiring, or secure bridge funding.';
+    } else if (runwayMonths < 12) {
+      runwayStatus = 'warning';
+      runwayTitle = 'Short Runway';
+      runwayDescription = `Runway is ${runwayMonths} months. Below the 12-month safety buffer.`;
+      runwayMitigation = 'De-risk by slowing down non-essential hires or optimizing marketing CAC.';
+    } else {
+      runwayStatus = 'healthy';
+      runwayTitle = 'Healthy Runway';
+      runwayDescription = `Runway is secure at ${runwayMonths} months.`;
+      runwayMitigation = 'Maintain current capital efficiency. Good buffer for growth investments.';
+    }
+  } else {
+    runwayStatus = 'healthy';
+    runwayTitle = 'Infinite Runway (Profitable)';
+    runwayDescription = 'Simulated monthly revenues exceed projected expenses.';
+    runwayMitigation = 'Reinvest surplus cash flow into high-ROAS marketing campaigns to accelerate growth.';
+  }
+
+  // 2. LTV to CAC Ratio
+  const churnDecimal = scenario.inputs.churnRate / 100;
+  const ltv = churnDecimal > 0 ? scenario.inputs.arpu / churnDecimal : 999999;
+  const ltvToCacRatio = scenario.inputs.cac > 0 ? ltv / scenario.inputs.cac : 999999;
+
+  let ltvCacStatus: 'healthy' | 'warning' | 'critical' = 'healthy';
+  let ltvCacTitle = 'Excellent LTV:CAC';
+  let ltvCacDescription = `Ratio: ${ltvToCacRatio === 999999 ? 'Infinite' : ltvToCacRatio.toFixed(1) + 'x'}.`;
+  let ltvCacMitigation = '';
+
+  if (ltvToCacRatio < 1.0) {
+    ltvCacStatus = 'critical';
+    ltvCacTitle = 'Unprofitable Unit Economics';
+    ltvCacDescription = `Ratio: ${ltvToCacRatio.toFixed(1)}x. You spend more to acquire than customer lifetime value.`;
+    ltvCacMitigation = 'Critically high CAC or churn. Focus on user onboarding, or raise price points/ARPU.';
+  } else if (ltvToCacRatio < 3.0) {
+    ltvCacStatus = 'warning';
+    ltvCacTitle = 'Sub-optimal Unit Economics';
+    ltvCacDescription = `Ratio: ${ltvToCacRatio.toFixed(1)}x. Below the 3x industry standard benchmark.`;
+    ltvCacMitigation = 'Optimize acquisition channels to reduce CAC, or improve product stickiness to lower churn.';
+  } else {
+    ltvCacStatus = 'healthy';
+    ltvCacTitle = 'Healthy Unit Economics';
+    ltvCacDescription = `Ratio: ${ltvToCacRatio === 999999 ? 'Infinite' : ltvToCacRatio.toFixed(1) + 'x'}. Strong business leverage.`;
+    ltvCacMitigation = 'Scale up marketing spend confidently to capture market share.';
+  }
+
+  // 3. Headcount Leverage (Payroll / Revenue Ratio)
+  const simulatedFinalHiresPayrollCents = scenario.inputs.newHires
+    .filter(hire => hire.startMonth <= 12)
+    .reduce((sum, hire) => sum + Math.round((hire.salary * 100) / 12), 0);
+  const finalMonthPayroll = basePayroll + simulatedFinalHiresPayrollCents;
+  const finalMonthProj = scenario.projections[scenario.projections.length - 1];
+  const finalMonthRevenue = finalMonthProj ? finalMonthProj.revenue : baseRevenue;
+
+  const payrollToRevenueRatio = finalMonthRevenue > 0 ? (finalMonthPayroll / finalMonthRevenue) * 100 : 0;
+
+  let headcountStatus: 'healthy' | 'warning' | 'critical' = 'healthy';
+  let headcountTitle = 'Balanced Headcount';
+  let headcountDescription = `Payroll consumes ${payrollToRevenueRatio.toFixed(0)}% of month 12 revenue.`;
+  let headcountMitigation = '';
+
+  if (payrollToRevenueRatio > 70) {
+    headcountStatus = 'critical';
+    headcountTitle = 'High Headcount Leverage';
+    headcountDescription = `Payroll consumes ${payrollToRevenueRatio.toFixed(0)}% of month 12 revenue. Highly vulnerable to revenue drops.`;
+    headcountMitigation = 'Freeze simulated hiring immediately. Consider performance-based sales roles.';
+  } else if (payrollToRevenueRatio > 50) {
+    headcountStatus = 'warning';
+    headcountTitle = 'Elevated Headcount Costs';
+    headcountDescription = `Payroll consumes ${payrollToRevenueRatio.toFixed(0)}% of month 12 revenue. Elevated risk profile.`;
+    headcountMitigation = 'Ensure future hires are directly tied to revenue milestones or clear ROI drivers.';
+  } else {
+    headcountStatus = 'healthy';
+    headcountTitle = 'Efficient Headcount';
+    headcountDescription = `Payroll consumes ${payrollToRevenueRatio.toFixed(0)}% of month 12 revenue. Strong operating leverage.`;
+    headcountMitigation = 'Headcount is well within safe bounds. Keep hiring aligned with strategic needs.';
+  }
+
+  // 4. Marketing Spend Efficiency
+  const finalMonthMarketingSpend = Math.round(scenario.inputs.marketingSpendDelta * 100);
+  const marketingToRevenueRatio = finalMonthRevenue > 0 ? (finalMonthMarketingSpend / finalMonthRevenue) * 100 : 0;
+
+  let marketingStatus: 'healthy' | 'warning' | 'critical' = 'healthy';
+  let marketingTitle = 'Optimized Ad Spend';
+  let marketingDescription = `Marketing budget consumes ${marketingToRevenueRatio.toFixed(0)}% of monthly revenue.`;
+  let marketingMitigation = '';
+
+  if (marketingToRevenueRatio > 40) {
+    marketingStatus = 'warning';
+    marketingTitle = 'High Acquisition Exposure';
+    marketingDescription = `Marketing budget consumes ${marketingToRevenueRatio.toFixed(0)}% of monthly revenue. High reliance on paid ads.`;
+    marketingMitigation = 'De-risk by diversifying into organic channels (SEO, product-led loops) or optimizing conversion rates.';
+  } else {
+    marketingStatus = 'healthy';
+    marketingTitle = 'Balanced Acquisition';
+    marketingDescription = `Marketing budget consumes ${marketingToRevenueRatio.toFixed(0)}% of monthly revenue. Low dependency risk.`;
+    marketingMitigation = 'Good marketing leverage. You have headroom to scale spend if LTV:CAC allows.';
+  }
 
   if (!baseline) {
     return (
@@ -506,6 +622,148 @@ Please analyze my active scenario. What are the key financial risks, and how can
                   ))}
                 </div>
               )}
+            </div>
+          </Card>
+
+          {/* AI Financial Risk Audit Panel */}
+          <Card className="p-6 bg-card/60 relative overflow-hidden shadow-lg border border-border/80 rounded-xl backdrop-blur-md">
+            <div className="flex items-center justify-between mb-5 border-b border-border/60 pb-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="text-[#00E5FF] animate-pulse" size={18} />
+                  <CardTitle className="text-sm font-extrabold text-white">AI Financial Risk Audit</CardTitle>
+                </div>
+                <p className="text-muted-foreground text-[10px] uppercase tracking-widest font-black mt-0.5">Real-time business sustainability checks</p>
+              </div>
+              <Badge variant="outline" className="text-[9px] font-black uppercase tracking-wider py-1 border-[#00E5FF]/20 text-[#00E5FF]">
+                Automated Guardrails
+              </Badge>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Card 1: Runway Check */}
+              <div className={`p-4 rounded-xl border transition-all duration-300 shadow-md ${
+                runwayStatus === 'critical' 
+                  ? 'bg-rose-950/5 border-rose-500/20 hover:border-rose-500/40 shadow-rose-500/5' 
+                  : runwayStatus === 'warning'
+                    ? 'bg-amber-950/5 border-amber-500/20 hover:border-amber-500/40 shadow-amber-500/5'
+                    : 'bg-emerald-950/5 border-emerald-500/20 hover:border-emerald-500/40 shadow-emerald-500/5'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    {runwayStatus === 'critical' ? (
+                      <ShieldAlert className="text-rose-400" size={16} />
+                    ) : runwayStatus === 'warning' ? (
+                      <AlertTriangle className="text-amber-400" size={16} />
+                    ) : (
+                      <CheckCircle2 className="text-emerald-400" size={16} />
+                    )}
+                    <span className="font-bold text-xs text-foreground">{runwayTitle}</span>
+                  </div>
+                  <Badge variant={runwayStatus === 'critical' ? 'destructive' : runwayStatus === 'warning' ? 'warning' : 'success'} className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.2">
+                    {runwayStatus}
+                  </Badge>
+                </div>
+                <p className="text-xs text-white/80 font-medium mb-1.5 leading-snug">{runwayDescription}</p>
+                {runwayMitigation && (
+                  <p className="text-[10px] text-muted-foreground leading-relaxed font-semibold italic border-t border-border/40 pt-1.5 mt-1.5">
+                    💡 Recommended Action: {runwayMitigation}
+                  </p>
+                )}
+              </div>
+
+              {/* Card 2: LTV:CAC Unit Economics */}
+              <div className={`p-4 rounded-xl border transition-all duration-300 shadow-md ${
+                ltvCacStatus === 'critical' 
+                  ? 'bg-rose-950/5 border-rose-500/20 hover:border-rose-500/40 shadow-rose-500/5' 
+                  : ltvCacStatus === 'warning'
+                    ? 'bg-amber-950/5 border-amber-500/20 hover:border-amber-500/40 shadow-amber-500/5'
+                    : 'bg-emerald-950/5 border-emerald-500/20 hover:border-emerald-500/40 shadow-emerald-500/5'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Target className={
+                      ltvCacStatus === 'critical' 
+                        ? 'text-rose-400' 
+                        : ltvCacStatus === 'warning' 
+                          ? 'text-amber-400' 
+                          : 'text-emerald-400'
+                    } size={16} />
+                    <span className="font-bold text-xs text-foreground">{ltvCacTitle}</span>
+                  </div>
+                  <Badge variant={ltvCacStatus === 'critical' ? 'destructive' : ltvCacStatus === 'warning' ? 'warning' : 'success'} className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.2">
+                    {ltvCacStatus}
+                  </Badge>
+                </div>
+                <p className="text-xs text-white/80 font-medium mb-1.5 leading-snug">{ltvCacDescription}</p>
+                {ltvCacMitigation && (
+                  <p className="text-[10px] text-muted-foreground leading-relaxed font-semibold italic border-t border-border/40 pt-1.5 mt-1.5">
+                    💡 Recommended Action: {ltvCacMitigation}
+                  </p>
+                )}
+              </div>
+
+              {/* Card 3: Headcount Leverage */}
+              <div className={`p-4 rounded-xl border transition-all duration-300 shadow-md ${
+                headcountStatus === 'critical' 
+                  ? 'bg-rose-950/5 border-rose-500/20 hover:border-rose-500/40 shadow-rose-500/5' 
+                  : headcountStatus === 'warning'
+                    ? 'bg-amber-950/5 border-amber-500/20 hover:border-amber-500/40 shadow-amber-500/5'
+                    : 'bg-emerald-950/5 border-emerald-500/20 hover:border-emerald-500/40 shadow-emerald-500/5'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Users className={
+                      headcountStatus === 'critical' 
+                        ? 'text-rose-400' 
+                        : headcountStatus === 'warning' 
+                          ? 'text-amber-400' 
+                          : 'text-emerald-400'
+                    } size={16} />
+                    <span className="font-bold text-xs text-foreground">{headcountTitle}</span>
+                  </div>
+                  <Badge variant={headcountStatus === 'critical' ? 'destructive' : headcountStatus === 'warning' ? 'warning' : 'success'} className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.2">
+                    {headcountStatus}
+                  </Badge>
+                </div>
+                <p className="text-xs text-white/80 font-medium mb-1.5 leading-snug">{headcountDescription}</p>
+                {headcountMitigation && (
+                  <p className="text-[10px] text-muted-foreground leading-relaxed font-semibold italic border-t border-border/40 pt-1.5 mt-1.5">
+                    💡 Recommended Action: {headcountMitigation}
+                  </p>
+                )}
+              </div>
+
+              {/* Card 4: Marketing Efficiency */}
+              <div className={`p-4 rounded-xl border transition-all duration-300 shadow-md ${
+                marketingStatus === 'critical' 
+                  ? 'bg-rose-950/5 border-rose-500/20 hover:border-rose-500/40 shadow-rose-500/5' 
+                  : marketingStatus === 'warning'
+                    ? 'bg-amber-950/5 border-amber-500/20 hover:border-amber-500/40 shadow-amber-500/5'
+                    : 'bg-emerald-950/5 border-emerald-500/20 hover:border-emerald-500/40 shadow-emerald-500/5'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Percent className={
+                      marketingStatus === 'critical' 
+                        ? 'text-rose-400' 
+                        : marketingStatus === 'warning' 
+                          ? 'text-amber-400' 
+                          : 'text-emerald-400'
+                    } size={16} />
+                    <span className="font-bold text-xs text-foreground">{marketingTitle}</span>
+                  </div>
+                  <Badge variant={marketingStatus === 'critical' ? 'destructive' : marketingStatus === 'warning' ? 'warning' : 'success'} className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.2">
+                    {marketingStatus}
+                  </Badge>
+                </div>
+                <p className="text-xs text-white/80 font-medium mb-1.5 leading-snug">{marketingDescription}</p>
+                {marketingMitigation && (
+                  <p className="text-[10px] text-muted-foreground leading-relaxed font-semibold italic border-t border-border/40 pt-1.5 mt-1.5">
+                    💡 Recommended Action: {marketingMitigation}
+                  </p>
+                )}
+              </div>
             </div>
           </Card>
         </div>

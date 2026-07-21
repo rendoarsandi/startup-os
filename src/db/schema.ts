@@ -281,5 +281,22 @@ export const autopilotRules = sqliteTable('autopilot_rule', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
+export const contracts = sqliteTable('contract', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id),
+  title: text('title').notNull(),
+  description: text('description'),
+  status: text('status').notNull().default('draft'), // 'draft', 'active', 'completed', 'terminated'
+  value: integer('value').notNull().default(0), // stored in cents (e.g. 500000 = $5,000.00)
+  clientId: text('client_id'), // associated client name or ID string
+  startDate: integer('start_date', { mode: 'timestamp' }),
+  endDate: integer('end_date', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+
 
 
