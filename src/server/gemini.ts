@@ -1,4 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Effect } from "effect";
+import { ExternalServiceError } from "./errors";
 
 export const SYSTEM_PROMPTS = {
   cfo: `You are a strategic, trade-off-minded AI CFO (Chief Financial Officer) and seasoned Financial Analyst (aligned with agency-chief-financial-officer & agency-financial-analyst).
@@ -142,6 +144,32 @@ export class GeminiService {
     const result = await modelWithSystem.generateContent([prompt, filePart]);
     const response = await result.response;
     return response.text();
+  }
+
+  generateResponseEffect(prompt: string, context?: string, role: keyof typeof SYSTEM_PROMPTS = 'cfo') {
+    return Effect.tryPromise({
+      try: () => this.generateResponse(prompt, context, role),
+      catch: (cause) => new ExternalServiceError({ service: "Gemini", message: "Failed to generate AI response", cause }),
+    });
+  }
+
+  chatEffect(
+    history: { role: "user" | "model"; parts: string[] }[],
+    message: string,
+    context?: string,
+    role: keyof typeof SYSTEM_PROMPTS = 'cfo'
+  ) {
+    return Effect.tryPromise({
+      try: () => this.chat(history, message, context, role),
+      catch: (cause) => new ExternalServiceError({ service: "Gemini", message: "Failed to process chat message", cause }),
+    });
+  }
+
+  generateMultimodalResponseEffect(prompt: string, fileBase64: string, mimeType: string, role: keyof typeof SYSTEM_PROMPTS = 'cfo') {
+    return Effect.tryPromise({
+      try: () => this.generateMultimodalResponse(prompt, fileBase64, mimeType, role),
+      catch: (cause) => new ExternalServiceError({ service: "Gemini", message: "Failed to process multimodal request", cause }),
+    });
   }
 }
 

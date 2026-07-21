@@ -4,6 +4,8 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
+import { Effect } from 'effect';
+import { ExternalServiceError } from './errors';
 
 interface PlaidConfig {
   clientId: string;
@@ -308,4 +310,33 @@ export class PlaidService {
     }
     return data.transactions || [];
   }
+
+  createLinkTokenEffect(userId: string) {
+    return Effect.tryPromise({
+      try: () => this.createLinkToken(userId),
+      catch: (cause) => new ExternalServiceError({ service: "Plaid", message: "Failed to create link token", cause }),
+    });
+  }
+
+  exchangePublicTokenEffect(publicToken: string) {
+    return Effect.tryPromise({
+      try: () => this.exchangePublicToken(publicToken),
+      catch: (cause) => new ExternalServiceError({ service: "Plaid", message: "Failed to exchange public token", cause }),
+    });
+  }
+
+  getAccountsEffect(accessToken: string) {
+    return Effect.tryPromise({
+      try: () => this.getAccounts(accessToken),
+      catch: (cause) => new ExternalServiceError({ service: "Plaid", message: "Failed to fetch Plaid accounts", cause }),
+    });
+  }
+
+  getTransactionsEffect(accessToken: string, startDate: string, endDate: string) {
+    return Effect.tryPromise({
+      try: () => this.getTransactions(accessToken, startDate, endDate),
+      catch: (cause) => new ExternalServiceError({ service: "Plaid", message: "Failed to fetch Plaid transactions", cause }),
+    });
+  }
 }
+

@@ -11,6 +11,8 @@ import { GeminiService } from "./gemini";
 import { AnalysisService } from "./analysis";
 import { PlaidService } from "./plaid";
 import { v4 as uuidv4 } from 'uuid';
+import { DatabaseError, ExternalServiceError, NotFoundError, UnauthorizedError, ValidationError as EffectValidationError } from "./errors";
+import { GeminiServiceTag, PlaidServiceTag, AnalysisServiceTag, DbTag, makeGeminiLayer, makePlaidLayer, makeAnalysisLayer, makeDbLayer } from "./effect-services";
 import { 
   decodeCreateAccount, decodeSaasConfig, decodeCreateTransaction, decodeCreateBudget, 
   decodePlaidExchangeToken, decodeCreateInvoice, decodeParseInvoice, decodeParseInvoiceSecure, 
@@ -28,6 +30,24 @@ class ValidationError extends Error {
     this.name = "ValidationError";
   }
 }
+
+export async function runEffectHandler<A, E, R>(
+  program: Effect.Effect<A, E, R>,
+  context?: any
+): Promise<A> {
+  const exit = await Effect.runPromiseExit(
+    context ? Effect.provide(program, context) : (program as Effect.Effect<A, E, never>)
+  );
+  if (Exit.isSuccess(exit)) {
+    return exit.value;
+  }
+  const failure = Cause.failureOption(exit.cause);
+  if (Option.isSome(failure)) {
+    throw failure.value;
+  }
+  throw Cause.squash(exit.cause);
+}
+
 
 async function getValidatedBody<T>(
   request: Request,

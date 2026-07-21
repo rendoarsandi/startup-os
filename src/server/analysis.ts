@@ -1,5 +1,7 @@
 import { users, transactions, financialAccounts, employees, saasConfigs } from "../db/schema";
 import { eq, desc } from "drizzle-orm";
+import { Effect } from "effect";
+import { DatabaseError } from "./errors";
 
 export class AnalysisService {
   constructor(private db: any) {}
@@ -273,4 +275,19 @@ export class AnalysisService {
     
     return categories.includes(trimmed) ? trimmed : "Other";
   }
+
+  getUserContextEffect(userId: string) {
+    return Effect.tryPromise({
+      try: () => this.getUserContext(userId),
+      catch: (cause) => new DatabaseError({ message: "Failed to generate user context from database", cause }),
+    });
+  }
+
+  calculateRunwayAndBurnEffect(userId: string) {
+    return Effect.tryPromise({
+      try: () => this.calculateRunwayAndBurn(userId),
+      catch: (cause) => new DatabaseError({ message: "Failed to calculate runway and burn analysis", cause }),
+    });
+  }
 }
+
