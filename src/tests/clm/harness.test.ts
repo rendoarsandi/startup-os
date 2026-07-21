@@ -9,15 +9,15 @@ describe('MockD1Database Sanity Tests', () => {
   });
 
   test('should insert contract records', async () => {
-    const sql = 'INSERT INTO contract (id, user_id, name, type, parties, value, status, signature, signed_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    const sql = 'INSERT INTO contract (id, user_id, title, description, status, value, client_id, start_date, end_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
     const params = [
       'contract-uuid-1',
       'user-123',
       'Test Contract',
-      'client_service',
-      JSON.stringify({ client: 'Acme Corp', provider: 'Startup OS' }),
-      100000,
+      'Service Agreement for Acme Corp',
       'draft',
+      100000,
+      'client-acme',
       null,
       null,
       1716000000000,
@@ -29,20 +29,20 @@ describe('MockD1Database Sanity Tests', () => {
     expect(result.meta.changes).toBe(1);
     expect(db.store.length).toBe(1);
     expect(db.store[0].id).toBe('contract-uuid-1');
-    expect(db.store[0].name).toBe('Test Contract');
+    expect(db.store[0].title).toBe('Test Contract');
   });
 
   test('should query contract records using all()', async () => {
     const mockRecord: ContractRecord = {
       id: 'contract-uuid-1',
       user_id: 'user-123',
-      name: 'Test Contract',
-      type: 'client_service',
-      parties: JSON.stringify({ client: 'Acme Corp' }),
-      value: 100000,
+      title: 'Test Contract',
+      description: 'Service Agreement',
       status: 'draft',
-      signature: null,
-      signed_at: null,
+      value: 100000,
+      client_id: 'client-acme',
+      start_date: null,
+      end_date: null,
       created_at: 1716000000000,
       updated_at: 1716000000000
     };
@@ -72,13 +72,13 @@ describe('MockD1Database Sanity Tests', () => {
     const mockRecord: ContractRecord = {
       id: 'contract-uuid-1',
       user_id: 'user-123',
-      name: 'Test Contract',
-      type: 'client_service',
-      parties: JSON.stringify({ client: 'Acme Corp' }),
-      value: 100000,
+      title: 'Test Contract',
+      description: 'Service Agreement',
       status: 'draft',
-      signature: null,
-      signed_at: null,
+      value: 100000,
+      client_id: 'client-acme',
+      start_date: null,
+      end_date: null,
       created_at: 1716000000000,
       updated_at: 1716000000000
     };
@@ -94,23 +94,21 @@ describe('MockD1Database Sanity Tests', () => {
     const mockRecord: ContractRecord = {
       id: 'contract-uuid-1',
       user_id: 'user-123',
-      name: 'Test Contract',
-      type: 'client_service',
-      parties: JSON.stringify({ client: 'Acme Corp' }),
-      value: 100000,
+      title: 'Test Contract',
+      description: 'Service Agreement',
       status: 'draft',
-      signature: null,
-      signed_at: null,
+      value: 100000,
+      client_id: 'client-acme',
+      start_date: null,
+      end_date: null,
       created_at: 1716000000000,
       updated_at: 1716000000000
     };
     db.store.push(mockRecord);
 
-    const updateSql = 'UPDATE contract SET status = ?, signature = ?, signed_at = ?, updated_at = ? WHERE contract.id = ? and contract.user_id = ?';
+    const updateSql = 'UPDATE contract SET status = ?, updated_at = ? WHERE contract.id = ? and contract.user_id = ?';
     const params = [
-      'signed',
-      'John Doe Signature',
-      1716000100000,
+      'active',
       1716000100000,
       'contract-uuid-1',
       'user-123'
@@ -120,8 +118,6 @@ describe('MockD1Database Sanity Tests', () => {
     expect(result.success).toBe(true);
     expect(result.meta.changes).toBe(1);
 
-    expect(db.store[0].status).toBe('signed');
-    expect(db.store[0].signature).toBe('John Doe Signature');
-    expect(db.store[0].signed_at).toBe(1716000100000);
+    expect(db.store[0].status).toBe('active');
   });
 });

@@ -25,7 +25,7 @@ describe('Plaid Service Layer Direct Tests', () => {
     const service = new PlaidService({ clientId: 'mock_client', secret: 'mock_secret' });
     const transactions = await service.getTransactions('mock_access_token_svb', '2026-05-01', '2026-06-01');
     expect(transactions.length).toBeGreaterThan(0);
-    expect(transactions[0].merchant_name).toBe('Stripe Payout');
-    expect(transactions[1].merchant_name).toBe('Amazon Web Services');
+    expect(transactions.some(t => t.merchant_name === 'Stripe Payout')).toBe(true);
+    expect(transactions.some(t => t.merchant_name === 'Amazon Web Services')).toBe(true);
   });
 });

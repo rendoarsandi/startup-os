@@ -4,13 +4,13 @@ import { handleApiRequest } from '../../server/dispatcher';
 export interface ContractRecord {
   id: string;
   user_id: string;
-  name: string;
-  type: 'client_service' | 'nda' | 'employment';
-  parties: string; // JSON string
+  title: string;
+  description: string | null;
+  status: 'draft' | 'active' | 'completed' | 'terminated';
   value: number; // in cents
-  status: 'draft' | 'sent' | 'signed';
-  signature: string | null;
-  signed_at: number | null;
+  client_id: string | null;
+  start_date: number | null;
+  end_date: number | null;
   created_at: number;
   updated_at: number;
 }

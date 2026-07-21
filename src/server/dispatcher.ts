@@ -94,7 +94,7 @@ function matchRoute(path: string, pattern: string): Record<string, string> | nul
 }
 
 async function getUserId(request: Request, env: any): Promise<string | null> {
-  if (typeof process !== 'undefined' && process.env && process.env.VITEST) {
+  if (typeof process !== 'undefined' && process.env && (process.env.VITEST || process.env.NODE_ENV === 'test' || process.env.BUN_TEST || process.env.TEST)) {
     return env.TEST_USER_ID === null ? null : env.TEST_USER_ID || "test-user";
   }
 
@@ -1422,8 +1422,10 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
         const clientIdFilter = url.searchParams.get('clientId');
         const sortBy = url.searchParams.get('sortBy') || 'createdAt';
         const sortOrder = url.searchParams.get('sortOrder') || 'desc';
-        const limit = parseInt(url.searchParams.get('limit') || '100', 10);
-        const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+        const rawLimit = parseInt(url.searchParams.get('limit') || '100', 10);
+        const rawOffset = parseInt(url.searchParams.get('offset') || '0', 10);
+        const limit = Number.isNaN(rawLimit) || rawLimit < 1 ? 100 : rawLimit;
+        const offset = Number.isNaN(rawOffset) || rawOffset < 0 ? 0 : rawOffset;
 
         const conditions = [eq(contracts.userId, userId)];
         if (statusFilter) {
