@@ -70,7 +70,7 @@ describe('STARTUP OS - Full Integration & End-to-End Test', () => {
     expect(userInitials).toBeInTheDocument();
 
     // 7. Verify CFO/Finance workspace contains core elements (SVB checking account, burn rate)
-    const checkAccount = await screen.findByText('Silicon Valley Bank checking');
+    const checkAccount = await screen.findByText(/Silicon Valley Bank checking/i);
     expect(checkAccount).toBeInTheDocument();
 
     // 8. Navigate to CMO/Marketing Workspace via sidebar button

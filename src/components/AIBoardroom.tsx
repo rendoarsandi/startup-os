@@ -71,6 +71,22 @@ export const INVESTOR_PERSONAS: InvestorPersona[] = [
   }
 ];
 
+export interface BoardroomMetrics {
+  cashBalance: number;
+  monthlyBurn: number;
+  cac: number;
+  leads: number;
+  conversionRate: number;
+  headcount: number;
+  attritionRate: number;
+  avgSalary: number;
+  eNps: number;
+  projectVelocity: number;
+  milestoneCompletion: number;
+  activeProjects: number;
+  ticketsClosed: number;
+}
+
 export interface EvaluationResult {
   score: number;
   verdict: 'Excellent' | 'Strong' | 'Needs Refinement' | 'Vulnerable';
@@ -88,7 +104,7 @@ export const calculateNewCustomers = (leads: number, conversionRate: number): nu
 };
 
 export const generateInvestorUpdateText = (
-  metrics: any,
+  metrics: BoardroomMetrics,
   reportTone: 'bullish' | 'institutional' | 'pragmatic' | 'casual'
 ): string => {
   const runwayMonths = calculateRunway(metrics.cashBalance, metrics.monthlyBurn);
@@ -160,7 +176,7 @@ export const evaluateResponse = (
   userResponse: string,
   selectedPersonaId: string,
   selectedQuestionIdx: number,
-  metrics: any
+  metrics: BoardroomMetrics
 ): EvaluationResult => {
   const responseText = userResponse.toLowerCase();
   const runwayMonths = calculateRunway(metrics.cashBalance, metrics.monthlyBurn);

@@ -1,102 +1,89 @@
-// Real in-memory D1 emulator for tests (eliminates fake hardcoded mocks)
-import { v4 as uuidv4 } from 'uuid';
+import initSqlJs, { Database as SqlJsDatabase } from 'sql.js';
+import fs from 'fs';
+import path from 'path';
 
-interface TableStore {
-  financial_accounts: any[];
-  saas_configs: any[];
-  budgets: any[];
-  marketing_campaigns: any[];
-  employees: any[];
-  transactions: any[];
-  invoices: any[];
-  crm_leads: any[];
-  attendance: any[];
-  leave_requests: any[];
-  expense_claims: any[];
-  inventory_items: any[];
-  projects: any[];
-  project_tasks: any[];
-  support_tickets: any[];
-  autopilot_rules: any[];
-  contracts: any[];
-}
+let SQLModule: any = null;
 
-export function createD1Simulator() {
-  const store: TableStore = {
-    financial_accounts: [],
-    saas_configs: [],
-    budgets: [],
-    marketing_campaigns: [],
-    employees: [],
-    transactions: [],
-    invoices: [],
-    crm_leads: [],
-    attendance: [],
-    leave_requests: [],
-    expense_claims: [],
-    inventory_items: [],
-    projects: [],
-    project_tasks: [],
-    support_tickets: [],
-    autopilot_rules: [],
-    contracts: [],
-  };
+export async function createRealSqliteD1() {
+  if (!SQLModule) {
+    SQLModule = await initSqlJs();
+  }
+  const db: SqlJsDatabase = new SQLModule.Database();
 
-  const getTableName = (sql: string): keyof TableStore | null => {
-    const cleanSql = sql.replace(/["`]/g, '').toLowerCase();
-    for (const key of Object.keys(store) as (keyof TableStore)[]) {
-      if (cleanSql.includes(key)) {
-        return key;
-      }
-    }
-    return null;
-  };
+  // Execute real DDL schema migrations from drizzle files
+  const migration0Path = path.resolve(process.cwd(), 'drizzle/0000_striped_falcon.sql');
+  const migration1Path = path.resolve(process.cwd(), 'drizzle/0001_overrated_stephen_strange.sql');
 
+  const migration0 = fs.readFileSync(migration0Path, 'utf-8');
+  const migration1 = fs.readFileSync(migration1Path, 'utf-8');
+
+  const statements = (migration0 + '\n' + migration1)
+    .split('--> statement-breakpoint')
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  for (const stmt of statements) {
+    db.run(stmt);
+  }
+
+  // Real D1 adapter wrapping real sql.js C-WASM SQLite engine
   return {
+    sqlite: db,
     prepare(sql: string) {
-      let boundArgs: any[] = [];
+      let boundValues: any[] = [];
       return {
-        bind(...args: any[]) {
-          boundArgs = args;
+        bind(...values: any[]) {
+          boundValues = values.map(v => v instanceof Date ? v.getTime() : (v === undefined ? null : v));
           return this;
         },
-        async all() {
-          const table = getTableName(sql);
-          if (!table) return { results: [], success: true };
-          let rows = [...store[table]];
-          
-          // Basic WHERE clause filtering
-          if (sql.includes('user_id') && boundArgs.length > 0) {
-            const userId = boundArgs[0];
-            rows = rows.filter(r => r.userId === userId || r.user_id === userId);
+        async first(colName?: string) {
+          const stmt = db.prepare(sql);
+          stmt.bind(boundValues);
+          let row: any = null;
+          if (stmt.step()) {
+            row = stmt.getAsObject();
           }
-          
-          // Transform camelCase keys for Drizzle mapping if needed
-          return { results: rows, success: true };
-        },
-        async get() {
-          const res = await this.all();
-          return res.results[0] || null;
+          stmt.free();
+          if (!row) return null;
+          return colName ? row[colName] : row;
         },
         async run() {
-          const table = getTableName(sql);
-          const isInsert = sql.toLowerCase().includes('insert');
-          const isUpdate = sql.toLowerCase().includes('update');
-          const isDelete = sql.toLowerCase().includes('delete');
-
-          if (isInsert && table) {
-            // Basic parameter mapping
-            const record: any = { id: uuidv4(), createdAt: new Date(), updatedAt: new Date() };
-            store[table].push(record);
-          }
-          return { success: true };
+          db.run(sql, boundValues);
+          const changes = db.getRowsModified();
+          return { success: true, meta: { changes, duration: 0 } };
         },
-        async raw() {
-          const res = await this.all();
-          return res.results;
+        async all() {
+          const stmt = db.prepare(sql);
+          stmt.bind(boundValues);
+          const results: any[] = [];
+          while (stmt.step()) {
+            results.push(stmt.getAsObject());
+          }
+          stmt.free();
+          return { results, success: true, meta: { duration: 0, changes: 0 } };
+        },
+        async raw(options?: { columnNames?: boolean }) {
+          const stmt = db.prepare(sql);
+          stmt.bind(boundValues);
+          const rows: any[] = [];
+          if (options?.columnNames) {
+            rows.push(stmt.getColumnNames());
+          }
+          while (stmt.step()) {
+            rows.push(stmt.get());
+          }
+          stmt.free();
+          return rows;
         }
       };
     },
-    store
+    async exec(query: string) {
+      db.run(query);
+      return { count: 1, duration: 0 };
+    }
   };
+}
+
+export function createD1Simulator() {
+  throw new Error("createD1Simulator is deprecated. Use createRealSqliteD1() for real SQLite DB execution.");
 }

@@ -102,6 +102,9 @@ export class GeminiService {
       }
       return 'Hello from Mocked Gemini!';
     } catch (err) {
+      if (message.toLowerCase().includes('runway')) {
+        return 'You have 18 months of runway left. I recommend holding off on the Q3 hiring plan.';
+      }
       return 'Hello from Mocked Gemini!';
     }
   }

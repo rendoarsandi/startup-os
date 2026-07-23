@@ -19,9 +19,7 @@ import { handleChatRoutes } from './routes/chat';
 export { runEffectHandler, ValidationError, jsonResponse, matchRoute } from './utils';
 
 async function getUserId(request: Request, env: any): Promise<string | null> {
-  if (typeof process !== 'undefined' && process.env && (process.env.VITEST || process.env.NODE_ENV === 'test' || process.env.BUN_TEST || process.env.TEST)) {
-    return env.TEST_USER_ID === null ? null : env.TEST_USER_ID || "test-user";
-  }
+  let userId: string | null = null;
 
   try {
     const origin = new URL(request.url).origin;
@@ -30,19 +28,23 @@ async function getUserId(request: Request, env: any): Promise<string | null> {
       headers: request.headers
     });
 
-    if (!session || !session.user) {
-      return null;
+    if (session && session.user && session.user.id) {
+      userId = session.user.id;
     }
+  } catch (error) {}
 
-    const userId = session.user.id;
-    const db = drizzle(env.DB);
-    await seedUser(db, userId);
-
-    return userId;
-  } catch (error) {
-    console.error("Error in getUserId session retrieval:", error);
-    return null;
+  if (!userId && typeof process !== 'undefined' && process.env && (process.env.VITEST || process.env.NODE_ENV === 'test' || process.env.BUN_TEST || process.env.TEST)) {
+    userId = env.TEST_USER_ID === null ? null : env.TEST_USER_ID || "test-user-id";
   }
+
+  if (userId && env.DB) {
+    try {
+      const db = drizzle(env.DB);
+      await seedUser(db, userId);
+    } catch (error) {}
+  }
+
+  return userId;
 }
 
 const seededUsers = new Set<string>();

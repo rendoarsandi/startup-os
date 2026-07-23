@@ -19,6 +19,7 @@
     "db:migrate": "node node_modules/drizzle-kit/bin.cjs migrate"
   },
   "dependencies": {
+    "@effect/schema": "^0.75.5",
     "@google/generative-ai": "^0.24.1",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -36,7 +37,6 @@
     "@tanstack/react-router": "^1.170.17",
     "@tanstack/react-start": "^1.168.27",
     "@tanstack/react-table": "^8.20.5",
-    "@effect/schema": "^0.75.5",
     "ai": "^4.1.0",
     "better-auth": "^1.6.23",
     "class-variance-authority": "^0.7.1",
@@ -73,6 +73,7 @@
     "globals": "^17.6.0",
     "jsdom": "^29.1.1",
     "msw": "^2.15.0",
+    "sql.js": "^1.14.1",
     "tailwindcss": "^4.3.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
