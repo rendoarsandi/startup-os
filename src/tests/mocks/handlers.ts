@@ -1,9 +1,24 @@
 import { http, HttpResponse } from 'msw';
+import { handleApiRequest } from '../../server/dispatcher';
 
 let sessionUser: any = null;
 
 export const setSessionUser = (user: any) => {
   sessionUser = user;
+};
+
+// Mock D1 DB binding for MSW test environment
+const mockDb = {
+  prepare: () => {
+    const chainable = {
+      bind: () => chainable,
+      all: async () => [],
+      get: async () => null,
+      run: async () => ({ success: true }),
+      raw: async () => []
+    };
+    return chainable;
+  }
 };
 
 export const handlers = [
@@ -24,7 +39,7 @@ export const handlers = [
       }
     });
   }),
-  
+
   http.get('*/api/accounts', () => {
     return HttpResponse.json([
       { id: 'acc-1', name: 'Silicon Valley Bank checking', balance: 250000, type: 'depository' },
@@ -75,5 +90,15 @@ export const handlers = [
     return HttpResponse.json({
       response: 'Here is your current burn rate and runway report: You have 18 months of runway left.'
     });
+  }),
+  
+  http.all('*/api/*', async ({ request }) => {
+    try {
+      const cloned = request.clone();
+      const res = await handleApiRequest(cloned, { DB: mockDb });
+      return res;
+    } catch (err: any) {
+      return HttpResponse.json({ error: err.message }, { status: 500 });
+    }
   })
 ];
