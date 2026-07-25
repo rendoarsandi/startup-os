@@ -37,7 +37,7 @@ async function getUserId(request: Request, env: any): Promise<string | null> {
     userId = env.TEST_USER_ID === null ? null : env.TEST_USER_ID || "test-user-id";
   }
 
-  if (userId && env.DB) {
+  if (userId && env.DB && !env.DISABLE_SEED) {
     try {
       const db = drizzle(env.DB);
       await seedUser(db, userId);
@@ -50,7 +50,7 @@ async function getUserId(request: Request, env: any): Promise<string | null> {
 const seededUsers = new Set<string>();
 
 async function seedUser(db: any, userId: string) {
-  if (seededUsers.has(userId)) {
+  if (!userId || seededUsers.has(userId)) {
     return;
   }
   const existingAccounts = await db.select().from(financialAccounts).where(eq(financialAccounts.userId, userId)).limit(1).all();

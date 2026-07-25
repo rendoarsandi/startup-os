@@ -34,7 +34,8 @@ describe('Budgets Endpoints', () => {
   });
 
   test('GET /api/budgets returns 200 with empty list when no budgets exist', async () => {
-    const res = await handleApiRequest(new Request('http://localhost/api/budgets', {}), env);
+    const cleanDb = await createRealSqliteD1();
+    const res = await handleApiRequest(new Request('http://localhost/api/budgets', {}), { DB: cleanDb as any, DISABLE_SEED: true });
 
     expect(res.status).toBe(200);
     const data = await res.json() as any;
