@@ -5,7 +5,8 @@ import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Sparkles, Send, CheckCircle2, AlertCircle, Award } from 'lucide-react';
-import { INVESTOR_PERSONAS, EvaluationResult } from '../AIBoardroom';
+import { INVESTOR_PERSONAS } from '../AIBoardroom';
+import type { EvaluationResult } from '../AIBoardroom';
 
 interface QASimulatorProps {
   metrics: any;
