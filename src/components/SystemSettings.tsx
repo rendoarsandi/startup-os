@@ -22,31 +22,39 @@ interface MockUser {
   role: string;
 }
 
+function getStoredItem(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
 export const SystemSettings: React.FC = () => {
   // 1. Company Profile State
-  const [companyName, setCompanyName] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_company_name') : null) || 'Startup OS Corp');
-  const [companyDomain, setCompanyDomain] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_company_domain') : null) || 'startupos.co');
-  const [currency, setCurrency] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_currency') : null) || 'USD');
-  const [fiscalMonth, setFiscalMonth] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_fiscal_month') : null) || 'January');
+  const [companyName, setCompanyName] = useState(() => getStoredItem('sys_company_name') || 'Startup OS Corp');
+  const [companyDomain, setCompanyDomain] = useState(() => getStoredItem('sys_company_domain') || 'startupos.co');
+  const [currency, setCurrency] = useState(() => getStoredItem('sys_currency') || 'USD');
+  const [fiscalMonth, setFiscalMonth] = useState(() => getStoredItem('sys_fiscal_month') || 'January');
 
   // 2. AI Config State
-  const [aiModel, setAiModel] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_ai_model') : null) || 'Gemini 3.7 Flash');
+  const [aiModel, setAiModel] = useState(() => getStoredItem('sys_ai_model') || 'Gemini 3.7 Flash');
   const [temperature, setTemperature] = useState<number>(() => {
-    const local = typeof window !== 'undefined' ? localStorage.getItem('sys_temperature') : null;
+    const local = getStoredItem('sys_temperature');
     return local ? parseFloat(local) : 0.4;
   });
-  const [autonomyLevel, setAutonomyLevel] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_autonomy') : null) || 'Require Approval');
-  const [systemPrompt, setSystemPrompt] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_system_prompt') : null) || 'You are Startup OS, an autonomous C-Suite AI assistant.');
+  const [autonomyLevel, setAutonomyLevel] = useState(() => getStoredItem('sys_autonomy') || 'Require Approval');
+  const [systemPrompt, setSystemPrompt] = useState(() => getStoredItem('sys_system_prompt') || 'You are Startup OS, an autonomous C-Suite AI assistant.');
 
   // 3. Module Toggles State
-  const [cfoEnabled, setCfoEnabled] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_cfo_enabled') === 'true' : true));
-  const [cmoEnabled, setCmoEnabled] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_cmo_enabled') === 'true' : true));
-  const [chroEnabled, setChroEnabled] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_chro_enabled') === 'true' : true));
-  const [cooEnabled, setCooEnabled] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_coo_enabled') === 'true' : true));
+  const [cfoEnabled, setCfoEnabled] = useState(() => getStoredItem('sys_cfo_enabled') !== 'false');
+  const [cmoEnabled, setCmoEnabled] = useState(() => getStoredItem('sys_cmo_enabled') !== 'false');
+  const [chroEnabled, setChroEnabled] = useState(() => getStoredItem('sys_chro_enabled') !== 'false');
+  const [cooEnabled, setCooEnabled] = useState(() => getStoredItem('sys_coo_enabled') !== 'false');
 
   // 4. Mock Users State
   const [users, setUsers] = useState<MockUser[]>(() => {
-    const local = typeof window !== 'undefined' ? localStorage.getItem('sys_users') : null;
+    const local = getStoredItem('sys_users');
     return local ? JSON.parse(local) : [
       { id: '1', name: 'Rendo Arsandi', email: 'rendo@startupos.co', role: 'Administrator / Founder' },
       { id: '2', name: 'Alice Smith', email: 'alice@startupos.co', role: 'Finance (CFO)' },

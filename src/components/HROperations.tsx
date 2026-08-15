@@ -321,7 +321,8 @@ export const HROperations: React.FC<{
       {/* Tab bar */}
       <Tabs 
         value={activeTab} 
-        onValueChange={(val) => setActiveTab(val as any)} 
+        // SAFETY: Radix Tabs onValueChange corresponds to activeTab union types
+        onValueChange={(val) => setActiveTab(val as 'attendance' | 'leaves' | 'expenses')} 
         className="w-full space-y-6"
       >
         <TabsList className="grid grid-cols-3 w-full sm:w-[480px] h-10 bg-black/10">

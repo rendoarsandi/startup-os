@@ -211,13 +211,13 @@ Please analyze my active scenario. What are the key financial risks, and how can
     return `$${Math.round(cents / 100).toLocaleString('en-US')}`;
   };
 
-  const deptColors: Record<string, string> = {
+  const deptColors = {
     Engineering: 'bg-indigo-500/5 text-indigo-400 border-indigo-500/10',
     Product: 'bg-cyan-500/5 text-cyan-400 border-cyan-500/10',
     Marketing: 'bg-rose-500/5 text-rose-400 border-rose-500/10',
     Sales: 'bg-emerald-500/5 text-emerald-400 border-emerald-500/10',
     Operations: 'bg-amber-500/5 text-amber-400 border-amber-500/10'
-  };
+  } satisfies Record<string, string>;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">

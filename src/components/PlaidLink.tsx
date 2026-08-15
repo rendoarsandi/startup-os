@@ -213,7 +213,7 @@ export function PlaidLinkButton({ onSuccess }: PlaidLinkProps) {
               {exchangeMutation.error && (
                 <div className="mt-4 p-3 bg-rose-500/5 border border-rose-500/10 rounded-xl flex items-center gap-2.5 text-rose-400">
                   <ShieldAlert size={16} />
-                  <p className="text-xs font-semibold">{(exchangeMutation.error as Error).message}</p>
+                  <p className="text-xs font-semibold">{exchangeMutation.error instanceof Error ? exchangeMutation.error.message : String(exchangeMutation.error)}</p>
                 </div>
               )}
             </div>

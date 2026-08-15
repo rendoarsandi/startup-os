@@ -35,7 +35,9 @@ async function getUserId(request: Request, env: any): Promise<string | null> {
     // Session retrieval failed or unauthenticated
   }
 
-  if (!userId && typeof process !== 'undefined' && process.env && (process.env.VITEST || process.env.NODE_ENV === 'test' || process.env.BUN_TEST || process.env.TEST)) {
+  // SAFETY: Node.js / Bun runtime environment process check
+  const proc = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process;
+  if (!userId && proc?.env && (proc.env.VITEST || proc.env.NODE_ENV === 'test' || proc.env.BUN_TEST || proc.env.TEST)) {
     userId = env.TEST_USER_ID === null ? null : env.TEST_USER_ID || "test-user-id";
   }
 
@@ -210,7 +212,8 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
   const path = url.pathname;
   const method = request.method;
 
-  const context = (request as any).context || {};
+  // SAFETY: TanStack Start / Cloudflare worker injects context into request object
+  const context = (request as { context?: { cloudflare?: { env?: unknown } } }).context || {};
   const cloudflare = context.cloudflare || {};
   const env = passedEnv || cloudflare.env || process.env || {};
 

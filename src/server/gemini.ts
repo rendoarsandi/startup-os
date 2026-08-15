@@ -64,7 +64,7 @@ export class GeminiService {
 
       const result = await modelWithSystem.generateContent(fullPrompt);
       if (result && result.response) {
-        return typeof result.response.text === 'function' ? result.response.text() : String(result.response);
+        return result.response.text();
       }
       return 'Generated response unavailable.';
     } catch (err: unknown) {
@@ -116,7 +116,7 @@ export class GeminiService {
 
       const result = await chatSession.sendMessage(finalMessage);
       if (result && result.response) {
-        return typeof result.response.text === 'function' ? result.response.text() : String(result.response);
+        return result.response.text();
       }
       return 'Chat response unavailable.';
     } catch (err: unknown) {
@@ -145,7 +145,7 @@ export class GeminiService {
 
       const result = await modelWithSystem.generateContent([prompt, filePart]);
       if (result && result.response) {
-        return typeof result.response.text === 'function' ? result.response.text() : String(result.response);
+        return result.response.text();
       }
       return 'Multimodal response unavailable.';
     } catch (err: unknown) {
@@ -239,7 +239,8 @@ Return a JSON object with EXACTLY this shape (no Markdown formatting, no code bl
       })) : [];
 
       const calculatedGrandTotal = items.reduce((sum: number, it: { qty: number; rate: number }) => sum + (it.qty * it.rate), 0);
-      const grandTotal = typeof parsed.grandTotal === 'number' ? parsed.grandTotal : calculatedGrandTotal;
+      const parsedTotal = Number(parsed.grandTotal);
+      const grandTotal = Number.isFinite(parsedTotal) ? parsedTotal : calculatedGrandTotal;
       const isMathAccurate = Math.abs(calculatedGrandTotal - grandTotal) < 0.01;
 
       return {

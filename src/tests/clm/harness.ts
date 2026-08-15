@@ -1,6 +1,9 @@
 import { vi } from 'vitest';
 import { handleApiRequest } from '../../server/dispatcher';
 
+export type DbValue = string | number | boolean | null | undefined;
+export type DbRow = Record<string, DbValue>;
+
 export interface ContractRecord {
   id: string;
   user_id: string;
@@ -15,8 +18,16 @@ export interface ContractRecord {
   updated_at: number;
 }
 
+export interface DatabaseTableMap {
+  contract: ContractRecord[];
+  invoice: DbRow[];
+  employee: DbRow[];
+  crm_lead: DbRow[];
+  [key: string]: (ContractRecord | DbRow)[];
+}
+
 export class MockD1Database {
-  public tables: Record<string, Record<string, unknown>[]> = {
+  public tables: DatabaseTableMap = {
     contract: [],
     invoice: [],
     employee: [],
@@ -24,15 +35,15 @@ export class MockD1Database {
   };
 
   constructor(initialData: ContractRecord[] = []) {
-    this.tables.contract = [...initialData] as unknown as Record<string, unknown>[];
+    this.tables.contract = [...initialData];
   }
 
   get store(): ContractRecord[] {
-    return this.tables.contract as unknown as ContractRecord[];
+    return this.tables.contract;
   }
 
   set store(value: ContractRecord[]) {
-    this.tables.contract = value as unknown as Record<string, unknown>[];
+    this.tables.contract = value;
   }
 
   public clear() {
@@ -65,9 +76,9 @@ export class MockD1Database {
       },
       raw: vi.fn().mockImplementation(async () => {
         const res = await executeQuery('all');
-        return (res as { results?: unknown[] }).results 
-          ? (res as { results: unknown[] }).results.map((r) => Object.values(r as Record<string, unknown>)) 
-          : [];
+        // SAFETY: D1 all() result contains results row array
+        const results = (res as { results?: DbRow[] }).results;
+        return results ? results.map((r) => Object.values(r)) : [];
       }),
       first: vi.fn().mockImplementation(async () => {
         return executeQuery('get');
@@ -88,9 +99,10 @@ export class MockD1Database {
       if (!colsMatch) throw new Error(`MockD1: Malformed INSERT statement: ${sql}`);
       const columns = colsMatch[1].split(',').map(c => c.trim().replace(/['"`]/g, ''));
       
-      const newRecord: Record<string, unknown> = {};
+      const newRecord: DbRow = {};
       columns.forEach((col, idx) => {
-        newRecord[col] = params[idx];
+        // SAFETY: Mock D1 bound params represent scalar column values
+        newRecord[col] = params[idx] as DbValue;
       });
       
       this.tables[tableName].push(newRecord);
@@ -259,15 +271,17 @@ export interface TestEnv {
   BETTER_AUTH_SECRET?: string;
 }
 
+export type RequestPayload = DbRow | Record<string, string | number | boolean | null | undefined | DbRow[]>;
+
 export async function dispatchRequest(
   env: TestEnv,
   path: string,
   method: 'GET' | 'POST' | 'PUT',
-  body?: unknown
+  body?: RequestPayload
 ): Promise<Response> {
-  const headers: Record<string, string> = {
+  const headers = {
     'Content-Type': 'application/json',
-  };
+  } satisfies Record<string, string>;
   
   const request = new Request(`http://localhost${path}`, {
     method,
@@ -286,10 +300,10 @@ export async function apiGetContractById(env: TestEnv, id: string): Promise<Resp
   return await dispatchRequest(env, `/api/contracts/${id}`, 'GET');
 }
 
-export async function apiCreateContract(env: TestEnv, payload: unknown): Promise<Response> {
+export async function apiCreateContract(env: TestEnv, payload: RequestPayload): Promise<Response> {
   return await dispatchRequest(env, '/api/contracts', 'POST', payload);
 }
 
-export async function apiUpdateContract(env: TestEnv, id: string, payload: unknown): Promise<Response> {
+export async function apiUpdateContract(env: TestEnv, id: string, payload: RequestPayload): Promise<Response> {
   return await dispatchRequest(env, `/api/contracts/${id}`, 'PUT', payload);
 }

@@ -28,6 +28,7 @@ export const useInvoices = (enabled = true) => {
     q.from({ invoice: invoicesCollection })
   );
 
+  // SAFETY: TanStack DB live query result maps to stored Invoice entities
   const mappedInvoices = (invoices || [])
     .map((i: any) => i?.invoice)
     .filter(Boolean) as Invoice[];

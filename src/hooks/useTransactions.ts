@@ -37,6 +37,7 @@ export const useTransactions = (enabled = true) => {
     q.from({ transaction: transactionsCollection })
   );
 
+  // SAFETY: TanStack DB live query result maps to stored Transaction entities
   const mappedTransactions = (transactions || [])
     .map((t: any) => t?.transaction)
     .filter(Boolean) as Transaction[];

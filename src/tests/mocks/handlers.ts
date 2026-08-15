@@ -66,6 +66,7 @@ export const handlers = [
     try {
       const db = await getRealDb();
       const cloned = request.clone();
+      // SAFETY: Mock D1 simulated instance for MSW HTTP router
       const res = await handleApiRequest(cloned, { DB: db as any, GEMINI_API_KEY: 'test-key' });
       return res;
     } catch (err: any) {

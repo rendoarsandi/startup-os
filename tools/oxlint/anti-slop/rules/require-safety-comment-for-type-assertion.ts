@@ -21,12 +21,16 @@ function isConstAssertion(node: TypeAssertion): boolean {
 }
 
 function hasSafetyComment(sourceCode: SourceCode, node: TypeAssertion): boolean {
+  const nStart = (node as any).start ?? node.range?.[0] ?? 0;
   let current: ESTree.Node = node;
   while (true) {
     if (
       sourceCode
         .getCommentsBefore(current)
-        .some((comment) => comment.end <= node.start && /\bSAFETY\s*:/u.test(comment.value))
+        .some((comment: any) => {
+          const cEnd = comment.end ?? comment.range?.[1] ?? 0;
+          return cEnd <= nStart && /\bSAFETY\s*:/u.test(comment.value);
+        })
     ) {
       return true;
     }

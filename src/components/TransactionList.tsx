@@ -16,21 +16,21 @@ import {
 } from '@tanstack/react-table';
 import type { SortingState } from '@tanstack/react-table';
 
-const categoryIcons: Record<string, React.ReactNode> = {
+const categoryIcons = {
   Food: <Utensils size={14} className="text-cyan-400" />,
   Shopping: <ShoppingBag size={14} className="text-violet-400" />,
   Entertainment: <Gamepad2 size={14} className="text-pink-400" />,
   Housing: <Home size={14} className="text-indigo-400" />,
   Transport: <Car size={14} className="text-amber-400" />,
-};
+} satisfies Record<string, React.ReactNode>;
 
-const categoryClasses: Record<string, string> = {
+const categoryClasses = {
   Food: 'bg-cyan-500/5 border-cyan-500/10 text-cyan-400',
   Shopping: 'bg-violet-500/5 border-violet-500/10 text-violet-400',
   Entertainment: 'bg-pink-500/5 border-pink-500/10 text-pink-400',
   Housing: 'bg-indigo-500/5 border-indigo-500/10 text-indigo-400',
   Transport: 'bg-amber-500/5 border-amber-500/10 text-amber-400',
-};
+} satisfies Record<string, string>;
 
 const columnHelper = createColumnHelper<Transaction>();
 

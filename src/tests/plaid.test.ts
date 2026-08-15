@@ -43,11 +43,17 @@ vi.mock('../server/plaid', () => {
   };
 });
 
+interface PlaidTestEnv {
+  PLAID_CLIENT_ID?: string;
+  PLAID_SECRET?: string;
+  PLAID_ENV?: string;
+  GEMINI_API_KEY?: string;
+  DB?: any;
+}
+
 describe('Plaid Endpoint Routing Tests', () => {
   test('POST /api/plaid/create-link-token returns a link token', async () => {
-    const res = await handleApiRequest(new Request('http://localhost' + '/api/plaid/create-link-token', {
-      method: 'POST',
-    }), {
+    const env: PlaidTestEnv = {
       PLAID_CLIENT_ID: 'test-client-id',
       PLAID_SECRET: 'test-secret',
       PLAID_ENV: 'sandbox',
@@ -57,19 +63,20 @@ describe('Plaid Endpoint Routing Tests', () => {
           run: vi.fn().mockResolvedValue({ success: true }),
         }),
       },
-    } as any);
+    };
+
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/plaid/create-link-token', {
+      method: 'POST',
+    }), env);
 
     expect(res.status).toBe(200);
-    const data = await res.json() as any;
+    // SAFETY: Response contains linkToken
+    const data = (await res.json()) as { linkToken: string };
     expect(data.linkToken).toBe('link-sandbox-test-token');
   });
 
   test('POST /api/plaid/exchange-token performs flow successfully', async () => {
-    const res = await handleApiRequest(new Request('http://localhost' + '/api/plaid/exchange-token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ publicToken: 'mock_public_token_chase', institutionName: 'Chase Bank' }),
-    }), {
+    const env: PlaidTestEnv = {
       PLAID_CLIENT_ID: 'test-client-id',
       PLAID_SECRET: 'test-secret',
       PLAID_ENV: 'sandbox',
@@ -83,7 +90,13 @@ describe('Plaid Endpoint Routing Tests', () => {
           raw: vi.fn().mockResolvedValue([]),
         }),
       },
-    } as any);
+    };
+
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/plaid/exchange-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ publicToken: 'mock_public_token_chase', institutionName: 'Chase Bank' }),
+    }), env);
 
     if (res.status === 500) {
       const errBody = await res.json();
@@ -91,15 +104,14 @@ describe('Plaid Endpoint Routing Tests', () => {
     }
 
     expect(res.status).toBe(200);
-    const data = await res.json() as any;
+    // SAFETY: Response contains exchange success payload
+    const data = (await res.json()) as { success: boolean; itemId: string };
     expect(data.success).toBe(true);
     expect(data.itemId).toBe('item-sandbox-123');
   });
 
   test('POST /api/plaid/sync-transactions synchronizes accounts and transactions', async () => {
-    const res = await handleApiRequest(new Request('http://localhost' + '/api/plaid/sync-transactions', {
-      method: 'POST',
-    }), {
+    const env: PlaidTestEnv = {
       PLAID_CLIENT_ID: 'test-client-id',
       PLAID_SECRET: 'test-secret',
       PLAID_ENV: 'sandbox',
@@ -150,7 +162,11 @@ describe('Plaid Endpoint Routing Tests', () => {
           };
         }),
       },
-    } as any);
+    };
+
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/plaid/sync-transactions', {
+      method: 'POST',
+    }), env);
 
     if (res.status === 500) {
       const errBody = await res.json();
@@ -158,7 +174,8 @@ describe('Plaid Endpoint Routing Tests', () => {
     }
 
     expect(res.status).toBe(200);
-    const data = await res.json() as any;
+    // SAFETY: Response contains sync transaction counts
+    const data = (await res.json()) as { success: boolean; accountsSynced: number; newTransactionsSynced: number };
     expect(data.success).toBe(true);
     expect(data.accountsSynced).toBe(1);
     expect(data.newTransactionsSynced).toBe(1);

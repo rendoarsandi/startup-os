@@ -336,7 +336,15 @@ export const AIBoardroom: React.FC = () => {
         setMilestoneCompletion={setMilestoneCompletion}
       />
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+      <Tabs 
+        value={activeTab} 
+        onValueChange={(v) => {
+          if (v === 'briefing' || v === 'qa') {
+            setActiveTab(v);
+          }
+        }} 
+        className="w-full"
+      >
         <TabsList className="grid grid-cols-2 w-full max-w-md h-10 bg-black/10">
           <TabsTrigger value="briefing" className="flex items-center gap-2 text-xs font-bold">
             <FileText className="w-4 h-4" /> Board Briefing Report

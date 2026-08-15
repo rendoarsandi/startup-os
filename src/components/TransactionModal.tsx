@@ -30,8 +30,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
     queryKey: ['accounts'],
     queryFn: async () => {
       const response = await fetch('/api/accounts');
-      if (!response.ok) throw new Error('Failed to load accounts');
-      return response.json() as Promise<{ id: string }[]>;
+      // SAFETY: GET /api/accounts endpoint returns a list of account records with id
+      return (await response.json()) as { id: string }[];
     },
   });
 

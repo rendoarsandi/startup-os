@@ -34,7 +34,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeRole, setActiveR
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const saved = localStorage.getItem('sys_theme');
-    return (saved as 'light' | 'dark') || 'dark';
+    return saved === 'light' ? 'light' : 'dark';
   });
 
   useEffect(() => {

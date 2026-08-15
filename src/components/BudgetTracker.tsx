@@ -8,7 +8,7 @@ import { useTransactions } from '../hooks/useTransactions';
 import { Progress } from './ui/progress';
 import { Badge } from './ui/badge';
 
-const categoryIcons: Record<string, React.ReactNode> = {
+const categoryIcons = {
   Food: <Utensils size={16} className="text-cyan-400" />,
   Transport: <Car size={16} className="text-indigo-400" />,
   Housing: <Home size={16} className="text-violet-400" />,
@@ -20,9 +20,9 @@ const categoryIcons: Record<string, React.ReactNode> = {
   Insurance: <Shield size={16} className="text-blue-400" />,
   Income: <DollarSign size={16} className="text-emerald-400" />,
   Other: <Package size={16} className="text-slate-400" />,
-};
+} satisfies Record<string, React.ReactNode>;
 
-const categoryGlows: Record<string, string> = {
+const categoryGlows = {
   Food: 'bg-cyan-500/5 border-cyan-500/10 text-cyan-400',
   Transport: 'bg-indigo-500/5 border-indigo-500/10 text-indigo-400',
   Housing: 'bg-violet-500/5 border-violet-500/10 text-violet-400',
@@ -34,7 +34,7 @@ const categoryGlows: Record<string, string> = {
   Insurance: 'bg-blue-500/5 border-blue-500/10 text-blue-400',
   Income: 'bg-emerald-500/5 border-emerald-500/10 text-emerald-400',
   Other: 'bg-slate-500/5 border-slate-500/10 text-slate-400',
-};
+} satisfies Record<string, string>;
 
 export function BudgetTracker() {
   const { budgets, loading: budgetsLoading } = useBudgets();

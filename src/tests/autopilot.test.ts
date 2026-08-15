@@ -2,16 +2,22 @@ import { expect, test, describe, beforeEach } from 'vitest';
 import { handleApiRequest } from '../server/dispatcher';
 import { createRealSqliteD1 } from './mocks/d1Simulator';
 
+interface AutopilotTestEnv {
+  GEMINI_API_KEY: string;
+  TEST_USER_ID: string;
+  DB: any;
+}
+
 describe('COO Autopilot Rules API Endpoints', () => {
   let realDb: any;
-  let mockEnv: { GEMINI_API_KEY: string; TEST_USER_ID: string; DB: any };
+  let mockEnv: AutopilotTestEnv;
 
   beforeEach(async () => {
     realDb = await createRealSqliteD1();
     mockEnv = {
       GEMINI_API_KEY: 'test-key',
       TEST_USER_ID: 'test-user-id',
-      DB: realDb as any,
+      DB: realDb,
     };
   });
 
@@ -21,7 +27,8 @@ describe('COO Autopilot Rules API Endpoints', () => {
     }), mockEnv);
 
     expect(res.status).toBe(200);
-    const data = await res.json() as any;
+    // SAFETY: Autopilot rules endpoint returns array of rules
+    const data = (await res.json()) as unknown[];
     expect(Array.isArray(data)).toBe(true);
   });
 
@@ -39,7 +46,8 @@ describe('COO Autopilot Rules API Endpoints', () => {
     }), mockEnv);
 
     expect(res.status).toBe(201);
-    const data = await res.json() as any;
+    // SAFETY: Created autopilot rule payload contains rule fields
+    const data = (await res.json()) as { name: string; triggerType: string; actionType: string };
     expect(data.name).toBe('Urgent Ticket Alert Hook');
     expect(data.triggerType).toBe('high_priority_ticket');
     expect(data.actionType).toBe('webhook_alert');
@@ -63,7 +71,8 @@ describe('COO Autopilot Rules API Endpoints', () => {
       headers: { 'Content-Type': 'application/json' },
     }), mockEnv);
 
-    const createdData = await createRes.json() as any;
+    // SAFETY: Created rule payload contains id
+    const createdData = (await createRes.json()) as { id?: string };
     const ruleId = createdData.id || 'rule-1';
 
     const toggleRes = await handleApiRequest(new Request(`http://localhost/api/operations/autopilot/${ruleId}/toggle`, {
@@ -73,7 +82,8 @@ describe('COO Autopilot Rules API Endpoints', () => {
     }), mockEnv);
 
     expect(toggleRes.status).toBe(200);
-    const toggleData = await toggleRes.json() as any;
+    // SAFETY: Toggle rule response contains success and active boolean
+    const toggleData = (await toggleRes.json()) as { success: boolean; active: boolean };
     expect(toggleData.success).toBe(true);
     expect(toggleData.active).toBe(false);
 
@@ -88,7 +98,8 @@ describe('COO Autopilot Rules API Endpoints', () => {
     }), mockEnv);
 
     expect(res.status).toBe(200);
-    const data = await res.json() as any;
+    // SAFETY: Run checks response contains success boolean and logs array
+    const data = (await res.json()) as { success: boolean; logs: unknown[] };
     expect(data.success).toBe(true);
     expect(Array.isArray(data.logs)).toBe(true);
   });

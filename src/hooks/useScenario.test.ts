@@ -1,14 +1,13 @@
-import { describe, expect, test } from 'vitest';
-import { calculateCustomProjections } from './useScenario';
+import { calculateCustomProjections, type BaselineRunwayData } from './useScenario';
 
 describe('calculateCustomProjections', () => {
-  const mockBaseline = {
+  const mockBaseline: BaselineRunwayData = {
     cashBalance: 1000000, // $10,000.00
     fixedCosts: { payroll: 200000, subscriptions: 50000, total: 250000 }, // $2,500.00
     variableExpenses: 300000, // $3,000.00
     monthlyRevenue: 400000, // $4,000.00
     netBurn: 150000, // $1,500.00
-    runwayMonths: 6.7 as number | "Infinite",
+    runwayMonths: 6.7,
     projections: []
   };
 

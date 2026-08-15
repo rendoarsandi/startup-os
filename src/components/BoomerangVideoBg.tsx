@@ -81,8 +81,9 @@ export function BoomerangVideoBg({ src, className }: Props) {
       requestVideoFrameCallback?: (cb: () => void) => number;
     };
 
+    // SAFETY: Detect optional modern browser requestVideoFrameCallback API on HTMLVideoElement
     const vfcVideo = video as VFCVideo;
-    const hasVFC = typeof vfcVideo.requestVideoFrameCallback === 'function';
+    const hasVFC = 'requestVideoFrameCallback' in vfcVideo;
     let rafId = 0;
 
     const rafLoop = () => {

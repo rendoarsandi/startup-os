@@ -453,7 +453,8 @@ export const CRMPipeline: React.FC = () => {
                 <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Pipeline Stage</label>
                 <Select 
                   value={leadStage} 
-                  onValueChange={(val) => setLeadStage(val as any)}
+                  // SAFETY: Radix Select onValueChange corresponds to CRM lead stage options
+                  onValueChange={(val) => setLeadStage(val as 'lead' | 'contacted' | 'proposal' | 'won' | 'lost')}
                 >
                   <SelectTrigger className="w-full text-xs uppercase font-bold tracking-wider">
                     <SelectValue placeholder="STAGE" />

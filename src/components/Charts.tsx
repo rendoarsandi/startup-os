@@ -17,11 +17,11 @@ const COLORS = [
   '#A855F7', // Lavender
 ];
 
-const categoryIcons: Record<string, string> = {
+const categoryIcons = {
   Food: '🍔', Transport: '🚗', Housing: '🏠', Utilities: '💡',
   Entertainment: '🎮', Healthcare: '🏥', Savings: '💰',
   Personal: '👤', Insurance: '🛡️', Income: '💵', Other: '📦',
-};
+} satisfies Record<string, string>;
 
 const customTooltipStyle: React.CSSProperties = {
   background: 'rgba(8, 7, 16, 0.75)',

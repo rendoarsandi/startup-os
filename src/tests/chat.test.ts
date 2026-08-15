@@ -9,15 +9,14 @@ vi.mock('../server/gemini', () => {
   };
 });
 
+interface ChatTestEnv {
+  GEMINI_API_KEY?: string;
+  DB?: any;
+}
+
 describe('Chat Endpoint', () => {
   test('POST /api/chat returns response from Gemini', async () => {
-    const res = await handleApiRequest(new Request('http://localhost' + '/api/chat', {
-      method: 'POST',
-      body: JSON.stringify({ message: 'Hello' }),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    }), {
+    const env: ChatTestEnv = {
       GEMINI_API_KEY: 'test-key',
       DB: {
         prepare: vi.fn().mockReturnValue({
@@ -27,10 +26,19 @@ describe('Chat Endpoint', () => {
           raw: vi.fn().mockResolvedValue([]),
         }),
       },
-    } as any);
+    };
+
+    const res = await handleApiRequest(new Request('http://localhost' + '/api/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message: 'Hello' }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }), env);
 
     expect(res.status).toBe(200);
-    const data = await res.json() as any;
+    // SAFETY: Response contains chat response string
+    const data = (await res.json()) as { response: string };
     expect(data.response).toBe('Hello from Mocked Gemini!');
   });
 });

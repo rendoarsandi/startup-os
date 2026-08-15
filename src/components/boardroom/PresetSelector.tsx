@@ -75,6 +75,8 @@ interface PresetSelectorProps {
   onSelectPreset: (key: keyof typeof PRESETS) => void;
 }
 
+const PRESET_KEYS: (keyof typeof PRESETS)[] = ['standard', 'hypergrowth', 'conservative', 'crisis'];
+
 export const PresetSelector: React.FC<PresetSelectorProps> = ({ selectedPreset, onSelectPreset }) => {
   return (
     <Card className="p-4 border border-border/50 bg-card rounded-xl mb-6">
@@ -83,7 +85,7 @@ export const PresetSelector: React.FC<PresetSelectorProps> = ({ selectedPreset, 
         <h3 className="font-semibold text-xs text-foreground uppercase tracking-wider">Operational Simulation Scenarios</h3>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {(Object.keys(PRESETS) as (keyof typeof PRESETS)[]).map(key => (
+        {PRESET_KEYS.map(key => (
           <Button
             key={key}
             variant={selectedPreset === key ? 'default' : 'outline'}

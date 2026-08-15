@@ -15,6 +15,7 @@ describe('API Input Validation Tests via @effect/schema', () => {
             currency: 'USD',
           }),
         }),
+        // SAFETY: Mock D1 environment for API test
         {
           DB: {
             prepare: vi.fn().mockReturnValue({
@@ -26,7 +27,8 @@ describe('API Input Validation Tests via @effect/schema', () => {
       );
 
       expect(res.status).toBe(201);
-      const data = await res.json() as any;
+      // SAFETY: Response payload contains Account JSON record
+      const data = (await res.json()) as { name: string; balance: number };
       expect(data.name).toBe('Checking Account');
       expect(data.balance).toBe(5000);
     });
@@ -40,13 +42,15 @@ describe('API Input Validation Tests via @effect/schema', () => {
             balance: 5000,
           }),
         }),
+        // SAFETY: Empty test DB environment
         {
           DB: {},
         } as any
       );
 
       expect(res.status).toBe(400);
-      const data = await res.json() as any;
+      // SAFETY: Error response contains error string property
+      const data = (await res.json()) as { error?: string };
       expect(data.error).toBeDefined();
       expect(data.error).toContain('is missing');
     });
@@ -61,13 +65,15 @@ describe('API Input Validation Tests via @effect/schema', () => {
             type: 'checking',
           }),
         }),
+        // SAFETY: Empty test DB environment
         {
           DB: {},
         } as any
       );
 
       expect(res.status).toBe(400);
-      const data = await res.json() as any;
+      // SAFETY: Error response contains error string property
+      const data = (await res.json()) as { error?: string };
       expect(data.error).toBeDefined();
       expect(data.error).toContain('Expected string');
     });
@@ -86,6 +92,7 @@ describe('API Input Validation Tests via @effect/schema', () => {
             arpu: '50',
           }),
         }),
+        // SAFETY: Mock D1 environment for API test
         {
           DB: {
             prepare: vi.fn().mockReturnValue({
@@ -112,13 +119,15 @@ describe('API Input Validation Tests via @effect/schema', () => {
             churnRate: 0.05,
           }),
         }),
+        // SAFETY: Empty test DB environment
         {
           DB: {},
         } as any
       );
 
       expect(res.status).toBe(400);
-      const data = await res.json() as any;
+      // SAFETY: Error response contains error string property
+      const data = (await res.json()) as { error?: string };
       expect(data.error).toContain('is missing');
     });
   });
@@ -134,13 +143,15 @@ describe('API Input Validation Tests via @effect/schema', () => {
             merchant: 'Vendors',
           }),
         }),
+        // SAFETY: Empty test DB environment
         {
           DB: {},
         } as any
       );
 
       expect(res.status).toBe(400);
-      const data = await res.json() as any;
+      // SAFETY: Error response contains error string property
+      const data = (await res.json()) as { error?: string };
       expect(data.error).toContain('is missing');
     });
   });

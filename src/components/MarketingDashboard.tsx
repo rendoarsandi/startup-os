@@ -265,7 +265,8 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
                 <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Initial Status</label>
                 <Select 
                   value={newStatus} 
-                  onValueChange={(val) => setNewStatus(val as any)}
+                  // SAFETY: Radix Select onValueChange corresponds to campaign status options
+                  onValueChange={(val) => setNewStatus(val as 'active' | 'paused' | 'completed')}
                 >
                   <SelectTrigger className="w-full text-xs font-bold uppercase tracking-wider h-10">
                     <SelectValue placeholder="STATUS" />

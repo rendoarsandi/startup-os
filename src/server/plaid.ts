@@ -66,7 +66,8 @@ export class PlaidService {
       }),
     });
 
-    const data = await response.json() as any;
+    // SAFETY: Plaid create link token endpoint response structure
+    const data = (await response.json()) as { error_code?: string; error_message?: string; link_token: string };
     if (data.error_code) {
       throw new Error(`Plaid error: ${data.error_message}`);
     }
@@ -98,7 +99,8 @@ export class PlaidService {
       }),
     });
 
-    const data = await response.json() as any;
+    // SAFETY: Plaid public token exchange endpoint response structure
+    const data = (await response.json()) as { error_code?: string; error_message?: string; access_token: string; item_id: string };
     if (data.error_code) {
       throw new Error(`Plaid error: ${data.error_message}`);
     }
@@ -121,7 +123,8 @@ export class PlaidService {
       }),
     });
 
-    const data = await response.json() as any;
+    // SAFETY: Plaid accounts balance endpoint response structure
+    const data = (await response.json()) as { error_code?: string; error_message?: string; accounts?: any[] };
     if (data.error_code) {
       throw new Error(`Plaid error: ${data.error_message}`);
     }
@@ -231,7 +234,8 @@ export class PlaidService {
       }),
     });
 
-    const data = await response.json() as any;
+    // SAFETY: Plaid transactions response structure
+    const data = (await response.json()) as { error_code?: string; error_message?: string; transactions?: any[] };
     if (data.error_code) {
       throw new Error(`Plaid error: ${data.error_message}`);
     }

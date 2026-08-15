@@ -40,7 +40,7 @@ export interface SeasonalityWeight {
 
 export const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export const SEASONALITY_PROFILES: Record<string, Record<string, SeasonalityWeight>> = {
+export const SEASONALITY_PROFILES = {
   steady: {
     Jan: { rev: 1.0, exp: 1.0 }, Feb: { rev: 1.0, exp: 1.0 }, Mar: { rev: 1.0, exp: 1.0 },
     Apr: { rev: 1.0, exp: 1.0 }, May: { rev: 1.0, exp: 1.0 }, Jun: { rev: 1.0, exp: 1.0 },
@@ -65,7 +65,7 @@ export const SEASONALITY_PROFILES: Record<string, Record<string, SeasonalityWeig
     Jul: { rev: 0.75, exp: 0.9 }, Aug: { rev: 0.75, exp: 0.9 }, Sep: { rev: 1.1, exp: 1.04 },
     Oct: { rev: 1.1, exp: 1.04 }, Nov: { rev: 1.1, exp: 1.04 }, Dec: { rev: 1.1, exp: 1.04 }
   }
-};
+} satisfies Record<string, Record<string, SeasonalityWeight>>;
 
 export interface BaselineRunwayData {
   cashBalance: number;
@@ -277,6 +277,7 @@ export const useScenario = (baseline: BaselineRunwayData | undefined) => {
       inputs,
       active: false,
       projections: [],
+      // SAFETY: Fallback baseline runway representation when uninitialized
       runwayMonths: 0 as number | "Infinite",
       netBurn: 0,
       monthlyRevenue: 0,

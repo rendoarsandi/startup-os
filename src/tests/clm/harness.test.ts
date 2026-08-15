@@ -54,7 +54,8 @@ describe('MockD1Database Sanity Tests', () => {
     expect(res1.length).toBe(1);
     expect(res1[0].id).toBe('contract-uuid-1');
     
-    const resultObj = res1 as unknown as { results: ContractRecord[] };
+    // SAFETY: Mock D1 all() result array carries results property
+    const resultObj = res1 as { results: ContractRecord[] };
     expect(resultObj.results).toBeDefined();
     expect(resultObj.results.length).toBe(1);
     expect(resultObj.results[0].id).toBe('contract-uuid-1');

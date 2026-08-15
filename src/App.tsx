@@ -222,7 +222,8 @@ function App() {
                 {currentView === 'dashboard' && (
                   <Tabs 
                     value={cfoView} 
-                    onValueChange={(val) => setCfoView(val as any)} 
+                    // SAFETY: Radix Tabs onValueChange matches cfoView union types
+                    onValueChange={(val) => setCfoView(val as 'overview' | 'invoices')} 
                     className="w-full sm:w-auto self-start"
                   >
                     <TabsList className="grid grid-cols-2 w-full sm:w-80 h-9 bg-black/10">
@@ -317,7 +318,8 @@ function App() {
                 {currentView === 'dashboard' && (
                   <Tabs 
                     value={cmoView} 
-                    onValueChange={(val) => setCmoView(val as any)} 
+                    // SAFETY: Radix Tabs onValueChange matches cmoView union types
+                    onValueChange={(val) => setCmoView(val as 'analytics' | 'brainstorm')} 
                     className="w-full sm:w-auto self-start"
                   >
                     <TabsList className="grid grid-cols-2 w-full sm:w-80 h-9 bg-black/10">

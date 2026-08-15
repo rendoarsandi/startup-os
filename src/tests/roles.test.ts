@@ -10,8 +10,13 @@ vi.mock('../server/gemini', () => {
   };
 });
 
+interface RoleTestEnv {
+  GEMINI_API_KEY?: string;
+  DB?: any;
+}
+
 describe('Multi-Role Executive API Endpoints', () => {
-  const mockEnv = {
+  const mockEnv: RoleTestEnv = {
     GEMINI_API_KEY: 'test-key',
     DB: {
       prepare: vi.fn().mockReturnValue({
@@ -22,7 +27,7 @@ describe('Multi-Role Executive API Endpoints', () => {
         run: vi.fn().mockResolvedValue({ success: true }),
       }),
     },
-  } as any;
+  };
 
   test('POST /api/chat supports marketer role', async () => {
     const res = await handleApiRequest(new Request('http://localhost' + '/api/chat', {
@@ -32,7 +37,8 @@ describe('Multi-Role Executive API Endpoints', () => {
     }), mockEnv);
 
     expect(res.status).toBe(200);
-    const data = await res.json() as any;
+    // SAFETY: Chat endpoint returns response string payload
+    const data = (await res.json()) as { response: string };
     expect(data.response).toBe('Hello from Mocked Gemini!');
   });
 
@@ -44,7 +50,8 @@ describe('Multi-Role Executive API Endpoints', () => {
     }), mockEnv);
 
     expect(res.status).toBe(200);
-    const data = await res.json() as any;
+    // SAFETY: Chat endpoint returns response string payload
+    const data = (await res.json()) as { response: string };
     expect(data.response).toBe('Hello from Mocked Gemini!');
   });
 
@@ -56,12 +63,13 @@ describe('Multi-Role Executive API Endpoints', () => {
     }), mockEnv);
 
     expect(res.status).toBe(200);
-    const data = await res.json() as any;
+    // SAFETY: Chat endpoint returns response string payload
+    const data = (await res.json()) as { response: string };
     expect(data.response).toBe('Hello from Mocked Gemini!');
   });
 
   test('GET /api/marketing/campaigns returns campaigns', async () => {
-    const mockEnvWithCampaigns = {
+    const mockEnvWithCampaigns: RoleTestEnv = {
       ...mockEnv,
       DB: {
         prepare: vi.fn().mockReturnValue({
@@ -72,14 +80,15 @@ describe('Multi-Role Executive API Endpoints', () => {
           run: vi.fn().mockResolvedValue({ success: true }),
         }),
       },
-    } as any;
+    };
 
     const res = await handleApiRequest(new Request('http://localhost' + '/api/marketing/campaigns', {
       method: 'GET',
     }), mockEnvWithCampaigns);
 
     expect(res.status).toBe(200);
-    const data = await res.json() as any;
+    // SAFETY: Marketing campaigns endpoint returns array of campaign records
+    const data = (await res.json()) as { name: string }[];
     expect(Array.isArray(data)).toBe(true);
     expect(data.length).toBeGreaterThan(0);
     expect(data[0]).toHaveProperty('name');
@@ -93,7 +102,8 @@ describe('Multi-Role Executive API Endpoints', () => {
     }), mockEnv);
 
     expect(res.status).toBe(201);
-    const data = await res.json() as any;
+    // SAFETY: Created campaign returns campaign payload
+    const data = (await res.json()) as { name: string; budget: number };
     expect(data.name).toBe('New Ad Campaign');
     expect(data.budget).toBe(100000);
   });
@@ -106,12 +116,13 @@ describe('Multi-Role Executive API Endpoints', () => {
     }), mockEnv);
 
     expect(res.status).toBe(200);
-    const data = await res.json() as any;
+    // SAFETY: Generate ideas returns ideas string payload
+    const data = (await res.json()) as { ideas: string };
     expect(data.ideas).toBe('Mocked Generative Response');
   });
 
   test('GET /api/hr/employees returns employee roster', async () => {
-    const mockEnvWithEmployees = {
+    const mockEnvWithEmployees: RoleTestEnv = {
       ...mockEnv,
       DB: {
         prepare: vi.fn().mockReturnValue({
@@ -122,14 +133,15 @@ describe('Multi-Role Executive API Endpoints', () => {
           run: vi.fn().mockResolvedValue({ success: true }),
         }),
       },
-    } as any;
+    };
 
     const res = await handleApiRequest(new Request('http://localhost' + '/api/hr/employees', {
       method: 'GET',
     }), mockEnvWithEmployees);
 
     expect(res.status).toBe(200);
-    const data = await res.json() as any;
+    // SAFETY: HR employees endpoint returns array of employee records
+    const data = (await res.json()) as { role: string }[];
     expect(Array.isArray(data)).toBe(true);
     expect(data.length).toBeGreaterThan(0);
     expect(data[0]).toHaveProperty('role');
@@ -143,7 +155,8 @@ describe('Multi-Role Executive API Endpoints', () => {
     }), mockEnv);
 
     expect(res.status).toBe(201);
-    const data = await res.json() as any;
+    // SAFETY: Created employee returns employee payload
+    const data = (await res.json()) as { name: string; salary: number };
     expect(data.name).toBe('Frank Ocean');
     expect(data.salary).toBe(20000000);
   });
@@ -156,7 +169,8 @@ describe('Multi-Role Executive API Endpoints', () => {
     }), mockEnv);
 
     expect(res.status).toBe(200);
-    const data = await res.json() as any;
+    // SAFETY: Generate doc returns document string payload
+    const data = (await res.json()) as { document: string };
     expect(data.document).toBe('Mocked Generative Response');
   });
 });

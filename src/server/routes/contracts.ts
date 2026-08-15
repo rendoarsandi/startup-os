@@ -25,7 +25,7 @@ export async function handleContractsRoutes(request: Request, path: string, meth
         conditions.push(eq(contracts.clientId, clientIdFilter));
       }
 
-      const columnMap: Record<string, any> = {
+      const columnMap = {
         createdAt: contracts.createdAt,
         updatedAt: contracts.updatedAt,
         value: contracts.value,
@@ -33,7 +33,8 @@ export async function handleContractsRoutes(request: Request, path: string, meth
         startDate: contracts.startDate,
         endDate: contracts.endDate,
       };
-      const column = columnMap[sortBy] || contracts.createdAt;
+      // SAFETY: Validated against known contract schema columns
+      const column = (sortBy in columnMap ? columnMap[sortBy as keyof typeof columnMap] : contracts.createdAt);
       const orderByClause = sortOrder.toLowerCase() === 'asc' ? asc(column) : desc(column);
 
       const results = await db.select()

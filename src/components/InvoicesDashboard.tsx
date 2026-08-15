@@ -56,9 +56,11 @@ export const InvoicesDashboard: React.FC = () => {
   const form = useForm({
     defaultValues: {
       clientName: '',
+      // SAFETY: Default invoice type is sales
       invoiceType: 'sales' as 'sales' | 'purchase',
       invoiceNumber: '',
       dueDate: '',
+      // SAFETY: Initial empty line item array
       lineItems: [{ description: '', qty: 1, rate: 0 }] as InvoiceItem[],
     },
     onSubmit: async ({ value }) => {
@@ -129,6 +131,7 @@ export const InvoicesDashboard: React.FC = () => {
       const base64Data = await new Promise<{ cleanBase64: string; mimeType: string }>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
+          // SAFETY: readAsDataURL produces a base64 Data URL string on success
           const base64String = reader.result as string;
           const commaIndex = base64String.indexOf(',');
           resolve({
@@ -192,7 +195,8 @@ export const InvoicesDashboard: React.FC = () => {
       refetch();
       // Update currently selected invoice details
       if (selectedInvoice) {
-        setSelectedInvoice(prev => prev ? { ...prev, status: prev.status === 'paid' ? 'unpaid' : 'paid' } as Invoice : null);
+        // SAFETY: Toggle status while preserving all existing invoice record fields
+        setSelectedInvoice(prev => prev ? ({ ...prev, status: prev.status === 'paid' ? 'unpaid' : 'paid' } as Invoice) : null);
       }
     }
   });
@@ -470,7 +474,8 @@ export const InvoicesDashboard: React.FC = () => {
             
             <Tabs 
               value={filterType} 
-              onValueChange={(val) => setFilterType(val as any)} 
+              // SAFETY: Radix Tabs onValueChange value corresponds to tab trigger values
+              onValueChange={(val) => setFilterType(val as 'all' | 'sales' | 'purchase')} 
               className="w-full sm:w-auto"
             >
               <TabsList className="grid grid-cols-3 w-full sm:w-60 h-9">
@@ -484,7 +489,8 @@ export const InvoicesDashboard: React.FC = () => {
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <Select 
                 value={filterStatus} 
-                onValueChange={(val) => setFilterStatus(val as any)}
+                // SAFETY: Radix Select onValueChange value corresponds to select item values
+                onValueChange={(val) => setFilterStatus(val as 'all' | 'paid' | 'unpaid' | 'overdue')}
               >
                 <SelectTrigger className="w-full sm:w-36 h-9 text-[10px] uppercase font-bold tracking-wider">
                   <SelectValue placeholder="STATUS" />

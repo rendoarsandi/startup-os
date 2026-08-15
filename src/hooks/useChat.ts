@@ -79,7 +79,7 @@ export const useChat = (activeRole: 'cfo' | 'marketer' | 'hr' | 'operations') =>
     sendMessage,
     clearChat,
     isLoading: mutation.isPending,
-    error: mutation.error ? (mutation.error as Error).message : null,
+    error: mutation.error ? (mutation.error instanceof Error ? mutation.error.message : String(mutation.error)) : null,
   };
 };
 
