@@ -213,7 +213,12 @@ export const useScenario = (baseline: BaselineRunwayData | undefined) => {
     } catch (e) {
       console.warn("Failed to load scenario inputs from localStorage", e);
     }
-    return DEFAULT_INPUTS;
+    return {
+      ...DEFAULT_INPUTS,
+      churnRate: baseline?.churnRate !== undefined ? baseline.churnRate / 100 : DEFAULT_INPUTS.churnRate,
+      cac: baseline?.cac !== undefined ? Math.round(baseline.cac / 100) : DEFAULT_INPUTS.cac,
+      arpu: baseline?.arpu !== undefined ? Math.round(baseline.arpu / 100) : DEFAULT_INPUTS.arpu,
+    };
   });
 
   const [active, setActive] = useState<boolean>(() => {
@@ -223,17 +228,6 @@ export const useScenario = (baseline: BaselineRunwayData | undefined) => {
       return false;
     }
   });
-
-  useEffect(() => {
-    if (baseline && !localStorage.getItem('ai_cfo_scenario_inputs')) {
-      setInputs(prev => ({
-        ...prev,
-        churnRate: baseline.churnRate !== undefined ? baseline.churnRate / 100 : 2.0,
-        cac: baseline.cac !== undefined ? Math.round(baseline.cac / 100) : 100,
-        arpu: baseline.arpu !== undefined ? Math.round(baseline.arpu / 100) : 50
-      }));
-    }
-  }, [baseline]);
 
   useEffect(() => {
     try {
@@ -399,7 +393,7 @@ export const useScenario = (baseline: BaselineRunwayData | undefined) => {
   }
 
   // Calculate Delta compared to baseline runway
-  let runwayDelta = 0;
+  let runwayDelta: number;
   if (baseline.runwayMonths === "Infinite") {
     if (runwayMonths === "Infinite") {
       runwayDelta = 0;

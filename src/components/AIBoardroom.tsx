@@ -182,8 +182,8 @@ export const evaluateResponse = (
   const runwayMonths = calculateRunway(metrics.cashBalance, metrics.monthlyBurn);
   
   let score = 50;
-  let critiquePoints: string[] = [];
-  let gapPoints: string[] = [];
+  const critiquePoints: string[] = [];
+  const gapPoints: string[] = [];
 
   if (responseText.length > 250) {
     score += 15;

@@ -92,7 +92,9 @@ export const TicketsSection: React.FC = () => {
         description: tDesc,
         priority: tPriority
       });
-    } catch (err) {}
+    } catch (_err) {
+      console.error('Failed to create ticket', _err);
+    }
     setIsSaving(false);
   };
 

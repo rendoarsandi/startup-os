@@ -14,7 +14,7 @@ vi.mock('../server/plaid', () => {
         });
       })
       
-      getAccounts = vi.fn().mockImplementation((token: string) => {
+      getAccounts = vi.fn().mockImplementation((_token: string) => {
         return Promise.resolve([
           {
             account_id: 'mock_chase_checking',
@@ -26,7 +26,7 @@ vi.mock('../server/plaid', () => {
         ]);
       })
       
-      getTransactions = vi.fn().mockImplementation((token: string, start: string, end: string) => {
+      getTransactions = vi.fn().mockImplementation((_token: string, _start: string, _end: string) => {
         return Promise.resolve([
           {
             transaction_id: 'tx_chase_checking_aws',

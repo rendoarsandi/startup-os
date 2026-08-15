@@ -2,7 +2,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
 import {
   financialAccounts, saasConfigs, budgets, marketingCampaigns, employees,
-  invoices, crmLeads, attendance, leaveRequests, expenseClaims, inventoryItems, projects, projectTasks, supportTickets
+  invoices, crmLeads, attendance, leaveRequests, expenseClaims, inventoryItems, projects, supportTickets
 } from "../db/schema";
 import { getAuth } from './auth';
 import { v4 as uuidv4 } from 'uuid';
@@ -31,7 +31,9 @@ async function getUserId(request: Request, env: any): Promise<string | null> {
     if (session && session.user && session.user.id) {
       userId = session.user.id;
     }
-  } catch (error) {}
+  } catch (_err) {
+    // Session retrieval failed or unauthenticated
+  }
 
   if (!userId && typeof process !== 'undefined' && process.env && (process.env.VITEST || process.env.NODE_ENV === 'test' || process.env.BUN_TEST || process.env.TEST)) {
     userId = env.TEST_USER_ID === null ? null : env.TEST_USER_ID || "test-user-id";
@@ -41,7 +43,9 @@ async function getUserId(request: Request, env: any): Promise<string | null> {
     try {
       const db = drizzle(env.DB);
       await seedUser(db, userId);
-    } catch (error) {}
+    } catch (_err) {
+      // Seeding ignored on race/duplicate
+    }
   }
 
   return userId;
@@ -240,16 +244,16 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
     ];
 
     for (const handler of handlers) {
-      const response = await handler(request, path, method, db, userId, env.GEMINI_API_KEY ? env : url);
+      const response = await handler(request, path, method, db, userId, env);
       if (response) return response;
     }
 
     return jsonResponse({ error: `Not Found: ${method} ${path}` }, 404);
   } catch (error: any) {
-    if (error instanceof ValidationError) {
+    if (error instanceof ValidationError || (error && error._tag === 'ValidationError') || error?.name === 'ValidationError') {
       return jsonResponse({ error: error.message }, 400);
     }
     console.error(`API Error on ${method} ${path}:`, error);
-    return jsonResponse({ error: error.message }, 500);
+    return jsonResponse({ error: error?.message || 'Internal Server Error' }, 500);
   }
 }

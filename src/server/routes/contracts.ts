@@ -4,7 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { decodeCreateContract, decodeUpdateContract } from '../schemas';
 import { getValidatedBody, jsonResponse, matchRoute } from '../utils';
 
-export async function handleContractsRoutes(request: Request, path: string, method: string, db: any, userId: string, url: URL): Promise<Response | null> {
+export async function handleContractsRoutes(request: Request, path: string, method: string, db: any, userId: string, _env?: any): Promise<Response | null> {
+  const url = new URL(request.url);
   if (path === '/api/contracts') {
     if (method === 'GET') {
       const statusFilter = url.searchParams.get('status');

@@ -1,11 +1,7 @@
 import { Cause, Effect, Exit, Option } from 'effect';
+import { ValidationError } from './errors';
 
-export class ValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "ValidationError";
-  }
-}
+export { ValidationError };
 
 export async function runEffectHandler<A, E, R>(
   program: Effect.Effect<A, E, R>,
@@ -30,12 +26,12 @@ export async function getValidatedBody<T>(
 ): Promise<T> {
   const program = Effect.tryPromise({
     try: () => request.json(),
-    catch: () => new ValidationError("Invalid JSON payload"),
+    catch: () => new ValidationError({ message: "Invalid JSON payload" }),
   }).pipe(
     Effect.flatMap(decoder),
     Effect.mapError((error) => error instanceof ValidationError
       ? error
-      : new ValidationError(error instanceof Error ? error.message : "Validation failed")),
+      : new ValidationError({ message: error instanceof Error ? error.message : String(error) })),
   );
 
   const exit = await Effect.runPromiseExit(program);

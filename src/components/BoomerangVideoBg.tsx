@@ -149,23 +149,28 @@ export function BoomerangVideoBg({ src, className }: Props) {
     const canvas = displayCanvasRef.current;
     if (!canvas) return;
 
+    let scrollRafId = 0;
     const handleScroll = () => {
-      const scrollTop = window.scrollY || document.documentElement.scrollTop;
-      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
-      
-      // Calculate fraction of page scrolled (bound between 0 and 1)
-      const scrollFraction = scrollHeight > 0 ? Math.max(0, Math.min(1, scrollTop / scrollHeight)) : 0;
-      scrollFractionRef.current = scrollFraction;
-      
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      if (scrollRafId) return;
+      scrollRafId = requestAnimationFrame(() => {
+        scrollRafId = 0;
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+        
+        // Calculate fraction of page scrolled (bound between 0 and 1)
+        const scrollFraction = scrollHeight > 0 ? Math.max(0, Math.min(1, scrollTop / scrollHeight)) : 0;
+        scrollFractionRef.current = scrollFraction;
+        
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
 
-      const frames = framesRef.current;
-      if (frames.length === 0) return;
+        const frames = framesRef.current;
+        if (frames.length === 0) return;
 
-      // Draw the selected frame
-      const index = Math.min(frames.length - 1, Math.floor(scrollFraction * frames.length));
-      ctx.drawImage(frames[index], 0, 0);
+        // Draw the selected frame
+        const index = Math.min(frames.length - 1, Math.floor(scrollFraction * frames.length));
+        ctx.drawImage(frames[index], 0, 0);
+      });
     };
 
     // Draw initial frame based on current scroll position
@@ -175,6 +180,7 @@ export function BoomerangVideoBg({ src, className }: Props) {
     window.addEventListener('resize', handleScroll);
 
     return () => {
+      if (scrollRafId) cancelAnimationFrame(scrollRafId);
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleScroll);
     };

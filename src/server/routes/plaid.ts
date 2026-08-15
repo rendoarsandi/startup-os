@@ -89,10 +89,10 @@ export async function handlePlaidRoutes(request: Request, path: string, method: 
       if (!localAccId) continue;
 
       const localAmount = Math.round(-tx.amount * 100);
-      let category = 'Other';
+      let category: string;
       try {
         category = await analysis.categorizeTransaction(tx.merchant_name || tx.name || '', tx.name || '', gemini);
-      } catch (err) {
+      } catch (_err) {
         category = (tx.category && tx.category[0]) || 'Other';
       }
 
@@ -182,10 +182,10 @@ export async function handlePlaidRoutes(request: Request, path: string, method: 
         if (!localAccId) continue;
 
         const localAmount = Math.round(-tx.amount * 100);
-        let category = 'Other';
+        let category: string;
         try {
           category = await analysis.categorizeTransaction(tx.merchant_name || tx.name || '', tx.name || '', gemini);
-        } catch (err) {
+        } catch (_err) {
           category = (tx.category && tx.category[0]) || 'Other';
         }
 

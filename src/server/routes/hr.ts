@@ -54,7 +54,7 @@ export async function handleHrRoutes(request: Request, path: string, method: str
   if (path === '/api/hr/generate-doc' && method === 'POST') {
     const gemini = new GeminiService(env.GEMINI_API_KEY);
     const { docType, title, department, salary, details } = await getValidatedBody(request, decodeGenerateDoc);
-    let prompt = "";
+    let prompt: string;
     if (docType === "job_description") {
       prompt = `Create a professional Job Description for a "${title}" in the "${department}" department. 
       Salary Range: ${salary}. 

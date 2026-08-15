@@ -37,14 +37,14 @@ export async function handleChatRoutes(request: Request, path: string, method: s
       try {
         const dbCampaigns = await db.select().from(marketingCampaigns).where(eq(marketingCampaigns.userId, userId)).all();
         context = `Marketing Profile:\nActive Campaigns:\n` + (dbCampaigns.length > 0 ? dbCampaigns.map(c => `- ${c.name} (${c.status}): Budget $${((c.budget || 0)/100).toFixed(2)}, Spend $${((c.spend || 0)/100).toFixed(2)}, ROAS ${((c.roas || 0)/100).toFixed(1)}x`).join('\n') : '- No active campaigns') + `\n\nGoal: Keep average CAC under $45 and boost conversion funnel.`;
-      } catch (dbError) {
+      } catch (_dbError) {
         context = `Marketing Profile:\nGoal: Keep average CAC under $45 and boost conversion funnel.`;
       }
     } else if (role === 'hr') {
       try {
         const dbEmployees = await db.select().from(employees).where(eq(employees.userId, userId)).all();
         context = `HR & People Profile:\nTotal Employees: ${dbEmployees.length}\nActive Staff:\n` + (dbEmployees.length > 0 ? dbEmployees.map(e => `- ${e.name}: ${e.role} (${e.department}) - $${((e.salary || 0)/100).toFixed(2)}/yr`).join('\n') : '- No active employees') + `\n\nHiring targets: Q3 Headcount growth and document generator.`;
-      } catch (dbError) {
+      } catch (_dbError) {
         context = `HR & People Profile:\nHiring targets: Q3 Headcount growth and document generator.`;
       }
     } else if (role === 'operations') {
@@ -57,7 +57,7 @@ export async function handleChatRoutes(request: Request, path: string, method: s
         context += `Active Projects:\n` + (dbProjects.length > 0 ? dbProjects.map(p => `- ${p.name} (${p.status})`).join('\n') : '- No active projects') + `\n\n`;
         context += `Recent Tasks:\n` + (dbTasks.length > 0 ? dbTasks.slice(0, 10).map(t => `- [${t.status}] ${t.title}`).join('\n') : '- No recent tasks') + `\n\n`;
         context += `Support Tickets:\n` + (dbTickets.length > 0 ? dbTickets.slice(0, 10).map(t => `- [${t.status}] [Priority: ${t.priority}] ${t.subject}`).join('\n') : '- No support tickets');
-      } catch (dbError) {
+      } catch (_dbError) {
         context = `Operations & Inventory Profile:\nStatus: Active\nProjects: 1 active\nRecent Tasks: 3 pending\nSupport Tickets: 2 unresolved`;
       }
     }

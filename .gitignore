@@ -1,7 +1,14 @@
 node_modules
 .DS_Store
 dist
-.env
-.dev.vars
+.output
+.tanstack
 .wrangler
+.env
+.env.*
+!.env.example
+.dev.vars
 *.log
+.bun
+~
+

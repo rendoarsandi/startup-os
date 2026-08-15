@@ -296,7 +296,7 @@ export const HiringEquityPlanner: React.FC = () => {
   const cashTrendChartData = useMemo(() => {
     const trend = [];
     const baseBurn = baseMonthlyBurn;
-    let baseCash = startingCash;
+    const baseCash = startingCash;
 
     for (let m = 0; m <= horizonMonths; m++) {
       const projectedCashPlanned = runwayResult.monthlyCashBalance[m];

@@ -1,8 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  TrendingUp, Sparkles, DollarSign, Users, Percent, ShieldAlert, 
-  ArrowUpRight, ArrowDownRight, RefreshCw, BarChart2, Info, HelpCircle
-} from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, RefreshCw, Info } from 'lucide-react';
 import { Card, CardTitle } from './ui/card';
 import { Slider } from './ui/slider';
 import { Badge } from './ui/badge';

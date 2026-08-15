@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, Plus, Loader2 } from 'lucide-react';
+import { Clock, Plus } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -55,7 +55,7 @@ export const ProjectsSection: React.FC = () => {
 
   const { data: employees = [] } = useQuery<Employee[]>({ queryKey: ['employees'] });
   
-  const { data: projects = [], isLoading: projLoading } = useQuery<Project[]>({
+  const { data: projects = [], isLoading: _projLoading } = useQuery<Project[]>({
     queryKey: ['projects'],
     queryFn: async () => {
       const res = await fetch('/api/operations/projects');

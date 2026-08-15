@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { FileText, Copy, Check, Download, Sparkles } from 'lucide-react';
+import { FileText, Copy, Check, Download } from 'lucide-react';
 
 interface InvestorBriefingProps {
   reportTone: 'bullish' | 'institutional' | 'pragmatic' | 'casual';

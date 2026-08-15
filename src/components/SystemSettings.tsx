@@ -24,29 +24,35 @@ interface MockUser {
 
 export const SystemSettings: React.FC = () => {
   // 1. Company Profile State
-  const [companyName, setCompanyName] = useState('Startup OS Corp');
-  const [companyDomain, setCompanyDomain] = useState('startupos.co');
-  const [currency, setCurrency] = useState('USD');
-  const [fiscalMonth, setFiscalMonth] = useState('January');
+  const [companyName, setCompanyName] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_company_name') : null) || 'Startup OS Corp');
+  const [companyDomain, setCompanyDomain] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_company_domain') : null) || 'startupos.co');
+  const [currency, setCurrency] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_currency') : null) || 'USD');
+  const [fiscalMonth, setFiscalMonth] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_fiscal_month') : null) || 'January');
 
   // 2. AI Config State
-  const [aiModel, setAiModel] = useState('Gemini 3.5 Flash');
-  const [temperature, setTemperature] = useState<number>(0.4);
-  const [autonomyLevel, setAutonomyLevel] = useState('Require Approval');
-  const [systemPrompt, setSystemPrompt] = useState('You are Startup OS, an autonomous C-Suite AI assistant.');
+  const [aiModel, setAiModel] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_ai_model') : null) || 'Gemini 3.7 Flash');
+  const [temperature, setTemperature] = useState<number>(() => {
+    const local = typeof window !== 'undefined' ? localStorage.getItem('sys_temperature') : null;
+    return local ? parseFloat(local) : 0.4;
+  });
+  const [autonomyLevel, setAutonomyLevel] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_autonomy') : null) || 'Require Approval');
+  const [systemPrompt, setSystemPrompt] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_system_prompt') : null) || 'You are Startup OS, an autonomous C-Suite AI assistant.');
 
   // 3. Module Toggles State
-  const [cfoEnabled, setCfoEnabled] = useState(true);
-  const [cmoEnabled, setCmoEnabled] = useState(true);
-  const [chroEnabled, setChroEnabled] = useState(true);
-  const [cooEnabled, setCooEnabled] = useState(true);
+  const [cfoEnabled, setCfoEnabled] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_cfo_enabled') === 'true' : true));
+  const [cmoEnabled, setCmoEnabled] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_cmo_enabled') === 'true' : true));
+  const [chroEnabled, setChroEnabled] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_chro_enabled') === 'true' : true));
+  const [cooEnabled, setCooEnabled] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('sys_coo_enabled') === 'true' : true));
 
   // 4. Mock Users State
-  const [users, setUsers] = useState<MockUser[]>([
-    { id: '1', name: 'Rendo Arsandi', email: 'rendo@startupos.co', role: 'Administrator / Founder' },
-    { id: '2', name: 'Alice Smith', email: 'alice@startupos.co', role: 'Finance (CFO)' },
-    { id: '3', name: 'Bob Jones', email: 'bob@startupos.co', role: 'Operations (COO)' },
-  ]);
+  const [users, setUsers] = useState<MockUser[]>(() => {
+    const local = typeof window !== 'undefined' ? localStorage.getItem('sys_users') : null;
+    return local ? JSON.parse(local) : [
+      { id: '1', name: 'Rendo Arsandi', email: 'rendo@startupos.co', role: 'Administrator / Founder' },
+      { id: '2', name: 'Alice Smith', email: 'alice@startupos.co', role: 'Finance (CFO)' },
+      { id: '3', name: 'Bob Jones', email: 'bob@startupos.co', role: 'Operations (COO)' },
+    ];
+  });
 
   // Form state for adding user
   const [newUserName, setNewUserName] = useState('');
@@ -55,45 +61,6 @@ export const SystemSettings: React.FC = () => {
   
   // Notification save status
   const [savedStatus, setSavedStatus] = useState(false);
-
-  // Load from localStorage on mount
-  useEffect(() => {
-    const localCompany = localStorage.getItem('sys_company_name');
-    if (localCompany) setCompanyName(localCompany);
-    
-    const localDomain = localStorage.getItem('sys_company_domain');
-    if (localDomain) setCompanyDomain(localDomain);
-
-    const localCurrency = localStorage.getItem('sys_currency');
-    if (localCurrency) setCurrency(localCurrency);
-
-    const localFiscal = localStorage.getItem('sys_fiscal_month');
-    if (localFiscal) setFiscalMonth(localFiscal);
-
-    const localModel = localStorage.getItem('sys_ai_model');
-    if (localModel) setAiModel(localModel);
-
-    const localTemp = localStorage.getItem('sys_temperature');
-    if (localTemp) setTemperature(parseFloat(localTemp));
-
-    const localAutonomy = localStorage.getItem('sys_autonomy');
-    if (localAutonomy) setAutonomyLevel(localAutonomy);
-
-    const localPrompt = localStorage.getItem('sys_system_prompt');
-    if (localPrompt) setSystemPrompt(localPrompt);
-
-    const localCfo = localStorage.getItem('sys_cfo_enabled');
-    if (localCfo) setCfoEnabled(localCfo === 'true');
-    const localCmo = localStorage.getItem('sys_cmo_enabled');
-    if (localCmo) setCmoEnabled(localCmo === 'true');
-    const localChro = localStorage.getItem('sys_chro_enabled');
-    if (localChro) setChroEnabled(localChro === 'true');
-    const localCoo = localStorage.getItem('sys_coo_enabled');
-    if (localCoo) setCooEnabled(localCoo === 'true');
-
-    const localUsers = localStorage.getItem('sys_users');
-    if (localUsers) setUsers(JSON.parse(localUsers));
-  }, []);
 
   // Save to localStorage
   const handleSaveSettings = () => {
@@ -324,9 +291,9 @@ export const SystemSettings: React.FC = () => {
                     onChange={(e) => setAiModel(e.target.value)}
                     className="w-full text-xs h-10 font-bold tracking-wider rounded-lg border border-border bg-black/10 px-2 uppercase text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   >
-                    <option value="Gemini 3.5 Flash">Gemini 3.5 Flash</option>
-                    <option value="Gemini 3.5 Pro">Gemini 3.5 Pro</option>
-                    <option value="Gemini 1.5 Pro">Gemini 1.5 Pro</option>
+                    <option value="Gemini 3.7 Flash">Gemini 3.7 Flash</option>
+                    <option value="Gemini 3.7 Pro">Gemini 3.7 Pro</option>
+                    <option value="Gemini 2.5 Flash">Gemini 2.5 Flash</option>
                   </select>
                 </div>
                 <div className="space-y-1.5">

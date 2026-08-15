@@ -70,7 +70,7 @@ export class AnalysisService {
       .where(eq(financialAccounts.userId, userId))
       .all();
     
-    let cashBalance = accounts.reduce((sum: number, acc: any) => sum + acc.balance, 0);
+    const cashBalance = accounts.reduce((sum: number, acc: any) => sum + acc.balance, 0);
 
     // 2. Fetch all employees and calculate monthly payroll
     const employeeList = await this.db

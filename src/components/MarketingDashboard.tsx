@@ -678,7 +678,7 @@ const MarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
 };
 
 const parseBoldText = (text: string) => {
-  const parts = text.split(/\*\*(.*?)\*\"/g);
+  const parts = text.split(/\*\*(.*?)\*\*/g);
   return parts.map((part, index) => {
     if (index % 2 === 1) {
       return <strong key={index} className="font-bold text-foreground">{part}</strong>;

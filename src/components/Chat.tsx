@@ -42,6 +42,20 @@ export const Chat: React.FC<ChatProps> = ({ activeRole, seedPrompt, setSeedPromp
     setInput('');
   };
 
+  const renderRoleIcon = (role: 'cfo' | 'marketer' | 'hr' | 'operations', size = 16) => {
+    switch (role) {
+      case 'marketer':
+        return <Sparkles size={size} />;
+      case 'hr':
+        return <Users size={size} />;
+      case 'operations':
+        return <Package size={size} />;
+      case 'cfo':
+      default:
+        return <Zap size={size} />;
+    }
+  };
+
   const roleTitle = {
     cfo: "AI CFO Assistant",
     marketer: "AI CMO Growth Partner",
@@ -54,13 +68,6 @@ export const Chat: React.FC<ChatProps> = ({ activeRole, seedPrompt, setSeedPromp
     marketer: "Hey there! I'm your AI CMO. Let's design some high-converting campaigns or brainstorm growth ideas!",
     hr: "Welcome! I'm your AI CHRO. I can assist you with HR policies, job descriptions, offer letters, or compliance questions.",
     operations: "Greetings! I'm your AI COO. Let's optimize our stock inventory levels, coordinate project tasks, or resolve client support issues."
-  };
-
-  const RoleIcon = () => {
-    if (activeRole === 'marketer') return <Sparkles size={20} />;
-    if (activeRole === 'hr') return <Users size={20} />;
-    if (activeRole === 'operations') return <Package size={20} />;
-    return <Briefcase size={20} />;
   };
 
   // Check if scenario is active for quick-prompt suggestions
@@ -99,7 +106,7 @@ export const Chat: React.FC<ChatProps> = ({ activeRole, seedPrompt, setSeedPromp
           <div className="p-4 border-b border-border flex items-center justify-between bg-black/10">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-                <RoleIcon />
+                {renderRoleIcon(activeRole, 18)}
               </div>
               <div>
                 <h3 className="font-bold text-sm text-foreground">{roleTitle[activeRole]}</h3>
@@ -132,7 +139,7 @@ export const Chat: React.FC<ChatProps> = ({ activeRole, seedPrompt, setSeedPromp
             {messages.length === 0 && (
               <div className="h-full flex flex-col items-center justify-center text-center space-y-3 px-4">
                 <div className="text-primary/30 w-10 h-10 rounded-full bg-primary/5 flex items-center justify-center border border-primary/10">
-                  <RoleIcon />
+                  {renderRoleIcon(activeRole)}
                 </div>
                 <p className="text-xs font-semibold text-muted-foreground max-w-[260px]">{roleWelcome[activeRole]}</p>
 
@@ -164,7 +171,7 @@ export const Chat: React.FC<ChatProps> = ({ activeRole, seedPrompt, setSeedPromp
                     ? 'bg-secondary/10 border-secondary/20 text-secondary' 
                     : 'bg-primary/10 border-primary/20 text-primary'
                 }`}>
-                  {msg.role === 'user' ? <User size={13} /> : <RoleIcon />}
+                  {msg.role === 'user' ? <User size={13} /> : renderRoleIcon(activeRole)}
                 </div>
                 <div className={`max-w-[80%] p-3 rounded-xl text-xs leading-relaxed break-words whitespace-pre-wrap ${
                   msg.role === 'user' 
@@ -179,7 +186,7 @@ export const Chat: React.FC<ChatProps> = ({ activeRole, seedPrompt, setSeedPromp
             {isLoading && (
               <div className="flex gap-2.5">
                 <div className="w-7 h-7 rounded-md bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
-                  <RoleIcon />
+                  {renderRoleIcon(activeRole)}
                 </div>
                 <div className="bg-card border border-border p-3 rounded-xl rounded-tl-none flex items-center justify-center">
                   <Loader2 size={14} className="animate-spin text-primary" />

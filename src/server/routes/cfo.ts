@@ -1,4 +1,3 @@
-import { drizzle } from 'drizzle-orm/d1';
 import { eq, and, desc } from 'drizzle-orm';
 import { financialAccounts, saasConfigs, transactions, budgets, invoices } from '../../db/schema';
 import { AnalysisService } from '../analysis';
@@ -181,11 +180,11 @@ export async function handleCfoRoutes(request: Request, path: string, method: st
         userId,
         invoiceNumber: body.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
         clientName: body.clientName,
-        type: body.type,
+        type: body.type || 'sales',
         amount: body.amount,
         status: body.status || 'unpaid',
-        issueDate: new Date(body.issueDate),
-        dueDate: new Date(body.dueDate),
+        issueDate: body.issueDate ? new Date(body.issueDate) : now,
+        dueDate: body.dueDate ? new Date(body.dueDate) : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
         items: body.items ? JSON.stringify(body.items) : null,
         createdAt: now,
         updatedAt: now,
@@ -196,7 +195,7 @@ export async function handleCfoRoutes(request: Request, path: string, method: st
   }
 
   const cfoInvoiceParams = matchRoute(path, '/api/cfo/invoices/:id/status');
-  if (cfoInvoiceParams && method === 'PATCH') {
+  if (cfoInvoiceParams && (method === 'PATCH' || method === 'PUT')) {
     const { status } = await getValidatedBody(request, decodeUpdateInvoiceStatus);
     const invoiceId = cfoInvoiceParams.id;
     await db.update(invoices).set({ status, updatedAt: new Date() }).where(and(eq(invoices.id, invoiceId), eq(invoices.userId, userId))).run();
@@ -205,16 +204,16 @@ export async function handleCfoRoutes(request: Request, path: string, method: st
   }
 
   if (path === '/api/cfo/parse-invoice' && method === 'POST') {
-    const gemini = new GeminiService(env.GEMINI_API_KEY);
-    const { documentBase64, mimeType } = await getValidatedBody(request, decodeParseInvoice);
-    const parsed = await gemini.parseInvoiceDocument(documentBase64, mimeType);
+    const gemini = new GeminiService(env?.GEMINI_API_KEY);
+    const { text } = await getValidatedBody(request, decodeParseInvoice);
+    const parsed = await gemini.parseInvoiceText(text);
     return jsonResponse(parsed);
   }
 
   if (path === '/api/cfo/parse-invoice-secure' && method === 'POST') {
-    const gemini = new GeminiService(env.GEMINI_API_KEY);
-    const { documentBase64, mimeType } = await getValidatedBody(request, decodeParseInvoiceSecure);
-    const parsed = await gemini.parseInvoiceDocument(documentBase64, mimeType);
+    const gemini = new GeminiService(env?.GEMINI_API_KEY);
+    const { fileBase64, mimeType } = await getValidatedBody(request, decodeParseInvoiceSecure);
+    const parsed = await gemini.parseInvoiceDocument(fileBase64, mimeType);
     return jsonResponse(parsed);
   }
 
