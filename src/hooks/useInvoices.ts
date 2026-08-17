@@ -10,8 +10,8 @@ export const useInvoices = (enabled = true) => {
     queryKey: ['invoices'],
     queryFn: async () => {
       try {
-        const { convexClient } = await import('../utils/convexClient');
-        const data = await convexClient.call<Invoice[]>('cfo.getInvoices');
+        const { durableClient } = await import('../utils/durableClient');
+        const data = await durableClient.call<Invoice[]>('cfo.getInvoices');
         if (data && Array.isArray(data)) return data;
       } catch {
         // Fallback to fetch

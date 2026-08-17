@@ -1,4 +1,4 @@
-import { query, mutation, action } from '../convex/core';
+import { query, mutation, action } from '../runtime/core';
 import { GeminiService } from '../gemini';
 
 export const getAccounts = query({

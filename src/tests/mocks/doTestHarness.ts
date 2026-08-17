@@ -1,14 +1,14 @@
-import { DurableObjectDatabase } from '../../server/convex/db';
+import { DurableObjectDatabase } from '../../server/runtime/db';
 import { WorkspaceDO } from '../../server/do/WorkspaceDO';
-import { ConvexFunction } from '../../server/convex/core';
+import { ServerFunction } from '../../server/runtime/core';
 
 export interface TestContext {
   db: DurableObjectDatabase;
   userId: string;
   env: Record<string, any>;
-  query<Args, Result>(fn: ConvexFunction<'query', Args, Result>, args?: Args): Promise<Result>;
-  mutation<Args, Result>(fn: ConvexFunction<'mutation', Args, Result>, args?: Args): Promise<Result>;
-  action<Args, Result>(fn: ConvexFunction<'action', Args, Result>, args?: Args): Promise<Result>;
+  query<Args, Result>(fn: ServerFunction<'query', Args, Result>, args?: Args): Promise<Result>;
+  mutation<Args, Result>(fn: ServerFunction<'mutation', Args, Result>, args?: Args): Promise<Result>;
+  action<Args, Result>(fn: ServerFunction<'action', Args, Result>, args?: Args): Promise<Result>;
 }
 
 export function createTestContext(options: { userId?: string; env?: Record<string, any> } = {}): TestContext {
@@ -32,11 +32,11 @@ export function createTestContext(options: { userId?: string; env?: Record<strin
     db,
     userId,
     env,
-    async query<Args, Result>(fn: ConvexFunction<'query', Args, Result>, args?: Args): Promise<Result> {
+    async query<Args, Result>(fn: ServerFunction<'query', Args, Result>, args?: Args): Promise<Result> {
       const ctx = { db, auth: authContext, env };
       return await fn.handler(ctx, args as Args);
     },
-    async mutation<Args, Result>(fn: ConvexFunction<'mutation', Args, Result>, args?: Args): Promise<Result> {
+    async mutation<Args, Result>(fn: ServerFunction<'mutation', Args, Result>, args?: Args): Promise<Result> {
       const ctx = {
         db,
         auth: authContext,
@@ -47,7 +47,7 @@ export function createTestContext(options: { userId?: string; env?: Record<strin
       };
       return await fn.handler(ctx, args as Args);
     },
-    async action<Args, Result>(fn: ConvexFunction<'action', Args, Result>, args?: Args): Promise<Result> {
+    async action<Args, Result>(fn: ServerFunction<'action', Args, Result>, args?: Args): Promise<Result> {
       const ctx = {
         auth: authContext,
         env,

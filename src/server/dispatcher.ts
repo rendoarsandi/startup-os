@@ -253,7 +253,7 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
   const userId = await getUserId(request, env);
   if (!userId) return jsonResponse({ error: "Unauthorized" }, 401);
 
-  // 1. WebSocket Upgrade or Convex RPC Routing to Durable Object
+  // 1. WebSocket Upgrade or Durable Objects RPC Routing to WorkspaceDO
   if (path === '/api/ws' || path === '/api/rpc' || path.startsWith('/api/rpc/')) {
     if (env.WORKSPACE_DO && typeof env.WORKSPACE_DO.idFromName === 'function') {
       const doId = env.WORKSPACE_DO.idFromName(userId);

@@ -1,4 +1,4 @@
-import { query, mutation } from '../convex/core';
+import { query, mutation } from '../runtime/core';
 
 export const getCampaigns = query({
   handler: async (ctx) => {

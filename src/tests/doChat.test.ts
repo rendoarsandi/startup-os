@@ -9,7 +9,7 @@ vi.mock('../server/gemini', () => ({
   }
 }));
 
-describe('Convex-Style AI Chat Action Tests', () => {
+describe('Durable Objects AI Chat Action Tests', () => {
   let ctx: TestContext;
 
   beforeEach(() => {

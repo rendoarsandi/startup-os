@@ -3,7 +3,7 @@ import { describe, test, expect, beforeEach } from 'vitest';
 import { createTestContext, TestContext } from './mocks/doTestHarness';
 import { api } from '../server/functions';
 
-describe('Convex-Style Operations & Autopilot Unit Tests', () => {
+describe('Durable Objects Operations & Autopilot Unit Tests', () => {
   let ctx: TestContext;
 
   beforeEach(() => {

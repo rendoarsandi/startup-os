@@ -20,7 +20,7 @@ export class DurableObjectDatabase implements DatabaseWriter {
     if (this.sql) {
       try {
         this.sql.exec(`
-          CREATE TABLE IF NOT EXISTS _convex_docs (
+          CREATE TABLE IF NOT EXISTS _do_docs (
             table_name TEXT NOT NULL,
             id TEXT NOT NULL,
             data TEXT NOT NULL,
@@ -28,8 +28,8 @@ export class DurableObjectDatabase implements DatabaseWriter {
             updated_at INTEGER NOT NULL,
             PRIMARY KEY (table_name, id)
           );
-          CREATE INDEX IF NOT EXISTS idx_convex_table ON _convex_docs (table_name);
-          CREATE INDEX IF NOT EXISTS idx_convex_table_created ON _convex_docs (table_name, created_at);
+          CREATE INDEX IF NOT EXISTS idx_do_table ON _do_docs (table_name);
+          CREATE INDEX IF NOT EXISTS idx_do_table_created ON _do_docs (table_name, created_at);
         `);
       } catch (err) {
         console.warn('DO SQLite schema creation warning (ignoring if exists):', err);
@@ -41,7 +41,7 @@ export class DurableObjectDatabase implements DatabaseWriter {
     this.ensureSchema();
     if (this.sql) {
       const rows = this.sql.exec(
-        `SELECT data FROM _convex_docs WHERE table_name = ? AND id = ? LIMIT 1`,
+        `SELECT data FROM _do_docs WHERE table_name = ? AND id = ? LIMIT 1`,
         table,
         id
       );
@@ -78,7 +78,7 @@ export class DurableObjectDatabase implements DatabaseWriter {
         let items: T[] = [];
         if (this.sql) {
           const rows = this.sql.exec(
-            `SELECT data FROM _convex_docs WHERE table_name = ? ORDER BY created_at ${sortDirection.toUpperCase()}`,
+            `SELECT data FROM _do_docs WHERE table_name = ? ORDER BY created_at ${sortDirection.toUpperCase()}`,
             table
           );
           const arr = Array.isArray(rows) ? rows : (typeof rows.toArray === 'function' ? rows.toArray() : Array.from(rows));
@@ -138,7 +138,7 @@ export class DurableObjectDatabase implements DatabaseWriter {
 
     if (this.sql) {
       this.sql.exec(
-        `INSERT OR REPLACE INTO _convex_docs (table_name, id, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`,
+        `INSERT OR REPLACE INTO _do_docs (table_name, id, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`,
         table,
         id,
         serialized,
@@ -172,7 +172,7 @@ export class DurableObjectDatabase implements DatabaseWriter {
 
     if (this.sql) {
       this.sql.exec(
-        `UPDATE _convex_docs SET data = ?, updated_at = ? WHERE table_name = ? AND id = ?`,
+        `UPDATE _do_docs SET data = ?, updated_at = ? WHERE table_name = ? AND id = ?`,
         serialized,
         now,
         table,
@@ -198,7 +198,7 @@ export class DurableObjectDatabase implements DatabaseWriter {
 
     if (this.sql) {
       this.sql.exec(
-        `INSERT OR REPLACE INTO _convex_docs (table_name, id, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`,
+        `INSERT OR REPLACE INTO _do_docs (table_name, id, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`,
         table,
         id,
         serialized,
@@ -219,7 +219,7 @@ export class DurableObjectDatabase implements DatabaseWriter {
     this.ensureSchema();
     if (this.sql) {
       this.sql.exec(
-        `DELETE FROM _convex_docs WHERE table_name = ? AND id = ?`,
+        `DELETE FROM _do_docs WHERE table_name = ? AND id = ?`,
         table,
         id
       );

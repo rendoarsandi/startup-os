@@ -1,4 +1,4 @@
-import { action } from '../convex/core';
+import { action } from '../runtime/core';
 import { GeminiService } from '../gemini';
 
 export const sendMessage = action({

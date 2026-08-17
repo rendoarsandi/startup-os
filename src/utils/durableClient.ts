@@ -1,6 +1,6 @@
 import { transactionsCollection, upsertTransactions, invoicesCollection, upsertInvoices } from './db';
 
-export class ConvexClient {
+export class DurableClient {
   private ws: WebSocket | null = null;
   private pendingRequests = new Map<string, { resolve: (val: any) => void; reject: (err: any) => void }>();
   private subscriptions = new Map<string, Set<(data: any) => void>>();
@@ -149,4 +149,4 @@ export class ConvexClient {
   }
 }
 
-export const convexClient = new ConvexClient();
+export const durableClient = new DurableClient();

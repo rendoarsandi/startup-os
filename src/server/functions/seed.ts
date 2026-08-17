@@ -1,4 +1,4 @@
-import { mutation } from '../convex/core';
+import { mutation } from '../runtime/core';
 
 export const seedWorkspaceData = mutation({
   handler: async (ctx) => {

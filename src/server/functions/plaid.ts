@@ -1,4 +1,4 @@
-import { action } from '../convex/core';
+import { action } from '../runtime/core';
 import { PlaidService } from '../plaid';
 import * as cfo from './cfo';
 

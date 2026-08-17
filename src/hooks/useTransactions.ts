@@ -19,8 +19,8 @@ export const useTransactions = (enabled = true) => {
     queryKey: ['transactions'],
     queryFn: async () => {
       try {
-        const { convexClient } = await import('../utils/convexClient');
-        const data = await convexClient.call<Transaction[]>('cfo.getTransactions');
+        const { durableClient } = await import('../utils/durableClient');
+        const data = await durableClient.call<Transaction[]>('cfo.getTransactions');
         if (data && Array.isArray(data)) return data;
       } catch {
         // Fallback to fetch

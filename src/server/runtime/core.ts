@@ -40,11 +40,11 @@ export interface MutationCtx {
 export interface ActionCtx {
   auth: AuthContext;
   env: Record<string, any>;
-  runQuery<Args, Result>(queryFn: ConvexFunction<'query', Args, Result>, args?: Args): Promise<Result>;
-  runMutation<Args, Result>(mutationFn: ConvexFunction<'mutation', Args, Result>, args?: Args): Promise<Result>;
+  runQuery<Args, Result>(queryFn: ServerFunction<'query', Args, Result>, args?: Args): Promise<Result>;
+  runMutation<Args, Result>(mutationFn: ServerFunction<'mutation', Args, Result>, args?: Args): Promise<Result>;
 }
 
-export interface ConvexFunction<TType extends FunctionType = FunctionType, Args = any, Result = any> {
+export interface ServerFunction<TType extends FunctionType = FunctionType, Args = any, Result = any> {
   _type: TType;
   argsValidator?: (args: unknown) => Args;
   handler: (ctx: any, args: Args) => Promise<Result>;
@@ -53,7 +53,7 @@ export interface ConvexFunction<TType extends FunctionType = FunctionType, Args 
 export function query<Args = any, Result = any>(definition: {
   args?: (args: unknown) => Args;
   handler: (ctx: QueryCtx, args: Args) => Promise<Result>;
-}): ConvexFunction<'query', Args, Result> {
+}): ServerFunction<'query', Args, Result> {
   return {
     _type: 'query',
     argsValidator: definition.args,
@@ -64,7 +64,7 @@ export function query<Args = any, Result = any>(definition: {
 export function mutation<Args = any, Result = any>(definition: {
   args?: (args: unknown) => Args;
   handler: (ctx: MutationCtx, args: Args) => Promise<Result>;
-}): ConvexFunction<'mutation', Args, Result> {
+}): ServerFunction<'mutation', Args, Result> {
   return {
     _type: 'mutation',
     argsValidator: definition.args,
@@ -75,7 +75,7 @@ export function mutation<Args = any, Result = any>(definition: {
 export function action<Args = any, Result = any>(definition: {
   args?: (args: unknown) => Args;
   handler: (ctx: ActionCtx, args: Args) => Promise<Result>;
-}): ConvexFunction<'action', Args, Result> {
+}): ServerFunction<'action', Args, Result> {
   return {
     _type: 'action',
     argsValidator: definition.args,

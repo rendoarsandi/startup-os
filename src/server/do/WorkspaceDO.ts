@@ -1,6 +1,6 @@
-import { DurableObjectDatabase } from '../convex/db';
+import { DurableObjectDatabase } from '../runtime/db';
 import { api } from '../functions';
-import { ConvexFunction } from '../convex/core';
+import { ServerFunction } from '../runtime/core';
 
 export class WorkspaceDO {
   private ctx: any;
@@ -20,7 +20,7 @@ export class WorkspaceDO {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // 1. WebSocket Upgrade for Real-Time Convex-Style Sync
+    // 1. WebSocket Upgrade for Real-Time Durable Sync
     if (request.headers.get('Upgrade') === 'websocket' || path.endsWith('/ws')) {
       return this.handleWebSocket(request);
     }
@@ -129,7 +129,7 @@ export class WorkspaceDO {
 
   public async executeFunction(functionName: string, args: any = {}, userId?: string) {
     const parts = functionName.split('.');
-    let fn: ConvexFunction | undefined;
+    let fn: ServerFunction | undefined;
 
     if (parts.length === 2) {
       const [domain, name] = parts;
