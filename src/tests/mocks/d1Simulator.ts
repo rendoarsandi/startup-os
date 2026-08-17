@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 
 let SQLModule: any = null;
+let cachedStatements: string[] | null = null;
 
 export async function createRealSqliteD1() {
   if (!SQLModule) {
@@ -10,19 +11,20 @@ export async function createRealSqliteD1() {
   }
   const db: SqlJsDatabase = new SQLModule.Database();
 
-  // Execute real DDL schema migrations from drizzle files
-  const migration0Path = path.resolve(process.cwd(), 'drizzle/0000_striped_falcon.sql');
-  const migration1Path = path.resolve(process.cwd(), 'drizzle/0001_overrated_stephen_strange.sql');
+  if (!cachedStatements) {
+    const migration0Path = path.resolve(process.cwd(), 'drizzle/0000_striped_falcon.sql');
+    const migration1Path = path.resolve(process.cwd(), 'drizzle/0001_overrated_stephen_strange.sql');
 
-  const migration0 = fs.readFileSync(migration0Path, 'utf-8');
-  const migration1 = fs.readFileSync(migration1Path, 'utf-8');
+    const migration0 = fs.existsSync(migration0Path) ? fs.readFileSync(migration0Path, 'utf-8') : '';
+    const migration1 = fs.existsSync(migration1Path) ? fs.readFileSync(migration1Path, 'utf-8') : '';
 
-  const statements = (migration0 + '\n' + migration1)
-    .split('--> statement-breakpoint')
-    .map(s => s.trim())
-    .filter(Boolean);
+    cachedStatements = (migration0 + '\n' + migration1)
+      .split('--> statement-breakpoint')
+      .map(s => s.trim())
+      .filter(Boolean);
+  }
 
-  for (const stmt of statements) {
+  for (const stmt of cachedStatements) {
     db.run(stmt);
   }
 

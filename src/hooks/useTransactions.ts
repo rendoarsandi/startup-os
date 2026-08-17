@@ -18,6 +18,13 @@ export const useTransactions = (enabled = true) => {
   const { data: serverTransactions = [], isLoading, refetch } = useQuery<Transaction[]>({
     queryKey: ['transactions'],
     queryFn: async () => {
+      try {
+        const { convexClient } = await import('../utils/convexClient');
+        const data = await convexClient.call<Transaction[]>('cfo.getTransactions');
+        if (data && Array.isArray(data)) return data;
+      } catch {
+        // Fallback to fetch
+      }
       const response = await fetch('/api/transactions');
       if (!response.ok) throw new Error('Failed to fetch transactions');
       return response.json();

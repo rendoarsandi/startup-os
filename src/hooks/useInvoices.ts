@@ -9,6 +9,13 @@ export const useInvoices = (enabled = true) => {
   const { data: serverInvoices = [], isLoading, refetch } = useQuery<Invoice[]>({
     queryKey: ['invoices'],
     queryFn: async () => {
+      try {
+        const { convexClient } = await import('../utils/convexClient');
+        const data = await convexClient.call<Invoice[]>('cfo.getInvoices');
+        if (data && Array.isArray(data)) return data;
+      } catch {
+        // Fallback to fetch
+      }
       const response = await fetch('/api/cfo/invoices');
       if (!response.ok) throw new Error('Failed to fetch invoices');
       return response.json();

@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
 import {
-  financialAccounts, saasConfigs, budgets, marketingCampaigns, employees,
+  financialAccounts, saasConfigs, budgets, marketingCampaigns, employees, transactions,
   invoices, crmLeads, attendance, leaveRequests, expenseClaims, inventoryItems, projects, supportTickets
 } from "../db/schema";
 import { getAuth } from './auth';
@@ -15,21 +15,38 @@ import { handleOperationsRoutes } from './routes/operations';
 import { handleContractsRoutes } from './routes/contracts';
 import { handlePlaidRoutes } from './routes/plaid';
 import { handleChatRoutes } from './routes/chat';
+import { WorkspaceDO } from './do/WorkspaceDO';
 
 export { runEffectHandler, ValidationError, jsonResponse, matchRoute } from './utils';
+
+const localWorkspaces = new Map<string, WorkspaceDO>();
+
+export function getLocalWorkspace(userId: string, env: any): WorkspaceDO {
+  if (!localWorkspaces.has(userId)) {
+    const ws = new WorkspaceDO(null, env);
+    localWorkspaces.set(userId, ws);
+  }
+  return localWorkspaces.get(userId)!;
+}
+
+export function clearLocalWorkspaces() {
+  localWorkspaces.clear();
+}
 
 async function getUserId(request: Request, env: any): Promise<string | null> {
   let userId: string | null = null;
 
   try {
-    const origin = new URL(request.url).origin;
-    const auth = getAuth(env.DB, env.BETTER_AUTH_URL || origin, env.BETTER_AUTH_SECRET);
-    const session = await auth.api.getSession({
-      headers: request.headers
-    });
+    if (env.DB) {
+      const origin = new URL(request.url).origin;
+      const auth = getAuth(env.DB, env.BETTER_AUTH_URL || origin, env.BETTER_AUTH_SECRET);
+      const session = await auth.api.getSession({
+        headers: request.headers
+      });
 
-    if (session && session.user && session.user.id) {
-      userId = session.user.id;
+      if (session && session.user && session.user.id) {
+        userId = session.user.id;
+      }
     }
   } catch (_err) {
     // Session retrieval failed or unauthenticated
@@ -219,9 +236,12 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
 
   // Auth Endpoint Routing
   if (path.startsWith('/api/auth/')) {
-    const origin = url.origin;
-    const auth = getAuth(env.DB, env.BETTER_AUTH_URL || origin, env.BETTER_AUTH_SECRET);
-    return auth.handler(request);
+    if (env.DB) {
+      const origin = url.origin;
+      const auth = getAuth(env.DB, env.BETTER_AUTH_URL || origin, env.BETTER_AUTH_SECRET);
+      return auth.handler(request);
+    }
+    return jsonResponse({ status: 'Auth Mock Active' });
   }
 
   // Health Check
@@ -233,22 +253,57 @@ export async function handleApiRequest(request: Request, passedEnv?: any): Promi
   const userId = await getUserId(request, env);
   if (!userId) return jsonResponse({ error: "Unauthorized" }, 401);
 
-  const db = drizzle(env.DB);
+  // 1. WebSocket Upgrade or Convex RPC Routing to Durable Object
+  if (path === '/api/ws' || path === '/api/rpc' || path.startsWith('/api/rpc/')) {
+    if (env.WORKSPACE_DO && typeof env.WORKSPACE_DO.idFromName === 'function') {
+      const doId = env.WORKSPACE_DO.idFromName(userId);
+      const stub = env.WORKSPACE_DO.get(doId);
+      return stub.fetch(request);
+    }
+    // Local / fallback in-memory WorkspaceDO
+    const workspace = getLocalWorkspace(userId, env);
+    return workspace.fetch(request);
+  }
+
+  // 2. Legacy / Standard REST route handlers with D1 or DO fallback
+  const db = env.DB ? drizzle(env.DB) : null;
 
   try {
-    const handlers = [
-      handleCfoRoutes,
-      handleMarketingRoutes,
-      handleHrRoutes,
-      handleOperationsRoutes,
-      handleContractsRoutes,
-      handlePlaidRoutes,
-      handleChatRoutes
-    ];
+    if (db) {
+      const handlers = [
+        handleCfoRoutes,
+        handleMarketingRoutes,
+        handleHrRoutes,
+        handleOperationsRoutes,
+        handleContractsRoutes,
+        handlePlaidRoutes,
+        handleChatRoutes
+      ];
 
-    for (const handler of handlers) {
-      const response = await handler(request, path, method, db, userId, env);
-      if (response) return response;
+      for (const handler of handlers) {
+        const response = await handler(request, path, method, db, userId, env);
+        if (response) return response;
+      }
+    } else {
+      // Execute via local WorkspaceDO
+      const workspace = getLocalWorkspace(userId, env);
+      if (path === '/api/transactions' && method === 'GET') {
+        const data = await workspace.executeFunction('cfo.getTransactions', {}, userId);
+        return jsonResponse(data);
+      }
+      if (path === '/api/accounts' && method === 'GET') {
+        const data = await workspace.executeFunction('cfo.getAccounts', {}, userId);
+        return jsonResponse(data);
+      }
+      if ((path === '/api/invoices' || path === '/api/cfo/invoices') && method === 'GET') {
+        const data = await workspace.executeFunction('cfo.getInvoices', {}, userId);
+        return jsonResponse(data);
+      }
+      if (path === '/api/chat' && method === 'POST') {
+        const body = await request.json();
+        const data = await workspace.executeFunction('chat.sendMessage', body, userId);
+        return jsonResponse(data);
+      }
     }
 
     return jsonResponse({ error: `Not Found: ${method} ${path}` }, 404);
