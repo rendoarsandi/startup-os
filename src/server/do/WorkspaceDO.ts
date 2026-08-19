@@ -1,6 +1,6 @@
 import { DurableObjectDatabase } from '../runtime/db';
 import { api } from '../functions';
-import { ServerFunction } from '../runtime/core';
+import type { ServerFunction } from '../runtime/core';
 
 export class WorkspaceDO {
   private ctx: any;

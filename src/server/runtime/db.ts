@@ -1,4 +1,4 @@
-import { DatabaseWriter, QueryBuilder } from './core';
+import type { DatabaseWriter, QueryBuilder } from './core';
 
 export interface SqlStorage {
   exec(sql: string, ...params: any[]): { toArray?: () => any[]; [Symbol.iterator]?: () => Iterator<any> } | any[];
