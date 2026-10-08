@@ -1,213 +1,221 @@
-import { eq, and, desc } from 'drizzle-orm';
-import { financialAccounts, plaidConnections, transactions } from '../../db/schema';
-import { PlaidService } from '../plaid';
-import { AnalysisService } from '../analysis';
-import { GeminiService } from '../gemini';
-import { v4 as uuidv4 } from 'uuid';
-import { decodePlaidExchangeToken } from '../schemas';
-import { getValidatedBody, jsonResponse } from '../utils';
+import type { DrizzleD1Database } from "drizzle-orm/d1";
+import type { AppEnv } from "../env";
+import { eq, and } from "drizzle-orm";
+import {
+  financialAccounts,
+  plaidConnections,
+  transactions,
+} from "../../db/schema";
+import { PlaidService } from "../plaid";
+import { decodePlaidExchangeToken } from "../schemas";
+import { getValidatedBody, jsonResponse } from "../utils";
 
-export async function handlePlaidRoutes(request: Request, path: string, method: string, db: any, userId: string, env: any): Promise<Response | null> {
-  if (path === '/api/plaid/create-link-token' && method === 'POST') {
-    const plaid = new PlaidService({
-      clientId: env.PLAID_CLIENT_ID,
-      secret: env.PLAID_SECRET,
-      environment: env.PLAID_ENV || 'sandbox',
-    });
-    const linkToken = await plaid.createLinkToken(userId);
-    return jsonResponse({ linkToken });
+async function syncConnection(
+  db: DrizzleD1Database,
+  userId: string,
+  connection: typeof plaidConnections.$inferSelect,
+  plaid: PlaidService,
+) {
+  const bankAccounts = await plaid.getAccounts(connection.accessToken);
+  if (
+    bankAccounts.some((account) => account.balances.iso_currency_code !== "USD")
+  )
+    throw new Error("Only USD accounts are supported by this workspace.");
+  const endDate = new Date().toISOString().slice(0, 10);
+  const startDate = new Date(Date.now() - 90 * 86400000)
+    .toISOString()
+    .slice(0, 10);
+  const bankTransactions = await plaid.getTransactions(
+    connection.accessToken,
+    startDate,
+    endDate,
+  );
+  const accountMap = new Map<string, string>();
+  const now = new Date();
+  for (const account of bankAccounts) {
+    const existing = await db
+      .select()
+      .from(financialAccounts)
+      .where(
+        and(
+          eq(financialAccounts.userId, userId),
+          eq(financialAccounts.plaidAccountId, account.account_id),
+        ),
+      )
+      .get();
+    const values = {
+      id: existing?.id || `plaid:${userId}:${account.account_id}`,
+      userId,
+      name: account.name,
+      type:
+        account.type === "depository"
+          ? account.subtype || "checking"
+          : account.type,
+      balance: Math.round((account.balances.current || 0) * 100),
+      currency: "USD",
+      plaidAccountId: account.account_id,
+      plaidConnectionId: connection.id,
+      createdAt: existing?.createdAt || now,
+      updatedAt: now,
+    };
+    await db
+      .insert(financialAccounts)
+      .values(values)
+      .onConflictDoUpdate({
+        target: financialAccounts.id,
+        set: {
+          name: values.name,
+          balance: values.balance,
+          updatedAt: now,
+          plaidConnectionId: connection.id,
+        },
+      })
+      .run();
+    accountMap.set(account.account_id, values.id);
   }
+  let newTransactions = 0;
+  for (const transaction of bankTransactions) {
+    const accountId = accountMap.get(transaction.account_id);
+    if (!accountId) continue;
+    const existing = await db
+      .select()
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.userId, userId),
+          eq(transactions.plaidTransactionId, transaction.transaction_id),
+        ),
+      )
+      .get();
+    const values = {
+      id: existing?.id || `plaid:${userId}:${transaction.transaction_id}`,
+      userId,
+      accountId,
+      amount: Math.round(-transaction.amount * 100),
+      category: transaction.category?.[0] || "Other",
+      merchant: transaction.merchant_name || transaction.name,
+      description: transaction.name,
+      date: new Date(transaction.date),
+      plaidTransactionId: transaction.transaction_id,
+      createdAt: existing?.createdAt || now,
+    };
+    if (existing) {
+      await db
+        .update(transactions)
+        .set(values)
+        .where(
+          and(
+            eq(transactions.id, existing.id),
+            eq(transactions.userId, userId),
+          ),
+        )
+        .run();
+    } else {
+      const inserted = await db
+        .insert(transactions)
+        .values(values)
+        .onConflictDoNothing()
+        .returning()
+        .all();
+      newTransactions += inserted.length;
+    }
+  }
+  return {
+    accountsSynced: bankAccounts.length,
+    newTransactionsSynced: newTransactions,
+  };
+}
 
-  if (path === '/api/plaid/exchange-token' && method === 'POST') {
-    const plaid = new PlaidService({
-      clientId: env.PLAID_CLIENT_ID,
-      secret: env.PLAID_SECRET,
-      environment: env.PLAID_ENV || 'sandbox',
-    });
-    const analysis = new AnalysisService(db);
-    const gemini = new GeminiService(env.GEMINI_API_KEY);
-
-    const { publicToken, institutionName } = await getValidatedBody(request, decodePlaidExchangeToken);
-    const { accessToken, itemId } = await plaid.exchangePublicToken(publicToken);
-    
-    const connectionId = uuidv4();
-    await db.insert(plaidConnections).values({
-      id: connectionId,
+export async function handlePlaidRoutes(
+  request: Request,
+  path: string,
+  method: string,
+  db: DrizzleD1Database,
+  userId: string,
+  env: AppEnv,
+): Promise<Response | null> {
+  if (!path.startsWith("/api/plaid/")) return null;
+  if (!env.PLAID_CLIENT_ID || !env.PLAID_SECRET)
+    return jsonResponse(
+      {
+        error:
+          "Banking is not connected. Configure Plaid credentials on the server.",
+      },
+      503,
+    );
+  const plaid = new PlaidService({
+    clientId: env.PLAID_CLIENT_ID,
+    secret: env.PLAID_SECRET,
+    environment: env.PLAID_ENV,
+  });
+  if (path === "/api/plaid/create-link-token" && method === "POST")
+    return jsonResponse({ linkToken: await plaid.createLinkToken(userId) });
+  if (path === "/api/plaid/exchange-token" && method === "POST") {
+    const { publicToken, institutionName } = await getValidatedBody(
+      request,
+      decodePlaidExchangeToken,
+    );
+    if (publicToken.startsWith("mock_"))
+      return jsonResponse(
+        { error: "A real Plaid Link token is required." },
+        400,
+      );
+    const { accessToken, itemId } =
+      await plaid.exchangePublicToken(publicToken);
+    const existing = await db
+      .select()
+      .from(plaidConnections)
+      .where(
+        and(
+          eq(plaidConnections.userId, userId),
+          eq(plaidConnections.itemId, itemId),
+        ),
+      )
+      .get();
+    const connection = {
+      id: existing?.id || `plaid:${userId}:${itemId}`,
       userId,
       accessToken,
       itemId,
-      institutionName: institutionName || 'Chase',
-      status: 'active',
-      createdAt: new Date(),
+      institutionName: institutionName || "Connected bank",
+      status: "active",
+      createdAt: existing?.createdAt || new Date(),
       updatedAt: new Date(),
-    }).run();
-
-    const plaidAccounts = await plaid.getAccounts(accessToken);
-    const accountIdMap = new Map<string, string>();
-
-    for (const plaidAcc of plaidAccounts) {
-      const accBalanceCents = Math.round((plaidAcc.balances.current || 0) * 100);
-      const existingAcc = await db.select().from(financialAccounts).where(
-        and(eq(financialAccounts.userId, userId), eq(financialAccounts.plaidAccountId, plaidAcc.account_id))
-      ).get();
-
-      let localAccountId = uuidv4();
-      if (existingAcc) {
-        localAccountId = existingAcc.id;
-        await db.update(financialAccounts).set({
-          name: plaidAcc.name,
-          balance: accBalanceCents,
-          plaidConnectionId: connectionId,
-          updatedAt: new Date(),
-        }).where(eq(financialAccounts.id, localAccountId)).run();
-      } else {
-        await db.insert(financialAccounts).values({
-          id: localAccountId,
-          userId,
-          name: plaidAcc.name,
-          type: plaidAcc.type === 'depository' ? (plaidAcc.subtype || 'checking') : plaidAcc.type,
-          balance: accBalanceCents,
-          currency: plaidAcc.balances.iso_currency_code || 'USD',
-          plaidAccountId: plaidAcc.account_id,
-          plaidConnectionId: connectionId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        }).run();
-      }
-      accountIdMap.set(plaidAcc.account_id, localAccountId);
-    }
-
-    const endDate = new Date().toISOString().split('T')[0];
-    const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const plaidTxList = await plaid.getTransactions(accessToken, startDate, endDate);
-
-    for (const tx of plaidTxList) {
-      const existingTx = await db.select().from(transactions).where(eq(transactions.plaidTransactionId, tx.transaction_id)).get();
-      if (existingTx) continue;
-
-      const localAccId = accountIdMap.get(tx.account_id);
-      if (!localAccId) continue;
-
-      const localAmount = Math.round(-tx.amount * 100);
-      let category: string;
-      try {
-        category = await analysis.categorizeTransaction(tx.merchant_name || tx.name || '', tx.name || '', gemini);
-      } catch (_err) {
-        category = (tx.category && tx.category[0]) || 'Other';
-      }
-
-      await db.insert(transactions).values({
-        id: uuidv4(),
-        userId,
-        accountId: localAccId,
-        amount: localAmount,
-        category,
-        merchant: tx.merchant_name || tx.name || 'Unknown Merchant',
-        description: tx.name || '',
-        date: new Date(tx.date),
-        plaidTransactionId: tx.transaction_id,
-        createdAt: new Date(),
-      }).run();
-    }
-
+    };
+    await db
+      .insert(plaidConnections)
+      .values(connection)
+      .onConflictDoUpdate({
+        target: plaidConnections.id,
+        set: { accessToken, status: "active", updatedAt: new Date() },
+      })
+      .run();
+    await syncConnection(db, userId, connection, plaid);
     return jsonResponse({ success: true, itemId });
   }
-
-  if (path === '/api/plaid/sync-transactions' && method === 'POST') {
-    const plaid = new PlaidService({
-      clientId: env.PLAID_CLIENT_ID,
-      secret: env.PLAID_SECRET,
-      environment: env.PLAID_ENV || 'sandbox',
-    });
-    const analysis = new AnalysisService(db);
-    const gemini = new GeminiService(env.GEMINI_API_KEY);
-
-    const activeConnections = await db.select().from(plaidConnections).where(
-      and(eq(plaidConnections.userId, userId), eq(plaidConnections.status, 'active'))
-    ).all();
-
+  if (path === "/api/plaid/sync-transactions" && method === "POST") {
+    const connections = await db
+      .select()
+      .from(plaidConnections)
+      .where(
+        and(
+          eq(plaidConnections.userId, userId),
+          eq(plaidConnections.status, "active"),
+        ),
+      )
+      .all();
     let accountsSynced = 0;
     let newTransactionsSynced = 0;
-
-    for (const conn of activeConnections) {
-      const plaidAccounts = await plaid.getAccounts(conn.accessToken);
-      const accountIdMap = new Map<string, string>();
-
-      for (const plaidAcc of plaidAccounts) {
-        const accBalanceCents = Math.round((plaidAcc.balances.current || 0) * 100);
-        const existingAcc = await db.select().from(financialAccounts).where(
-          and(eq(financialAccounts.userId, userId), eq(financialAccounts.plaidAccountId, plaidAcc.account_id))
-        ).get();
-
-        let localAccountId = uuidv4();
-        if (existingAcc) {
-          localAccountId = existingAcc.id;
-          await db.update(financialAccounts).set({
-            name: plaidAcc.name,
-            balance: accBalanceCents,
-            plaidConnectionId: conn.id,
-            updatedAt: new Date(),
-          }).where(eq(financialAccounts.id, localAccountId)).run();
-        } else {
-          await db.insert(financialAccounts).values({
-            id: localAccountId,
-            userId,
-            name: plaidAcc.name,
-            type: plaidAcc.type === 'depository' ? (plaidAcc.subtype || 'checking') : plaidAcc.type,
-            balance: accBalanceCents,
-            currency: plaidAcc.balances.iso_currency_code || 'USD',
-            plaidAccountId: plaidAcc.account_id,
-            plaidConnectionId: conn.id,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          }).run();
-        }
-        accountIdMap.set(plaidAcc.account_id, localAccountId);
-        accountsSynced++;
-      }
-
-      const latestTx = await db.select().from(transactions).where(eq(transactions.userId, userId)).orderBy(desc(transactions.date)).limit(1).get();
-      const startDate = latestTx
-        ? new Date(latestTx.date.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-        : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      const endDate = new Date().toISOString().split('T')[0];
-
-      const plaidTxList = await plaid.getTransactions(conn.accessToken, startDate, endDate);
-
-      for (const tx of plaidTxList) {
-        const existingTx = await db.select().from(transactions).where(eq(transactions.plaidTransactionId, tx.transaction_id)).get();
-        if (existingTx) continue;
-
-        const localAccId = accountIdMap.get(tx.account_id);
-        if (!localAccId) continue;
-
-        const localAmount = Math.round(-tx.amount * 100);
-        let category: string;
-        try {
-          category = await analysis.categorizeTransaction(tx.merchant_name || tx.name || '', tx.name || '', gemini);
-        } catch (_err) {
-          category = (tx.category && tx.category[0]) || 'Other';
-        }
-
-        await db.insert(transactions).values({
-          id: uuidv4(),
-          userId,
-          accountId: localAccId,
-          amount: localAmount,
-          category,
-          merchant: tx.merchant_name || tx.name || 'Unknown Merchant',
-          description: tx.name || '',
-          date: new Date(tx.date),
-          plaidTransactionId: tx.transaction_id,
-          createdAt: new Date(),
-        }).run();
-
-        newTransactionsSynced++;
-      }
+    for (const connection of connections) {
+      const result = await syncConnection(db, userId, connection, plaid);
+      accountsSynced += result.accountsSynced;
+      newTransactionsSynced += result.newTransactionsSynced;
     }
-
-    return jsonResponse({ success: true, accountsSynced, newTransactionsSynced });
+    return jsonResponse({
+      success: true,
+      accountsSynced,
+      newTransactionsSynced,
+    });
   }
-
   return null;
 }

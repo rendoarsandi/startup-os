@@ -1,3 +1,4 @@
+import * as api from '../lib/server-functions'
 import React, { useState } from 'react';
 import { Card, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -12,8 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from './ui/table';
-import { 
-  Users, DollarSign, Award, Landmark, 
+import {
+  Users, DollarSign, Award, Landmark,
   Calculator, Plus, Minus
 } from 'lucide-react';
 
@@ -37,9 +38,9 @@ export const HRBoardroom: React.FC = () => {
   const { data: employees = [] } = useQuery<Employee[]>({
     queryKey: ['employees'],
     queryFn: async () => {
-      const res = await fetch('/api/hr/employees');
-      if (!res.ok) throw new Error('Failed to fetch employees');
-      return res.json();
+      const res = await api.listEmployees();
+
+      return res;
     }
   });
 
@@ -196,7 +197,7 @@ export const HRBoardroom: React.FC = () => {
           <div className="space-y-4">
             <div className="space-y-1.5">
               <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Expansion Department</label>
-              <select 
+              <select
                 value={simDept}
                 onChange={(e) => setSimDept(e.target.value)}
                 className="w-full text-xs h-9 font-bold tracking-wider rounded-lg border border-border bg-black/10 px-2 uppercase text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
@@ -215,15 +216,15 @@ export const HRBoardroom: React.FC = () => {
                 <span className="text-emerald-400 font-black">{simCount} FTE</span>
               </div>
               <div className="flex items-center gap-3">
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  className="h-8 w-8 rounded-md" 
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 rounded-md"
                   onClick={() => setSimCount(c => Math.max(1, c - 1))}
                 >
                   <Minus size={12} />
                 </Button>
-                <Slider 
+                <Slider
                   min={1}
                   max={20}
                   step={1}
@@ -231,10 +232,10 @@ export const HRBoardroom: React.FC = () => {
                   onValueChange={(val) => setSimCount(val[0])}
                   className="flex-1"
                 />
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  className="h-8 w-8 rounded-md" 
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 rounded-md"
                   onClick={() => setSimCount(c => Math.min(20, c + 1))}
                 >
                   <Plus size={12} />
@@ -247,7 +248,7 @@ export const HRBoardroom: React.FC = () => {
                 <span className="text-muted-foreground uppercase">Average Annual Salary</span>
                 <span className="text-emerald-400 font-black">${simSalary.toLocaleString()} USD</span>
               </div>
-              <Slider 
+              <Slider
                 min={40000}
                 max={250000}
                 step={5000}

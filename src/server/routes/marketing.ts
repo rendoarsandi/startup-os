@@ -1,11 +1,13 @@
+import type { DrizzleD1Database } from 'drizzle-orm/d1';
+import type { AppEnv } from '../env';
 import { eq, and, desc } from 'drizzle-orm';
 import { crmLeads, marketingCampaigns } from '../../db/schema';
-import { GeminiService } from '../gemini';
+import { createAIService } from '../ai';
 import { v4 as uuidv4 } from 'uuid';
 import { decodeCrmLead, decodeCreateCampaign, decodeGenerateIdeas } from '../schemas';
 import { getValidatedBody, jsonResponse, matchRoute } from '../utils';
 
-export async function handleMarketingRoutes(request: Request, path: string, method: string, db: any, userId: string, env: any): Promise<Response | null> {
+export async function handleMarketingRoutes(request: Request, path: string, method: string, db: DrizzleD1Database, userId: string, env: AppEnv): Promise<Response | null> {
   if (path === '/api/marketing/crm') {
     if (method === 'GET') {
       const results = await db.select().from(crmLeads).where(eq(crmLeads.userId, userId)).orderBy(desc(crmLeads.createdAt)).all();
@@ -34,7 +36,7 @@ export async function handleMarketingRoutes(request: Request, path: string, meth
   if (crmParams && method === 'PUT') {
     const id = crmParams.id;
     const body = await getValidatedBody(request, decodeCrmLead);
-    await db.update(crmLeads).set({
+    const updated = await db.update(crmLeads).set({
       name: body.name,
       company: body.company,
       email: body.email,
@@ -42,8 +44,8 @@ export async function handleMarketingRoutes(request: Request, path: string, meth
       value: body.value,
       status: body.status,
       updatedAt: new Date()
-    }).where(and(eq(crmLeads.id, id), eq(crmLeads.userId, userId))).run();
-    return jsonResponse({ success: true });
+    }).where(and(eq(crmLeads.id, id), eq(crmLeads.userId, userId))).returning().get();
+    return updated ? jsonResponse({ success: true }) : jsonResponse({ error: 'Lead not found.' }, 404);
   }
 
   if (path === '/api/marketing/campaigns') {
@@ -66,6 +68,7 @@ export async function handleMarketingRoutes(request: Request, path: string, meth
         updatedAt: new Date()
       };
       const existing = await db.select().from(marketingCampaigns).where(and(eq(marketingCampaigns.id, newCampaign.id), eq(marketingCampaigns.userId, userId))).get();
+      if (body.id && !existing) return jsonResponse({ error: 'Campaign not found.' }, 404);
       if (existing) {
         await db.update(marketingCampaigns).set({
           name: newCampaign.name,
@@ -84,9 +87,9 @@ export async function handleMarketingRoutes(request: Request, path: string, meth
   }
 
   if (path === '/api/marketing/generate-ideas' && method === 'POST') {
-    const gemini = new GeminiService(env.GEMINI_API_KEY);
+    const gemini = createAIService(env);
     const { productDescription, targetAudience } = await getValidatedBody(request, decodeGenerateIdeas);
-    const prompt = `Brainstorm 4 creative marketing campaign concepts for this product: "${productDescription}" targeting this audience: "${targetAudience}". 
+    const prompt = `Brainstorm 4 creative marketing campaign concepts for this product: "${productDescription}" targeting this audience: "${targetAudience}".
     For each campaign, provide:
     1. Campaign Name
     2. Concept Description

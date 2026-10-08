@@ -1,3 +1,4 @@
+import * as api from '../../lib/server-functions'
 import React, { useState } from 'react';
 import { Ticket, Plus, Loader2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -42,21 +43,17 @@ export const TicketsSection: React.FC = () => {
   const { data: tickets = [], isLoading } = useQuery<SupportTicket[]>({
     queryKey: ['tickets'],
     queryFn: async () => {
-      const res = await fetch('/api/operations/tickets');
-      if (!res.ok) throw new Error('Failed to fetch tickets');
-      return res.json();
+      const res = await api.listTickets();
+
+      return res;
     }
   });
 
   const createTicketMutation = useMutation({
     mutationFn: async (ticketData: any) => {
-      const res = await fetch('/api/operations/tickets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(ticketData)
-      });
-      if (!res.ok) throw new Error('Failed to create ticket');
-      return res.json();
+      const res = await api.createTicket({ data: ticketData });
+
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
@@ -67,14 +64,10 @@ export const TicketsSection: React.FC = () => {
   });
 
   const ticketStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const res = await fetch(`/api/operations/tickets/${id}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
-      });
-      if (!res.ok) throw new Error('Failed to update ticket');
-      return res.json();
+    mutationFn: async ({ id, status }: { id: string; status: 'open' | 'replied' | 'resolved' }) => {
+      const res = await api.updateTicketStatus({ data: { id: id, payload: { status } } });
+
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
@@ -174,7 +167,7 @@ export const TicketsSection: React.FC = () => {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center">
-                        <Select value={t.status} onValueChange={status => ticketStatusMutation.mutate({ id: t.id, status })}>
+                        <Select value={t.status} onValueChange={status => { if (status === 'open' || status === 'replied' || status === 'resolved') ticketStatusMutation.mutate({ id: t.id, status }) }}>
                           <SelectTrigger className="h-6 text-[10px] w-[100px] bg-background">
                             <SelectValue />
                           </SelectTrigger>

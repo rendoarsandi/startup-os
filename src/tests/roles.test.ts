@@ -1,12 +1,12 @@
 import { expect, test, describe, vi } from 'vitest';
-import { handleApiRequest } from '../server/dispatcher';
+import { handleApiRequest } from './mocks/apiHarness';
 
-vi.mock('../server/gemini', () => {
+vi.mock('../server/ai', () => {
   return {
-    GeminiService: class {
-      chat = vi.fn().mockResolvedValue('Hello from Mocked Gemini!');
-      generateResponse = vi.fn().mockResolvedValue('Mocked Generative Response');
-    }
+    createAIService: () => ({
+      chat: vi.fn().mockResolvedValue('Hello from Mocked Gemini!'),
+      generateResponse: vi.fn().mockResolvedValue('Mocked Generative Response'),
+    })
   };
 });
 

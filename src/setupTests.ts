@@ -2,9 +2,9 @@ import '@testing-library/jest-dom/vitest';
 import { beforeAll, afterEach, afterAll } from 'vitest';
 import { server } from './tests/mocks/server';
 
+server.listen({ onUnhandledRequest: 'error' });
+
 beforeAll(() => {
-  // Start Mock Service Worker
-  server.listen({ onUnhandledRequest: 'bypass' });
 
   class ResizeObserverMock {
     observe() {}

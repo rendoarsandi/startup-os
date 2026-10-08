@@ -63,7 +63,7 @@ export const QASimulator: React.FC<QASimulatorProps> = ({ metrics, evaluateRespo
             <Select value={selectedQuestionIdx.toString()} onValueChange={v => { setSelectedQuestionIdx(parseInt(v, 10)); setEvaluation(null); }}>
               <SelectTrigger className="w-[200px] text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {activePersona.questions.map((q, idx) => (
+                {activePersona.questions.map((_q, idx) => (
                   <SelectItem key={idx} value={idx.toString()}>Question {idx + 1}</SelectItem>
                 ))}
               </SelectContent>

@@ -75,7 +75,7 @@ interface PresetSelectorProps {
   onSelectPreset: (key: keyof typeof PRESETS) => void;
 }
 
-const PRESET_KEYS: (keyof typeof PRESETS)[] = ['standard', 'hypergrowth', 'conservative', 'crisis'];
+const PRESET_KEYS: (keyof typeof PRESETS)[] = ['steady', 'growth', 'efficient', 'crisis'];
 
 export const PresetSelector: React.FC<PresetSelectorProps> = ({ selectedPreset, onSelectPreset }) => {
   return (

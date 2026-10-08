@@ -1,4 +1,8 @@
+import * as api from './lib/server-functions'
+import { useSearch, useNavigate } from '@tanstack/react-router'
+import { sessionOptions } from './lib/query-options'
 import { Layout } from './components/Layout'
+import { RequestErrors } from './components/RequestErrors'
 import { AuthPage } from './components/AuthPage'
 import { Chat } from './components/Chat'
 import { TransactionList } from './components/TransactionList'
@@ -11,6 +15,7 @@ import { CRMPipeline } from './components/CRMPipeline'
 import { HROperations } from './components/HROperations'
 import { COOOperations } from './components/COOOperations'
 import { SystemSettings } from './components/SystemSettings'
+import { AutopilotSection } from './components/coo/AutopilotSection'
 import { FunnelAnalysis } from './components/FunnelAnalysis'
 import { HRBoardroom } from './components/HRBoardroom'
 import { AIBoardroom } from './components/AIBoardroom'
@@ -20,7 +25,7 @@ import { CfoOverview } from './components/app/CfoOverview'
 import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTransactions } from './hooks/useTransactions'
 import { calculateCustomProjections } from './hooks/useScenario'
 
@@ -31,24 +36,18 @@ import { Tabs, TabsList, TabsTrigger } from './components/ui/tabs'
 export { StatCard, InsightItem, SyncBankButton } from './components/app/StatCard'
 
 function App() {
-  const [activeRole, setActiveRole] = useState<'cfo' | 'marketer' | 'hr' | 'operations'>('cfo');
+  const { role: activeRole, view: currentView } = useSearch({ from: '/app' });
+  const navigate = useNavigate({ from: '/app' });
+  const setActiveRole = (role: typeof activeRole) => { void navigate({ search: previous => ({ ...previous, role, view: previous.view === 'settings' || previous.view === 'automation' || previous.view === 'ai-boardroom' ? previous.view : 'dashboard' }) }); };
+  const setCurrentView = (view: typeof currentView) => { void navigate({ search: previous => ({ ...previous, view }) }); };
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [chatSeedPrompt, setChatSeedPrompt] = useState<string | undefined>(undefined);
 
   const [cfoView, setCfoView] = useState<'overview' | 'invoices'>('overview');
   const [cmoView, setCmoView] = useState<'analytics' | 'brainstorm'>('analytics');
-  const [currentView, setCurrentView] = useState<string>('dashboard');
-
-  useEffect(() => {
-    if (currentView !== 'settings') {
-      setCurrentView('dashboard');
-    }
-  }, [activeRole]);
-
-  // Session state
-  const [session, setSession] = useState<{ user: { id: string, email: string, name: string } } | null>(null);
-  const [loadingSession, setLoadingSession] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: session, isPending: loadingSession, error: sessionError, refetch: checkSession } = useQuery(sessionOptions);
 
   // Custom Runway Projection parameters
   const [revGrowth, setRevGrowth] = useState<number>(0);
@@ -56,70 +55,31 @@ function App() {
   const [seasonalityProfile, setSeasonalityProfile] = useState<string>('steady');
   const [isParamsOpen, setIsParamsOpen] = useState<boolean>(false);
 
-  const checkSession = async () => {
-    try {
-      const res = await fetch('/api/auth/get-session');
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.user) {
-          setSession(data);
-        } else {
-          setSession(null);
-        }
-      } else {
-        setSession(null);
-      }
-    } catch (err) {
-      console.error("Session check failed", err);
-      setSession(null);
-    } finally {
-      setLoadingSession(false);
-    }
-  };
-
-  useEffect(() => {
-    checkSession();
-  }, []);
-
-  const handleSignOut = async () => {
-    try {
-      await fetch('/api/auth/sign-out', { method: 'POST' });
-    } catch (err) {
-      console.error("Sign out failed", err);
-    }
-    setSession(null);
-  };
+  const signOut = useMutation({ mutationFn: async () => {
+    const response = await fetch('/api/auth/sign-out', { method: 'POST' });
+    if (!response.ok) throw new Error('Sign out failed. Please try again.');
+    queryClient.clear();
+    queryClient.setQueryData(['session'], null);
+  } });
 
   const { transactions } = useTransactions(!!session);
 
   const { data: accounts = [] } = useQuery<{ id: string, name: string, balance: number, type: string }[]>({
     queryKey: ['accounts', refreshKey, session?.user?.id],
     queryFn: async () => {
-      const res = await fetch('/api/accounts');
-      if (!res.ok) throw new Error('Failed to fetch accounts');
-      return res.json();
+      const res = await api.listAccounts();
+
+      return res;
     },
     enabled: !!session,
   });
 
-  const { data: runwayData, isLoading: runwayLoading } = useQuery<{
-    cashBalance: number;
-    fixedCosts: { payroll: number; subscriptions: number; total: number };
-    variableExpenses: number;
-    monthlyRevenue: number;
-    netBurn: number;
-    runwayMonths: number | "Infinite";
-    projections: { month: string; balance: number }[];
-    startingMrr?: number;
-    churnRate?: number;
-    cac?: number;
-    arpu?: number;
-  }>({
+  const { data: runwayData, isLoading: runwayLoading } = useQuery({
     queryKey: ['runway', refreshKey, session?.user?.id],
     queryFn: async () => {
-      const res = await fetch('/api/cfo/runway');
-      if (!res.ok) throw new Error('Failed to fetch runway data');
-      return res.json();
+      const res = await api.getRunway();
+
+      return res;
     },
     enabled: !!session,
   });
@@ -132,9 +92,9 @@ function App() {
   }>({
     queryKey: ['saasConfig', refreshKey, session?.user?.id],
     queryFn: async () => {
-      const res = await fetch('/api/cfo/saas-config');
-      if (!res.ok) throw new Error('Failed to fetch SaaS config');
-      return res.json();
+      const res = await api.getSaasConfig();
+
+      return res;
     },
     enabled: !!session,
   });
@@ -155,13 +115,9 @@ function App() {
 
   const saasMutation = useMutation({
     mutationFn: async (newConfig: { startingMrr: number; churnRate: number; cac: number; arpu: number }) => {
-      const res = await fetch('/api/cfo/saas-config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newConfig)
-      });
-      if (!res.ok) throw new Error('Failed to update SaaS config');
-      return res.json();
+      const res = await api.saveSaasConfig({ data: newConfig });
+
+      return res;
     },
     onSuccess: () => {
       setRefreshKey(prev => prev + 1);
@@ -174,11 +130,11 @@ function App() {
     : undefined;
 
   const totalBalanceCents = accounts.length > 0
-    ? accounts.reduce((sum, acc) => sum + acc.balance, 0)
+    ? accounts.filter(account => ['checking', 'savings', 'cash'].includes(account.type)).reduce((sum, acc) => sum + acc.balance, 0)
     : 0;
 
   const monthlySpendingCents = transactions
-    .filter(t => t.amount < 0)
+    .filter(t => t.amount < 0 && new Date(t.date).getFullYear() === new Date().getFullYear() && new Date(t.date).getMonth() === new Date().getMonth())
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
   const formattedBalance = `$${(totalBalanceCents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -197,21 +153,24 @@ function App() {
     );
   }
 
+  if (sessionError) return <div className="p-8 space-y-4"><p role="alert">Could not load your session. {sessionError.message}</p><Button onClick={() => checkSession()}>Try again</Button></div>;
+
   if (!session) {
     return <AuthPage onAuthSuccess={checkSession} />;
   }
 
   return (
-    <Layout 
-      activeRole={activeRole} 
+    <Layout
+      activeRole={activeRole}
       setActiveRole={setActiveRole}
       userName={session.user.name}
-      onSignOut={handleSignOut}
+      onSignOut={() => signOut.mutate()}
       currentView={currentView}
       onViewChange={setCurrentView}
     >
       <div className="space-y-6">
-        {currentView === 'settings' ? (
+        <RequestErrors />
+        {currentView === 'automation' ? (<AutopilotSection />) : currentView === 'settings' ? (
           <SystemSettings />
         ) : currentView === 'ai-boardroom' ? (
           <AIBoardroom />
@@ -220,10 +179,10 @@ function App() {
             {activeRole === 'cfo' && (
               <div className="space-y-6">
                 {currentView === 'dashboard' && (
-                  <Tabs 
-                    value={cfoView} 
+                  <Tabs
+                    value={cfoView}
                     // SAFETY: Radix Tabs onValueChange matches cfoView union types
-                    onValueChange={(val) => setCfoView(val as 'overview' | 'invoices')} 
+                    onValueChange={(val) => setCfoView(val as 'overview' | 'invoices')}
                     className="w-full sm:w-auto self-start"
                   >
                     <TabsList className="grid grid-cols-2 w-full sm:w-80 h-9 bg-black/10">
@@ -263,7 +222,7 @@ function App() {
                   />
                 )}
 
-                {currentView === 'invoices' && (
+                {(currentView === 'invoices' || (currentView === 'dashboard' && cfoView === 'invoices')) && (
                   <InvoicesDashboard />
                 )}
 
@@ -275,7 +234,7 @@ function App() {
                           <h3 className="text-base font-bold text-foreground/90">General Ledger Logs</h3>
                           <p className="text-muted-foreground text-[10px] uppercase tracking-widest font-black mt-0.5">Corporate transaction database</p>
                         </div>
-                        <Button 
+                        <Button
                           onClick={() => setIsModalOpen(true)}
                           className="h-8 text-[10px] font-bold px-3 uppercase tracking-wider gap-1"
                         >
@@ -297,13 +256,13 @@ function App() {
                 )}
 
                 {currentView === 'forecasting' && (
-                  <ScenarioPlanner 
-                    baseline={runwayData} 
+                  <ScenarioPlanner
+                    baseline={runwayData}
                     onOpenChat={(seedPrompt) => {
                       if (seedPrompt) {
                         setChatSeedPrompt(seedPrompt);
                       }
-                    }} 
+                    }}
                   />
                 )}
 
@@ -316,10 +275,10 @@ function App() {
             {activeRole === 'marketer' && (
               <div className="space-y-6">
                 {currentView === 'dashboard' && (
-                  <Tabs 
-                    value={cmoView} 
+                  <Tabs
+                    value={cmoView}
                     // SAFETY: Radix Tabs onValueChange matches cmoView union types
-                    onValueChange={(val) => setCmoView(val as 'analytics' | 'brainstorm')} 
+                    onValueChange={(val) => setCmoView(val as 'analytics' | 'brainstorm')}
                     className="w-full sm:w-auto self-start"
                   >
                     <TabsList className="grid grid-cols-2 w-full sm:w-80 h-9 bg-black/10">
@@ -333,7 +292,7 @@ function App() {
                 {currentView === 'crm' && <CRMPipeline />}
                 {currentView === 'campaigns' && <MarketingDashboard showOnlyBrainstorm={true} />}
                 {currentView === 'funnel' && <FunnelAnalysis />}
-                
+
                 {currentView === 'saas-economics' && (
                   <SaaSEconomics />
                 )}
@@ -349,9 +308,9 @@ function App() {
                 ) : currentView === 'documents' ? (
                   <HRDashboard filterSection="documents" />
                 ) : (
-                  <HROperations 
+                  <HROperations
                     activeTab={
-                      currentView === 'expenses' ? 'expenses' : 
+                      currentView === 'expenses' ? 'expenses' :
                       currentView === 'leaves' ? 'leaves' : 'attendance'
                     }
                     onTabChange={(tab) => {
@@ -366,9 +325,9 @@ function App() {
 
             {activeRole === 'operations' && (
               <div className="space-y-6">
-                <COOOperations 
+                <COOOperations
                   activeTab={
-                    currentView === 'projects' ? 'projects' : 
+                    currentView === 'projects' ? 'projects' :
                     currentView === 'tickets' ? 'tickets' : 'inventory'
                   }
                   onTabChange={(tab) => {
@@ -384,9 +343,9 @@ function App() {
 
         <Chat activeRole={activeRole} seedPrompt={chatSeedPrompt} setSeedPrompt={setChatSeedPrompt} />
 
-        <TransactionModal 
-          isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
+        <TransactionModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
           onSuccess={() => setRefreshKey(prev => prev + 1)}
         />
       </div>

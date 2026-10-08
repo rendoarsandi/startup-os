@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, User, Loader2, Sparkles, Briefcase, Users, Zap, Package } from 'lucide-react';
+import { MessageCircle, X, Send, User, Loader2, Sparkles, Users, Zap, Package } from 'lucide-react';
 import { useChat } from '../hooks/useChat';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -33,7 +33,7 @@ export const Chat: React.FC<ChatProps> = ({ activeRole, seedPrompt, setSeedPromp
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [seedPrompt]);
+  }, [seedPrompt, isLoading, sendMessage, setSeedPrompt]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,7 +89,7 @@ export const Chat: React.FC<ChatProps> = ({ activeRole, seedPrompt, setSeedPromp
     <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
       {/* Toggle Button */}
       {!isOpen && (
-        <Button 
+        <Button
           onClick={() => setIsOpen(true)}
           aria-label="Open chat"
           className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-primary shadow-2xl flex items-center justify-center text-primary-foreground hover:scale-105 active:scale-95 group duration-300 relative border border-primary/20"
@@ -121,9 +121,9 @@ export const Chat: React.FC<ChatProps> = ({ activeRole, seedPrompt, setSeedPromp
                 </div>
               </div>
             </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setIsOpen(false)}
               className="text-muted-foreground hover:text-foreground h-8 w-8 rounded-full hover:bg-accent/40"
             >
@@ -132,7 +132,7 @@ export const Chat: React.FC<ChatProps> = ({ activeRole, seedPrompt, setSeedPromp
           </div>
 
           {/* Messages */}
-          <div 
+          <div
             ref={scrollRef}
             className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-black/5"
           >
@@ -167,22 +167,22 @@ export const Chat: React.FC<ChatProps> = ({ activeRole, seedPrompt, setSeedPromp
             {messages.map((msg, i) => (
               <div key={i} className={`flex gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                 <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 border ${
-                  msg.role === 'user' 
-                    ? 'bg-secondary/10 border-secondary/20 text-secondary' 
+                  msg.role === 'user'
+                    ? 'bg-secondary/10 border-secondary/20 text-secondary'
                     : 'bg-primary/10 border-primary/20 text-primary'
                 }`}>
                   {msg.role === 'user' ? <User size={13} /> : renderRoleIcon(activeRole)}
                 </div>
                 <div className={`max-w-[80%] p-3 rounded-xl text-xs leading-relaxed break-words whitespace-pre-wrap ${
-                  msg.role === 'user' 
-                    ? 'bg-primary text-primary-foreground font-medium rounded-tr-none' 
+                  msg.role === 'user'
+                    ? 'bg-primary text-primary-foreground font-medium rounded-tr-none'
                     : 'bg-card border border-border text-foreground/90 rounded-tl-none'
                 }`}>
                   {msg.parts[0].text}
                 </div>
               </div>
             ))}
-            
+
             {isLoading && (
               <div className="flex gap-2.5">
                 <div className="w-7 h-7 rounded-md bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
@@ -198,14 +198,14 @@ export const Chat: React.FC<ChatProps> = ({ activeRole, seedPrompt, setSeedPromp
           {/* Input */}
           <form onSubmit={handleSubmit} className="p-3 border-t border-border bg-card">
             <div className="relative flex items-center">
-              <Input 
-                type="text" 
+              <Input
+                type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Type a message..."
                 className="w-full pr-10 bg-black/10 border-border"
               />
-              <Button 
+              <Button
                 type="submit"
                 disabled={!input.trim() || isLoading}
                 size="icon"

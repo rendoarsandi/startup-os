@@ -1,15 +1,14 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "startup-os",
-  "main": "dist/server/index.js",
+  "main": "src/worker.ts",
   "compatibility_date": "2026-05-20",
   "compatibility_flags": [
     "nodejs_compat"
   ],
   "assets": {
     "directory": "dist/client",
-    "binding": "ASSETS",
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS"
   },
   "observability": {
     "enabled": true
@@ -18,14 +17,33 @@
     "bindings": [
       {
         "name": "WORKSPACE_DO",
-        "class_name": "WorkspaceDO"
+        "class_name": "AutomationCoordinator"
       }
     ]
   },
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["WorkspaceDO"]
+      "new_sqlite_classes": [
+        "WorkspaceDO"
+      ]
+    },
+    {
+      "tag": "v2",
+      "renamed_classes": [
+        {
+          "from": "WorkspaceDO",
+          "to": "AutomationCoordinator"
+        }
+      ]
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "startup-os-db",
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      "migrations_dir": "drizzle"
     }
   ]
 }

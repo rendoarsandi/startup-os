@@ -1,5 +1,6 @@
+import * as api from '../lib/server-functions'
 import React, { useState } from 'react';
-import { 
+import {
   Users, Plus, Search, Loader2, AlertCircle, DollarSign, Calendar, ArrowRight, CheckCircle2, XCircle, Edit2
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -43,7 +44,7 @@ export const CRMPipeline: React.FC = () => {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [minValue, setMinValue] = useState('');
-  
+
   // Modals / Editor State
   const [selectedLead, setSelectedLead] = useState<CRMLead | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -62,22 +63,18 @@ export const CRMPipeline: React.FC = () => {
   const { data: leads = [], isLoading, error } = useQuery<CRMLead[]>({
     queryKey: ['crmLeads'],
     queryFn: async () => {
-      const res = await fetch('/api/marketing/crm');
-      if (!res.ok) throw new Error('Failed to fetch CRM leads');
-      return res.json();
+      const res = await api.listLeads();
+
+      return res;
     }
   });
 
   // Mutate Lead
   const saveLeadMutation = useMutation({
     mutationFn: async (leadData: any) => {
-      const res = await fetch('/api/marketing/crm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(leadData)
-      });
-      if (!res.ok) throw new Error('Failed to save CRM lead');
-      return res.json();
+      const res = await api.createLead({ data: leadData });
+
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crmLeads'] });
@@ -88,13 +85,9 @@ export const CRMPipeline: React.FC = () => {
 
   const updateLeadMutation = useMutation({
     mutationFn: async ({ id, ...leadData }: { id: string } & Partial<CRMLead>) => {
-      const res = await fetch(`/api/marketing/crm/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(leadData)
-      });
-      if (!res.ok) throw new Error('Failed to update CRM lead');
-      return res.json();
+      const res = await api.updateLead({ data: { id: id, payload: { ...leadData, name: leadData.name ?? selectedLead?.name ?? '', company: leadData.company ?? selectedLead?.company ?? '' } } });
+
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crmLeads'] });
@@ -175,7 +168,7 @@ export const CRMPipeline: React.FC = () => {
 
   // Filtered leads
   const filteredLeads = leads.filter(l => {
-    const matchesSearch = l.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchesSearch = l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           l.company.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesMinVal = !minValue || (l.value / 100) >= parseFloat(minValue);
     return matchesSearch && matchesMinVal;
@@ -189,7 +182,7 @@ export const CRMPipeline: React.FC = () => {
           <h2 className="text-2xl font-bold text-foreground tracking-tight">Sales CRM & Pipeline</h2>
           <p className="text-muted-foreground text-xs mt-1">Track pipeline deals, manage customer opportunities, and monitor conversion velocity.</p>
         </div>
-        <Button 
+        <Button
           onClick={() => { resetForm(); setIsCreateOpen(true); }}
           className="flex items-center gap-2 self-start sm:self-auto"
         >
@@ -230,7 +223,7 @@ export const CRMPipeline: React.FC = () => {
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <div className="relative flex-1 sm:flex-none">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={13} />
-            <Input 
+            <Input
               type="text"
               placeholder="Search client/company..."
               value={searchQuery}
@@ -241,7 +234,7 @@ export const CRMPipeline: React.FC = () => {
 
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">$</span>
-            <Input 
+            <Input
               type="number"
               placeholder="Min value ($)"
               value={minValue}
@@ -271,8 +264,8 @@ export const CRMPipeline: React.FC = () => {
             const stageLeads = filteredLeads.filter(l => l.status === stage.key);
             const totalStageValue = stageLeads.reduce((sum, l) => sum + l.value, 0) / 100;
             return (
-              <div 
-                key={stage.key} 
+              <div
+                key={stage.key}
                 className={`border ${stage.border} rounded-xl ${stage.bg} flex flex-col p-3 space-y-3 min-h-[450px] max-h-[600px] overflow-y-auto custom-scrollbar`}
               >
                 {/* Stage Header */}
@@ -287,14 +280,14 @@ export const CRMPipeline: React.FC = () => {
                 {/* Cards List */}
                 <div className="space-y-2 flex-1">
                   {stageLeads.map((lead) => (
-                    <div 
+                    <div
                       key={lead.id}
                       onClick={() => handleOpenEdit(lead)}
                       className="border border-border/60 p-3 rounded-lg bg-card hover:bg-accent/40 hover:border-primary/20 transition-all cursor-pointer group space-y-2.5 relative shadow-sm"
                     >
                       <div className="flex justify-between items-start gap-1">
                         <h5 className="font-extrabold text-xs text-foreground group-hover:text-primary transition-colors leading-tight line-clamp-1">{lead.company}</h5>
-                        <Button 
+                        <Button
                           variant="ghost"
                           size="icon"
                           onClick={(e) => { e.stopPropagation(); handleOpenEdit(lead); }}
@@ -308,7 +301,7 @@ export const CRMPipeline: React.FC = () => {
 
                       <div className="border-t border-border/40 pt-2 flex justify-between items-center text-[10px]">
                         <span className="font-bold text-foreground">${(lead.value / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
-                        
+
                         <div className="flex items-center gap-1.5 text-muted-foreground text-[9px] font-bold uppercase tracking-tight">
                           <Calendar size={9} />
                           <span>{new Date(lead.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
@@ -366,15 +359,15 @@ export const CRMPipeline: React.FC = () => {
       )}
 
       {/* CRM Opportunity Creator & Editor Drawers */}
-      <Dialog 
-        open={isCreateOpen || isEditOpen} 
-        onOpenChange={(open) => { 
-          if (!open) { 
-            setIsCreateOpen(false); 
-            setIsEditOpen(false); 
-            setSelectedLead(null); 
+      <Dialog
+        open={isCreateOpen || isEditOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsCreateOpen(false);
+            setIsEditOpen(false);
+            setSelectedLead(null);
             resetForm();
-          } 
+          }
         }}
       >
         <DialogContent className="max-w-md w-full border-border bg-card p-6 shadow-2xl relative overflow-hidden">
@@ -395,7 +388,7 @@ export const CRMPipeline: React.FC = () => {
           <form onSubmit={isCreateOpen ? handleCreateSubmit : handleEditSubmit} className="space-y-4 pt-2">
             <div className="space-y-1.5">
               <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Company Name</label>
-              <Input 
+              <Input
                 type="text"
                 required
                 value={leadCompany}
@@ -406,7 +399,7 @@ export const CRMPipeline: React.FC = () => {
 
             <div className="space-y-1.5">
               <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Contact Name</label>
-              <Input 
+              <Input
                 type="text"
                 required
                 value={leadName}
@@ -418,7 +411,7 @@ export const CRMPipeline: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Email (Optional)</label>
-                <Input 
+                <Input
                   type="email"
                   value={leadEmail}
                   onChange={(e) => setLeadEmail(e.target.value)}
@@ -427,7 +420,7 @@ export const CRMPipeline: React.FC = () => {
               </div>
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Phone (Optional)</label>
-                <Input 
+                <Input
                   type="text"
                   value={leadPhone}
                   onChange={(e) => setLeadPhone(e.target.value)}
@@ -439,7 +432,7 @@ export const CRMPipeline: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Deal Value ($)</label>
-                <Input 
+                <Input
                   type="number"
                   required
                   min="0"
@@ -451,8 +444,8 @@ export const CRMPipeline: React.FC = () => {
 
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Pipeline Stage</label>
-                <Select 
-                  value={leadStage} 
+                <Select
+                  value={leadStage}
                   // SAFETY: Radix Select onValueChange corresponds to CRM lead stage options
                   onValueChange={(val) => setLeadStage(val as 'lead' | 'contacted' | 'proposal' | 'won' | 'lost')}
                 >
@@ -471,15 +464,15 @@ export const CRMPipeline: React.FC = () => {
             </div>
 
             <div className="flex gap-2 pt-2">
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={isSaving}
                 className="flex-1 h-10 text-xs font-bold gap-1.5"
               >
                 {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Users size={13} />}
                 <span>{isCreateOpen ? "Create Opportunity" : "Save Changes"}</span>
               </Button>
-              <Button 
+              <Button
                 type="button"
                 variant="outline"
                 onClick={() => { setIsCreateOpen(false); setIsEditOpen(false); setSelectedLead(null); resetForm(); }}

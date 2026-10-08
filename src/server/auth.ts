@@ -1,7 +1,11 @@
+import { pbkdf2Async } from '@noble/hashes/pbkdf2.js';
+import { sha256 } from '@noble/hashes/sha2.js';
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
+
+import type { D1Database } from '@cloudflare/workers-types';
 
 const PBKDF2_ITERATIONS = 600_000;
 
@@ -22,20 +26,8 @@ function fromHex(value: string): Uint8Array {
 }
 
 async function derivePasswordHash(password: string, salt: Uint8Array, iterations: number): Promise<string> {
-  const passwordBytes = new TextEncoder().encode(password);
-  const key = await crypto.subtle.importKey(
-    "raw",
-    passwordBytes,
-    "PBKDF2",
-    false,
-    ["deriveBits"],
-  );
-  const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", hash: "SHA-256", salt, iterations },
-    key,
-    256,
-  );
-  return toHex(new Uint8Array(bits));
+  // Standard PBKDF2, preserving existing hashes without workerd's native cap.
+  return toHex(await pbkdf2Async(sha256, new TextEncoder().encode(password), salt, { c: iterations, dkLen: 32 }));
 }
 
 export const getAuth = (db: D1Database, url: string, secret?: string) => {
@@ -66,11 +58,16 @@ export const getAuth = (db: D1Database, url: string, secret?: string) => {
               return false;
             }
             const iterations = Number.parseInt(iterationsStr, 10);
-            if (Number.isNaN(iterations) || iterations <= 0) {
+            if (Number.isNaN(iterations) || iterations <= 0 || iterations > 1_000_000) {
               return false;
             }
             const candidateHash = await derivePasswordHash(password, fromHex(salt), iterations);
-            return candidateHash === expectedHash;
+            const candidate = fromHex(candidateHash);
+            const expected = fromHex(expectedHash);
+            if (candidate.length !== expected.length) return false;
+            let mismatch = 0;
+            for (let i = 0; i < candidate.length; i++) mismatch |= candidate[i] ^ expected[i];
+            return mismatch === 0;
           } catch {
             return false;
           }
@@ -79,9 +76,6 @@ export const getAuth = (db: D1Database, url: string, secret?: string) => {
     },
     baseURL: url,
     trustedOrigins: [
-      "https://ai-cfo-web.pages.dev",
-      "https://*.pages.dev",
-      "http://localhost:5173",
       url,
     ],
   });

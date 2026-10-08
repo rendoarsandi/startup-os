@@ -1,106 +1,67 @@
-import { expect, test, describe, beforeEach } from 'vitest';
-import { handleApiRequest } from '../server/dispatcher';
-import { createRealSqliteD1 } from './mocks/d1Simulator';
-
-interface AutopilotTestEnv {
-  GEMINI_API_KEY: string;
-  TEST_USER_ID: string;
-  DB: any;
+// @vitest-environment node
+import { beforeEach, describe, expect, test } from 'vitest'
+import { handleApiRequest } from './mocks/apiHarness'
+import { createRealSqliteD1 } from './mocks/d1Simulator'
+let env: any
+async function request(path: string, method = 'GET', input?: unknown, owner = 'founder') {
+  return handleApiRequest(new Request('http://localhost' + path, { method, headers: { 'Content-Type': 'application/json' }, body: method === 'GET' ? undefined : JSON.stringify(input || {}) }), { ...env, TEST_USER_ID: owner })
 }
-
-describe('COO Autopilot Rules API Endpoints', () => {
-  let realDb: any;
-  let mockEnv: AutopilotTestEnv;
-
-  beforeEach(async () => {
-    realDb = await createRealSqliteD1();
-    mockEnv = {
-      GEMINI_API_KEY: 'test-key',
-      TEST_USER_ID: 'test-user-id',
-      DB: realDb,
-    };
-  });
-
-  test('GET /api/operations/autopilot returns rule list', async () => {
-    const res = await handleApiRequest(new Request('http://localhost/api/operations/autopilot', {
-      method: 'GET',
-    }), mockEnv);
-
-    expect(res.status).toBe(200);
-    // SAFETY: Autopilot rules endpoint returns array of rules
-    const data = (await res.json()) as unknown[];
-    expect(Array.isArray(data)).toBe(true);
-  });
-
-  test('POST /api/operations/autopilot creates or updates rule', async () => {
-    const res = await handleApiRequest(new Request('http://localhost/api/operations/autopilot', {
-      method: 'POST',
-      body: JSON.stringify({
-        name: 'Urgent Ticket Alert Hook',
-        triggerType: 'high_priority_ticket',
-        triggerValue: 'high',
-        actionType: 'webhook_alert',
-        actionTarget: 'https://hooks.slack.com/services/test'
-      }),
-      headers: { 'Content-Type': 'application/json' },
-    }), mockEnv);
-
-    expect(res.status).toBe(201);
-    // SAFETY: Created autopilot rule payload contains rule fields
-    const data = (await res.json()) as { name: string; triggerType: string; actionType: string };
-    expect(data.name).toBe('Urgent Ticket Alert Hook');
-    expect(data.triggerType).toBe('high_priority_ticket');
-    expect(data.actionType).toBe('webhook_alert');
-
-    const resAll = await realDb.prepare('SELECT * FROM autopilot_rule WHERE user_id = ?').bind('test-user-id').all();
-    expect(resAll.results.length).toBe(1);
-    expect(resAll.results[0].name).toBe('Urgent Ticket Alert Hook');
-  });
-
-  test('PUT /api/operations/autopilot/:id/toggle toggles rule state', async () => {
-    const createRes = await handleApiRequest(new Request('http://localhost/api/operations/autopilot', {
-      method: 'POST',
-      body: JSON.stringify({
-        id: 'rule-1',
-        name: 'Urgent Ticket Alert Hook',
-        triggerType: 'high_priority_ticket',
-        triggerValue: 'high',
-        actionType: 'webhook_alert',
-        actionTarget: 'https://hooks.slack.com/services/test'
-      }),
-      headers: { 'Content-Type': 'application/json' },
-    }), mockEnv);
-
-    // SAFETY: Created rule payload contains id
-    const createdData = (await createRes.json()) as { id?: string };
-    const ruleId = createdData.id || 'rule-1';
-
-    const toggleRes = await handleApiRequest(new Request(`http://localhost/api/operations/autopilot/${ruleId}/toggle`, {
-      method: 'PUT',
-      body: JSON.stringify({ active: false }),
-      headers: { 'Content-Type': 'application/json' },
-    }), mockEnv);
-
-    expect(toggleRes.status).toBe(200);
-    // SAFETY: Toggle rule response contains success and active boolean
-    const toggleData = (await toggleRes.json()) as { success: boolean; active: boolean };
-    expect(toggleData.success).toBe(true);
-    expect(toggleData.active).toBe(false);
-
-    const row = await realDb.prepare('SELECT * FROM autopilot_rule WHERE id = ?').bind(ruleId).first();
-    expect(row).toBeDefined();
-    expect(Boolean(row.active)).toBe(false);
-  });
-
-  test('POST /api/operations/autopilot/run-checks evaluates autopilot triggers', async () => {
-    const res = await handleApiRequest(new Request('http://localhost/api/operations/autopilot/run-checks', {
-      method: 'POST',
-    }), mockEnv);
-
-    expect(res.status).toBe(200);
-    // SAFETY: Run checks response contains success boolean and logs array
-    const data = (await res.json()) as { success: boolean; logs: unknown[] };
-    expect(data.success).toBe(true);
-    expect(Array.isArray(data.logs)).toBe(true);
-  });
-});
+beforeEach(async () => {
+  const DB = await createRealSqliteD1()
+  env = { DB }
+  const now = Math.floor(Date.now() / 1000)
+  for (const id of ['founder', 'other']) await DB.prepare('INSERT INTO user (id,name,email,email_verified,created_at,updated_at) VALUES (?,?,?,?,?,?)').bind(id,id,id+'@test.local',1,now,now).run()
+})
+async function lowStockRule() {
+  await request('/api/operations/inventory', 'POST', { sku: 'LAPTOP', name: 'Laptop', qty: 2, rate: 150000 })
+  const res = await request('/api/operations/autopilot', 'POST', { name: 'Restock', triggerType: 'low_stock', triggerValue: '5', actionType: 'auto_task' })
+  expect(res.status).toBe(201)
+  return res.json()
+}
+describe('Persistent automation', () => {
+  test('manual and concurrent checks deduplicate work, and approval creates exactly one persisted task', async () => {
+    const rule = await lowStockRule()
+    const checks = await Promise.all([request('/api/operations/autopilot/run-checks', 'POST'), request('/api/operations/autopilot/run-checks', 'POST')])
+    for (const res of checks) expect(res.status).toBe(200)
+    const runs = await (await request('/api/automation/runs')).json()
+    expect(runs).toHaveLength(1)
+    expect(runs[0].status).toBe('awaiting_approval')
+    await request(`/api/operations/autopilot/${rule.id}/toggle`, 'PUT', { active: false })
+    await request(`/api/operations/autopilot/${rule.id}/toggle`, 'PUT', { active: true })
+    await request('/api/operations/autopilot/run-checks', 'POST')
+    expect(await (await request('/api/automation/runs')).json()).toHaveLength(1)
+    expect(await (await request('/api/operations/tasks')).json()).toEqual([])
+    const approvals = await Promise.all([request(`/api/automation/runs/${runs[0].id}/review`, 'POST', { decision: 'approve' }), request(`/api/automation/runs/${runs[0].id}/review`, 'POST', { decision: 'approve' })])
+    expect(approvals.map(res => res.status).sort()).toEqual([200,409])
+    const tasks = await (await request('/api/operations/tasks')).json()
+    expect(tasks).toHaveLength(1)
+    expect(tasks[0].title).toBe('Review stock for Laptop')
+    expect((await (await request('/api/automation/runs')).json())[0].status).toBe('completed')
+  })
+  test('server autonomy setting allows internal work without fabricated execution', async () => {
+    await request('/api/workspace/settings', 'PUT', { companyName: 'Small team', companyDescription: '', autonomy: 'internal' })
+    await lowStockRule()
+    await request('/api/operations/autopilot/run-checks', 'POST')
+    expect(await (await request('/api/operations/tasks')).json()).toHaveLength(1)
+  })
+  test('rule deletion, toggling, and review cannot affect another founder', async () => {
+    const rule = await lowStockRule()
+    expect((await request(`/api/operations/autopilot/${rule.id}`, 'DELETE', undefined, 'other')).status).toBe(404)
+    expect((await request(`/api/operations/autopilot/${rule.id}/toggle`, 'PUT', { active: false }, 'other')).status).toBe(404)
+    await request('/api/operations/autopilot/run-checks', 'POST')
+    const runs = await (await request('/api/automation/runs')).json()
+    expect((await request(`/api/automation/runs/${runs[0].id}/review`, 'POST', { decision: 'approve' }, 'other')).status).toBe(409)
+    expect(await (await request('/api/automation/runs', 'GET', undefined, 'other')).json()).toEqual([])
+  })
+  test('missing AI credentials persist a failure and never claim a customer reply was sent', async () => {
+    await request('/api/operations/tickets', 'POST', { customerName: 'Customer', subject: 'Help', description: 'Login fails', priority: 'high' })
+    await request('/api/operations/autopilot', 'POST', { name: 'Support draft', triggerType: 'high_priority_ticket', triggerValue: 'high', actionType: 'ai_reply' })
+    await request('/api/operations/autopilot/run-checks', 'POST')
+    const runs = await (await request('/api/automation/runs')).json()
+    expect(runs[0].status).toBe('failed')
+    expect(runs[0].error).toContain('AI is not connected')
+    expect((await (await request('/api/operations/tickets')).json())[0].status).toBe('open')
+    expect((await request(`/api/automation/runs/${runs[0].id}/review`, 'POST', { decision: 'retry' })).status).toBe(200)
+    expect((await (await request('/api/automation/runs')).json())[0].attempts).toBe(2)
+  })
+})

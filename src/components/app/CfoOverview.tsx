@@ -9,6 +9,7 @@ import { StatCard, SyncBankButton } from './StatCard';
 import { SpendingTrendChart, RunwayProjectionChart } from '../Charts';
 import { TransactionList } from '../TransactionList';
 import { BudgetTracker } from '../BudgetTracker';
+import { AccountForm } from '../AccountForm';
 import { PlaidLinkButton } from '../PlaidLink';
 
 interface CfoOverviewProps {
@@ -72,30 +73,31 @@ export const CfoOverview: React.FC<CfoOverviewProps> = ({
         <h2 className="text-2xl font-bold mb-1 text-foreground tracking-tight">
           CFO Financial Dashboard
         </h2>
-        <p className="text-muted-foreground text-xs font-semibold">Your AI CFO has analyzed {transactions.length} transactions.</p>
+        <p className="text-muted-foreground text-xs font-semibold">Financial overview from {transactions.length} recorded transactions.</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard 
-          title="Total Balance" 
-          value={formattedBalance} 
-          change={accounts.length > 0 ? "Live" : "No Accounts"} 
-          isPositive={true} 
+        <StatCard
+          title="Total Balance"
+          value={formattedBalance}
+          change={accounts.length > 0 ? "Live" : "No Accounts"}
+          isPositive={true}
         />
-        <StatCard 
-          title="Monthly Spending" 
-          value={formattedSpending} 
-          change={transactions.length > 0 ? "Calculated" : "No Spend"} 
-          isPositive={true} 
+        <StatCard
+          title="Monthly Spending"
+          value={formattedSpending}
+          change={transactions.length > 0 ? "Calculated" : "No Spend"}
+          isPositive={true}
         />
-        <StatCard 
-          title="AI Cash Runway" 
-          value={runwayLoading ? "Loading..." : customRunway?.runwayMonths === "Infinite" ? "Infinite Runway" : `${customRunway?.runwayMonths ?? '0'} Months`} 
-          change={runwayLoading ? "Calculating" : customRunway?.runwayMonths === "Infinite" ? "Profitable" : `$${Math.round((customRunway?.netBurn ?? 0) / 100).toLocaleString()}/mo burn`} 
-          isPositive={customRunway?.runwayMonths === "Infinite" || (customRunway?.runwayMonths ?? 12) >= 6} 
+        <StatCard
+          title="Estimated Cash Runway"
+          value={runwayLoading ? "Loading..." : customRunway?.dataQuality === 'missing' ? "Add financial records" : customRunway?.runwayMonths === "Infinite" ? "Costs covered" : `${customRunway?.runwayMonths ?? '0'} Months`}
+          change={runwayLoading ? "Calculating" : customRunway?.dataQuality === 'missing' ? "Estimate unavailable" : customRunway?.runwayMonths === "Infinite" ? "Recorded costs covered" : `$${Math.round((customRunway?.netBurn ?? 0) / 100).toLocaleString()}/mo burn`}
+          isPositive={customRunway?.runwayMonths === "Infinite" || (customRunway?.runwayMonths ?? 12) >= 6}
         />
       </div>
 
+      {customRunway?.dataQuality === 'limited' && <p className="text-sm text-muted-foreground">This forecast uses limited records. Unrecorded costs are excluded.</p>}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <Card className="p-6 min-h-[400px]">
@@ -107,7 +109,7 @@ export const CfoOverview: React.FC<CfoOverviewProps> = ({
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-base font-bold text-foreground/90">Cash Runway Projections</h3>
               <div className="flex items-center gap-2">
-                <Button 
+                <Button
                   variant="outline"
                   onClick={() => setIsParamsOpen(!isParamsOpen)}
                   className="h-8 text-[10px] font-bold px-3 uppercase tracking-wider gap-1.5"
@@ -116,8 +118,8 @@ export const CfoOverview: React.FC<CfoOverviewProps> = ({
                 </Button>
                 {!runwayLoading && customRunway && (
                   <Badge variant={customRunway.runwayMonths === 'Infinite' ? 'success' : customRunway.runwayMonths < 6 ? 'destructive' : 'warning'} className="text-[9px] font-black uppercase tracking-wider py-0.5">
-                    {customRunway.runwayMonths === 'Infinite' 
-                      ? 'Profitable' 
+                    {customRunway.runwayMonths === 'Infinite'
+                      ? 'Profitable'
                       : `${customRunway.runwayMonths} Mo. Runway`}
                   </Badge>
                 )}
@@ -132,7 +134,7 @@ export const CfoOverview: React.FC<CfoOverviewProps> = ({
                       <span className="text-muted-foreground uppercase">Revenue Growth Rate</span>
                       <span className="text-primary font-black">{revGrowth >= 0 ? '+' : ''}{revGrowth}% MoM</span>
                     </div>
-                    <Slider 
+                    <Slider
                       min={-10}
                       max={20}
                       step={0.5}
@@ -148,7 +150,7 @@ export const CfoOverview: React.FC<CfoOverviewProps> = ({
                       <span className="text-muted-foreground uppercase">Expense Growth Rate</span>
                       <span className="text-foreground/80 font-black">{expGrowth >= 0 ? '+' : ''}{expGrowth}% MoM</span>
                     </div>
-                    <Slider 
+                    <Slider
                       min={-10}
                       max={20}
                       step={0.5}
@@ -161,8 +163,8 @@ export const CfoOverview: React.FC<CfoOverviewProps> = ({
 
                   <div className="space-y-2">
                     <label className="block text-[10px] text-muted-foreground font-bold uppercase tracking-widest pl-0.5">Seasonality Profile</label>
-                    <Select 
-                      value={seasonalityProfile} 
+                    <Select
+                      value={seasonalityProfile}
                       onValueChange={(val) => setSeasonalityProfile(val)}
                     >
                       <SelectTrigger className="w-full text-xs h-9 uppercase font-bold tracking-wider">
@@ -185,7 +187,7 @@ export const CfoOverview: React.FC<CfoOverviewProps> = ({
           <Card className="p-6 min-h-[400px]">
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-base font-bold text-foreground/90">Transaction History</h3>
-              <Button 
+              <Button
                 onClick={() => setIsModalOpen(true)}
                 className="h-8 text-[10px] font-bold px-3 uppercase tracking-wider gap-1"
               >
@@ -202,7 +204,7 @@ export const CfoOverview: React.FC<CfoOverviewProps> = ({
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <label className="block text-[10px] text-muted-foreground font-bold uppercase tracking-widest pl-0.5">Starting MRR (USD)</label>
-                <Input 
+                <Input
                   type="number"
                   value={mrrInput || ''}
                   onChange={(e) => setMrrInput(Number(e.target.value))}
@@ -211,7 +213,7 @@ export const CfoOverview: React.FC<CfoOverviewProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="block text-[10px] text-muted-foreground font-bold uppercase tracking-widest pl-0.5">Churn Rate (%)</label>
-                  <Input 
+                  <Input
                     type="number"
                     step="0.1"
                     value={churnInput || ''}
@@ -220,7 +222,7 @@ export const CfoOverview: React.FC<CfoOverviewProps> = ({
                 </div>
                 <div className="space-y-1.5">
                   <label className="block text-[10px] text-muted-foreground font-bold uppercase tracking-widest pl-0.5">CAC (USD)</label>
-                  <Input 
+                  <Input
                     type="number"
                     value={cacInput || ''}
                     onChange={(e) => setCacInput(Number(e.target.value))}
@@ -229,7 +231,7 @@ export const CfoOverview: React.FC<CfoOverviewProps> = ({
               </div>
               <div className="space-y-1.5">
                 <label className="block text-[10px] text-muted-foreground font-bold uppercase tracking-widest pl-0.5">ARPU (USD)</label>
-                <Input 
+                <Input
                   type="number"
                   value={arpuInput || ''}
                   onChange={(e) => setArpuInput(Number(e.target.value))}
@@ -266,7 +268,7 @@ export const CfoOverview: React.FC<CfoOverviewProps> = ({
                 <SyncBankButton onSyncSuccess={() => setRefreshKey(prev => prev + 1)} />
               )}
             </div>
-            
+
             {accounts.length > 0 ? (
               <div className="space-y-2">
                 {accounts.map((acc: any) => (
@@ -284,7 +286,8 @@ export const CfoOverview: React.FC<CfoOverviewProps> = ({
             ) : (
               <p className="text-muted-foreground text-xs">No bank accounts linked yet.</p>
             )}
-            
+
+            <AccountForm />
             <PlaidLinkButton onSuccess={() => setRefreshKey(prev => prev + 1)} />
           </Card>
         </div>

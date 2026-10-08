@@ -1,5 +1,5 @@
 import { expect, test, describe, beforeEach } from 'vitest';
-import { handleApiRequest } from '../server/dispatcher';
+import { handleApiRequest } from './mocks/apiHarness';
 import { createRealSqliteD1 } from './mocks/d1Simulator';
 
 interface MockEnv {
@@ -20,9 +20,9 @@ describe('Budgets Endpoints', () => {
     const res = await handleApiRequest(new Request('http://localhost/api/budgets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        category: 'Food', 
-        amount: 50000 
+      body: JSON.stringify({
+        category: 'Food',
+        amount: 50000
       }),
     }), env);
 

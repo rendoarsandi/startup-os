@@ -3,27 +3,9 @@ import { ValidationError } from './errors';
 
 export { ValidationError };
 
-export async function runEffectHandler<A, E, R>(
-  program: Effect.Effect<A, E, R>,
-  context?: any
-): Promise<A> {
-  const exit = await Effect.runPromiseExit(
-    // SAFETY: If context is omitted, program is executed directly without additional environment requirements
-    context ? Effect.provide(program, context) : (program as Effect.Effect<A, E, never>)
-  );
-  if (Exit.isSuccess(exit)) {
-    return exit.value;
-  }
-  const failure = Cause.failureOption(exit.cause);
-  if (Option.isSome(failure)) {
-    throw failure.value;
-  }
-  throw Cause.squash(exit.cause);
-}
-
-export async function getValidatedBody<T, I = any>(
+export async function getValidatedBody<T>(
   request: Request,
-  decoder: (input: I) => Effect.Effect<T, unknown, never>,
+  decoder: (input: unknown) => Effect.Effect<T, unknown, never>,
 ): Promise<T> {
   const program = Effect.tryPromise({
     try: () => request.json(),

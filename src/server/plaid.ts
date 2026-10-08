@@ -1,272 +1,128 @@
-/**
- * Plaid Service - Handles Plaid Link token creation and public token exchange
- * Uses Plaid Sandbox mode for development, and mock fallback for testing / offline development
- */
+import { z } from "zod";
 
-import { v4 as uuidv4 } from 'uuid';
-import { Effect } from 'effect';
-import { ExternalServiceError } from './errors';
-
-interface PlaidConfig {
-  clientId: string;
-  secret: string;
-  environment?: string;
-}
+const accountSchema = z.object({
+  account_id: z.string(),
+  name: z.string(),
+  type: z.string(),
+  subtype: z.string().nullable().optional(),
+  balances: z.object({
+    current: z.number().nullable(),
+    iso_currency_code: z.string().nullable().optional(),
+  }),
+});
+const transactionSchema = z.object({
+  transaction_id: z.string(),
+  account_id: z.string(),
+  amount: z.number(),
+  date: z.string(),
+  name: z.string(),
+  merchant_name: z.string().nullable().optional(),
+  category: z.array(z.string()).nullable().optional(),
+  pending: z.boolean().optional(),
+});
+export type BankAccount = z.infer<typeof accountSchema>;
+export type BankTransaction = z.infer<typeof transactionSchema>;
 
 export class PlaidService {
-  private clientId: string;
-  private secret: string;
-  private baseUrl: string;
-
-  constructor(config: PlaidConfig) {
-    this.clientId = config.clientId || '';
-    this.secret = config.secret || '';
-    const env = config.environment || 'sandbox';
-    this.baseUrl = env === 'production' 
-      ? 'https://production.plaid.com'
-      : env === 'development'
-      ? 'https://development.plaid.com'
-      : 'https://sandbox.plaid.com';
+  private readonly config: {
+    clientId: string;
+    secret: string;
+    environment?: string;
+  };
+  private readonly baseUrl: string;
+  constructor(config: {
+    clientId: string;
+    secret: string;
+    environment?: string;
+  }) {
+    this.config = config;
+    const environment = z
+      .enum(["sandbox", "development", "production"])
+      .parse(config.environment || "sandbox");
+    this.baseUrl = `https://${environment}.plaid.com`;
   }
-
-  private isMock(): boolean {
-    return (
-      !this.clientId ||
-      !this.secret ||
-      this.clientId === 'test-client-id' ||
-      this.clientId.startsWith('mock_') ||
-      this.secret.startsWith('mock_')
-    );
-  }
-
-  private getInstitutionFromToken(token: string): string {
-    const lower = token.toLowerCase();
-    if (lower.includes('svb') || lower.includes('silicon')) return 'svb';
-    if (lower.includes('mercury')) return 'mercury';
-    if (lower.includes('bofa') || lower.includes('america')) return 'bofa';
-    return 'chase';
-  }
-
-  async createLinkToken(userId: string): Promise<string> {
-    if (this.isMock()) {
-      return 'link-sandbox-test-token';
-    }
-
-    const response = await fetch(`${this.baseUrl}/link/token/create`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+  private async request<T>(
+    path: string,
+    input: object,
+    schema: z.ZodType<T>,
+  ): Promise<T> {
+    if (!this.config.clientId || !this.config.secret)
+      throw new Error("Banking is not connected.");
+    const response = await fetch(this.baseUrl + path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        client_id: this.clientId,
-        secret: this.secret,
-        user: { client_user_id: userId },
-        client_name: 'AI CFO',
-        products: ['transactions'],
-        country_codes: ['US'],
-        language: 'en',
+        client_id: this.config.clientId,
+        secret: this.config.secret,
+        ...input,
       }),
+      signal: AbortSignal.timeout(20_000),
     });
-
-    // SAFETY: Plaid create link token endpoint response structure
-    const data = (await response.json()) as { error_code?: string; error_message?: string; link_token: string };
-    if (data.error_code) {
-      throw new Error(`Plaid error: ${data.error_message}`);
-    }
-    return data.link_token;
+    if (!response.ok)
+      throw new Error(
+        "Your bank connection could not complete the request. Reconnect or try again.",
+      );
+    return schema.parse(await response.json());
   }
-
-  async exchangePublicToken(publicToken: string): Promise<{ accessToken: string; itemId: string }> {
-    if (this.isMock() || publicToken.startsWith('mock_')) {
-      if (this.clientId === 'test-client-id' || !this.clientId) {
-        return {
-          accessToken: 'mock_access_token_chase',
-          itemId: 'item-sandbox-123',
-        };
-      }
-      const inst = this.getInstitutionFromToken(publicToken);
-      return {
-        accessToken: `mock_access_token_${inst}`,
-        itemId: `mock_item_${inst}_${uuidv4().substring(0, 8)}`,
-      };
-    }
-
-    const response = await fetch(`${this.baseUrl}/item/public_token/exchange`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_id: this.clientId,
-        secret: this.secret,
-        public_token: publicToken,
-      }),
-    });
-
-    // SAFETY: Plaid public token exchange endpoint response structure
-    const data = (await response.json()) as { error_code?: string; error_message?: string; access_token: string; item_id: string };
-    if (data.error_code) {
-      throw new Error(`Plaid error: ${data.error_message}`);
-    }
-    return { accessToken: data.access_token, itemId: data.item_id };
-  }
-
-  async getAccounts(accessToken: string): Promise<any[]> {
-    if (this.isMock() || accessToken.startsWith('mock_')) {
-      const inst = this.getInstitutionFromToken(accessToken);
-      return this.getMockAccounts(inst);
-    }
-
-    const response = await fetch(`${this.baseUrl}/accounts/balance/get`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_id: this.clientId,
-        secret: this.secret,
-        access_token: accessToken,
-      }),
-    });
-
-    // SAFETY: Plaid accounts balance endpoint response structure
-    const data = (await response.json()) as { error_code?: string; error_message?: string; accounts?: any[] };
-    if (data.error_code) {
-      throw new Error(`Plaid error: ${data.error_message}`);
-    }
-    return data.accounts || [];
-  }
-
-  private getMockAccounts(institution: string): any[] {
-    const inst = institution.toLowerCase();
-    if (this.clientId === 'mock_client') {
-      if (inst === 'svb') {
-        return [
-          {
-            account_id: 'mock_svb_checking',
-            name: 'SVB Operating Checking',
-            type: 'depository',
-            subtype: 'checking',
-            balances: { current: 1420000.00, available: 1420000.00, iso_currency_code: 'USD' }
-          },
-          {
-            account_id: 'mock_svb_mm',
-            name: 'SVB MM Account',
-            type: 'depository',
-            subtype: 'savings',
-            balances: { current: 3500000.00, available: 3500000.00, iso_currency_code: 'USD' }
-          }
-        ];
-      } else {
-        return [
-          {
-            account_id: 'mock_chase_checking',
-            name: 'Chase Business Checking',
-            type: 'depository',
-            subtype: 'checking',
-            balances: { current: 125450.00, available: 125450.00, iso_currency_code: 'USD' }
-          },
-          {
-            account_id: 'mock_chase_savings',
-            name: 'Chase Business Savings',
-            type: 'depository',
-            subtype: 'savings',
-            balances: { current: 500000.00, available: 500000.00, iso_currency_code: 'USD' }
-          },
-          {
-            account_id: 'mock_chase_credit',
-            name: 'Chase Ink Business Credit',
-            type: 'credit',
-            subtype: 'credit card',
-            balances: { current: 12450.00, available: 37550.00, iso_currency_code: 'USD' }
-          }
-        ];
-      }
-    }
-
-    return [
+  async createLinkToken(userId: string) {
+    const response = await this.request(
+      "/link/token/create",
       {
-        account_id: 'mock_chase_checking',
-        name: 'Chase Business Checking',
-        type: 'depository',
-        subtype: 'checking',
-        balances: { current: 125450.00, available: 125450.00, iso_currency_code: 'USD' }
-      }
-    ];
+        user: { client_user_id: userId },
+        client_name: "Startup OS",
+        products: ["transactions"],
+        country_codes: ["US"],
+        language: "en",
+      },
+      z.object({ link_token: z.string() }),
+    );
+    return response.link_token;
   }
-
-  async getTransactions(accessToken: string, startDate: string, endDate: string): Promise<any[]> {
-    if (this.isMock() || accessToken.startsWith('mock_')) {
-      const inst = this.getInstitutionFromToken(accessToken);
-      const accounts = this.getMockAccounts(inst);
-      const mockTransactions: any[] = [];
-      const txDate = startDate || '2026-05-15';
-      
-      accounts.forEach(acc => {
-        if (this.clientId === 'mock_client') {
-          mockTransactions.push({
-            transaction_id: `tx_${acc.account_id}_payout`,
-            account_id: acc.account_id,
-            amount: -5000.00,
-            merchant_name: 'Stripe Payout',
-            name: 'Stripe Payout Transfer',
-            category: ['Transfer', 'Deposit'],
-            date: txDate,
-          });
-        }
-        mockTransactions.push({
-          transaction_id: `tx_${acc.account_id}_aws`,
-          account_id: acc.account_id,
-          amount: 850.00,
-          merchant_name: 'Amazon Web Services',
-          name: 'AWS Cloud Services',
-          category: ['Service', 'Technology'],
-          date: txDate,
-        });
-      });
-      
-      return mockTransactions;
+  async exchangePublicToken(publicToken: string) {
+    if (publicToken.startsWith("mock_"))
+      throw new Error("A real Plaid Link token is required.");
+    const response = await this.request(
+      "/item/public_token/exchange",
+      { public_token: publicToken },
+      z.object({ access_token: z.string(), item_id: z.string() }),
+    );
+    return { accessToken: response.access_token, itemId: response.item_id };
+  }
+  async getAccounts(accessToken: string) {
+    const response = await this.request(
+      "/accounts/balance/get",
+      { access_token: accessToken },
+      z.object({ accounts: z.array(accountSchema) }),
+    );
+    return response.accounts;
+  }
+  async getTransactions(
+    accessToken: string,
+    startDate: string,
+    endDate: string,
+  ) {
+    const transactions: BankTransaction[] = [];
+    for (let page = 0; page < 20; page++) {
+      const response = await this.request(
+        "/transactions/get",
+        {
+          access_token: accessToken,
+          start_date: startDate,
+          end_date: endDate,
+          options: { count: 500, offset: transactions.length },
+        },
+        z.object({
+          transactions: z.array(transactionSchema),
+          total_transactions: z.number().int().nonnegative(),
+        }),
+      );
+      transactions.push(...response.transactions);
+      if (transactions.length >= response.total_transactions)
+        return transactions.filter((transaction) => !transaction.pending);
+      if (!response.transactions.length) break;
     }
-
-    const response = await fetch(`${this.baseUrl}/transactions/get`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_id: this.clientId,
-        secret: this.secret,
-        access_token: accessToken,
-        start_date: startDate,
-        end_date: endDate,
-      }),
-    });
-
-    // SAFETY: Plaid transactions response structure
-    const data = (await response.json()) as { error_code?: string; error_message?: string; transactions?: any[] };
-    if (data.error_code) {
-      throw new Error(`Plaid error: ${data.error_message}`);
-    }
-    return data.transactions || [];
-  }
-
-  createLinkTokenEffect(userId: string) {
-    return Effect.tryPromise({
-      try: () => this.createLinkToken(userId),
-      catch: (cause) => new ExternalServiceError({ service: "Plaid", message: "Failed to create link token", cause }),
-    });
-  }
-
-  exchangePublicTokenEffect(publicToken: string) {
-    return Effect.tryPromise({
-      try: () => this.exchangePublicToken(publicToken),
-      catch: (cause) => new ExternalServiceError({ service: "Plaid", message: "Failed to exchange public token", cause }),
-    });
-  }
-
-  getAccountsEffect(accessToken: string) {
-    return Effect.tryPromise({
-      try: () => this.getAccounts(accessToken),
-      catch: (cause) => new ExternalServiceError({ service: "Plaid", message: "Failed to fetch Plaid accounts", cause }),
-    });
-  }
-
-  getTransactionsEffect(accessToken: string, startDate: string, endDate: string) {
-    return Effect.tryPromise({
-      try: () => this.getTransactions(accessToken, startDate, endDate),
-      catch: (cause) => new ExternalServiceError({ service: "Plaid", message: "Failed to fetch Plaid transactions", cause }),
-    });
+    throw new Error(
+      "The transaction import is too large. Narrow the import window before retrying.",
+    );
   }
 }

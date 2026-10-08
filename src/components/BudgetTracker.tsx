@@ -1,6 +1,6 @@
 import React from 'react';
-import { 
-  Utensils, Car, Home, Zap, Gamepad2, 
+import {
+  Utensils, Car, Home, Zap, Gamepad2,
   Activity, TrendingUp, User, Shield, DollarSign, Package, AlertCircle
 } from 'lucide-react';
 import { useBudgets } from '../hooks/useBudgets';
@@ -72,13 +72,13 @@ export function BudgetTracker() {
           (t) => t.category === budget.category && t.amount < 0
         );
         const spent = categoryTransactions.reduce(
-          (sum, t) => sum + Math.abs(t.amount), 
+          (sum, t) => sum + Math.abs(t.amount),
           0
         );
-        const percentage = budget.amount > 0 
-          ? Math.min(100, Math.round((spent / budget.amount) * 100)) 
+        const percentage = budget.amount > 0
+          ? Math.min(100, Math.round((spent / budget.amount) * 100))
           : 0;
-        
+
         const isOver = percentage >= 90;
         const isWarning = percentage >= 70 && percentage < 90;
 
@@ -96,17 +96,17 @@ export function BudgetTracker() {
           statusTextColor = 'text-amber-400';
         }
 
-        const iconBoxStyle = categoryGlows[budget.category] || categoryGlows.Other;
+        const iconBoxStyle = Object.entries(categoryGlows).find(([name]) => name === budget.category)?.[1] || categoryGlows.Other;
 
         return (
-          <div 
-            key={budget.id} 
+          <div
+            key={budget.id}
             className="p-4 rounded-xl border border-border/50 bg-black/10 hover:bg-black/20 transition-all duration-200"
           >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <div className={`w-9 h-9 rounded-lg border flex items-center justify-center ${iconBoxStyle}`}>
-                  {categoryIcons[budget.category] || <Package size={16} className="text-muted-foreground" />}
+                  {Object.entries(categoryIcons).find(([name]) => name === budget.category)?.[1] || <Package size={16} className="text-muted-foreground" />}
                 </div>
                 <div>
                   <span className="font-bold text-sm text-foreground">{budget.category}</span>
@@ -125,9 +125,9 @@ export function BudgetTracker() {
               </div>
             </div>
 
-            <Progress 
-              value={percentage} 
-              className={`h-2 bg-muted/60 ${progressColorClass}`} 
+            <Progress
+              value={percentage}
+              className={`h-2 bg-muted/60 ${progressColorClass}`}
             />
           </div>
         );

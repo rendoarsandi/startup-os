@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import * as api from '../../lib/server-functions'
+import { useState } from 'react';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -37,9 +38,9 @@ export function SyncBankButton({ onSyncSuccess }: { onSyncSuccess: () => void })
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch('/api/plaid/sync-transactions', { method: 'POST' });
-      if (!res.ok) throw new Error('Sync failed');
-      return res.json();
+      const res = await api.syncBank();
+
+      return res;
     },
     onSuccess: (data) => {
       setMetrics(data);

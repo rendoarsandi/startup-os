@@ -1,3 +1,4 @@
+import * as api from '../lib/server-functions'
 import React from 'react';
 import { Loader2, Sparkles, DollarSign, Calendar, Tag, Briefcase } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -29,30 +30,24 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
     queryFn: async () => {
-      const response = await fetch('/api/accounts');
-      // SAFETY: GET /api/accounts endpoint returns a list of account records with id
-      return (await response.json()) as { id: string }[];
+      return (await api.listAccounts()).filter(account => !account.plaidConnectionId);
     },
   });
 
   const mutation = useMutation({
-    mutationFn: async (value: { merchant: string; amount: string; category: string; date: string }) => {
-      const accountId = accounts[0]?.id;
+    mutationFn: async (value: { accountId: string; merchant: string; amount: string; category: string; date: string }) => {
+      const accountId = value.accountId || accounts[0]?.id;
       if (!accountId) throw new Error('Create an account before adding a transaction');
-      const response = await fetch('/api/transactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const response = await api.createTransaction({ data: {
           merchant: value.merchant,
           category: value.category,
           date: value.date,
           amount: Math.round(parseFloat(value.amount) * 100), // convert to cents
           accountId,
-        }),
-      });
+        } });
 
-      if (!response.ok) throw new Error('Failed to add transaction');
-      return response.json();
+
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
@@ -67,6 +62,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
   // Initialize TanStack Form
   const form = useForm({
     defaultValues: {
+      accountId: '',
       merchant: '',
       amount: '',
       category: 'Food',
@@ -95,20 +91,22 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
           </div>
         </DialogHeader>
 
-        <form 
+        <form
           onSubmit={(e) => {
             e.preventDefault();
             e.stopPropagation();
             form.handleSubmit();
-          }} 
+          }}
           className="space-y-4 relative z-10"
         >
           {accounts.length === 0 && (
             <div className="p-3 mb-2 text-xs rounded-lg border border-amber-200/50 bg-amber-50 text-amber-800 dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-300">
-              You need to create a financial account first before adding transactions.
+              You need to create a manual financial account first before adding transactions.
             </div>
           )}
 
+          <form.Field name="accountId">{field => <div className="space-y-2"><label htmlFor="transaction-account" className="text-sm">Account</label><select id="transaction-account" className="w-full rounded-md border border-input bg-background p-2 text-sm" value={field.state.value || accounts[0]?.id || ''} onChange={event => field.handleChange(event.target.value)} required>{accounts.map(account => <option key={account.id} value={account.id}>{account.name}</option>)}</select></div>}</form.Field>
+          {mutation.error && <p role="alert" className="text-sm text-destructive">{mutation.error.message}</p>}
           {/* Merchant Field */}
           <form.Field
             name="merchant"
@@ -120,9 +118,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                 <label htmlFor={field.name} className="text-[10px] text-muted-foreground uppercase tracking-widest font-black flex items-center gap-1.5 pl-0.5">
                   <Briefcase size={10} /> Merchant Name
                 </label>
-                <Input 
+                <Input
                   id={field.name}
-                  type="text" 
+                  type="text"
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
@@ -154,9 +152,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                   <label htmlFor={field.name} className="text-[10px] text-muted-foreground uppercase tracking-widest font-black flex items-center gap-1.5 pl-0.5">
                     <DollarSign size={10} /> Amount ($)
                   </label>
-                  <Input 
+                  <Input
                     id={field.name}
-                    type="number" 
+                    type="number"
                     step="0.01"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -183,8 +181,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                   <label htmlFor={field.name} className="text-[10px] text-muted-foreground uppercase tracking-widest font-black flex items-center gap-1.5 pl-0.5">
                     <Tag size={10} /> Category
                   </label>
-                  <Select 
-                    value={field.state.value} 
+                  <Select
+                    value={field.state.value}
                     onValueChange={(value) => field.handleChange(value)}
                   >
                     <SelectTrigger id={field.name}>
@@ -219,9 +217,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                 <label htmlFor={field.name} className="text-[10px] text-muted-foreground uppercase tracking-widest font-black flex items-center gap-1.5 pl-0.5">
                   <Calendar size={10} /> Transaction Date
                 </label>
-                <Input 
+                <Input
                   id={field.name}
-                  type="date" 
+                  type="date"
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
@@ -236,8 +234,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
             )}
           />
 
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={mutation.isPending || accounts.length === 0}
             className="w-full mt-2 h-11 font-bold"
           >

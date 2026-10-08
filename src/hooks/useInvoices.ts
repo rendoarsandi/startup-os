@@ -1,48 +1,6 @@
-import { useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useLiveQuery } from '@tanstack/react-db';
-import { invoicesCollection, upsertInvoices } from '../utils/db';
-import type { Invoice } from '../utils/db';
-
-export const useInvoices = (enabled = true) => {
-  // 1. Fetch server invoices with TanStack Query
-  const { data: serverInvoices = [], isLoading, refetch } = useQuery<Invoice[]>({
-    queryKey: ['invoices'],
-    queryFn: async () => {
-      try {
-        const { durableClient } = await import('../utils/durableClient');
-        const data = await durableClient.call<Invoice[]>('cfo.getInvoices');
-        if (data && Array.isArray(data)) return data;
-      } catch {
-        // Fallback to fetch
-      }
-      const response = await fetch('/api/cfo/invoices');
-      if (!response.ok) throw new Error('Failed to fetch invoices');
-      return response.json();
-    },
-    enabled,
-  });
-
-  // 2. Synchronize server data to TanStack DB
-  useEffect(() => {
-    if (serverInvoices && serverInvoices.length > 0) {
-      upsertInvoices(serverInvoices);
-    }
-  }, [serverInvoices]);
-
-  // 3. Reactively subscribe to TanStack DB using useLiveQuery
-  const { data: invoices = [] } = useLiveQuery((q) =>
-    q.from({ invoice: invoicesCollection })
-  );
-
-  // SAFETY: TanStack DB live query result maps to stored Invoice entities
-  const mappedInvoices = (invoices || [])
-    .map((i: any) => i?.invoice)
-    .filter(Boolean) as Invoice[];
-
-  return {
-    invoices: mappedInvoices,
-    isLoading,
-    refetch,
-  };
-};
+import { useQuery } from '@tanstack/react-query'
+import { listInvoices } from '../lib/server-functions'
+export function useInvoices(enabled = true) {
+ const query = useQuery({ queryKey: ['invoices'], queryFn: () => listInvoices(), enabled });
+ return { invoices: query.data ?? [], isLoading: query.isLoading, refetch: query.refetch, error: query.error }
+}

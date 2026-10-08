@@ -1,16 +1,18 @@
+import * as api from '../lib/server-functions'
+import { z } from 'zod'
 import React, { useState, useMemo } from 'react';
-import { 
+import {
   FileText, Plus, Search, Loader2, AlertCircle, CheckCircle2, Clock, Trash2, Printer, Eye, X, ArrowUpRight, ArrowDownLeft, Sparkles, ArrowUpDown, Calendar, Tag, Briefcase
 } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { useInvoices } from '../hooks/useInvoices';
-import { useForm } from '@tanstack/react-form';
-import { 
-  useReactTable, 
-  getCoreRowModel, 
-  getSortedRowModel, 
-  flexRender, 
-  createColumnHelper 
+import { useForm, useStore } from '@tanstack/react-form';
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  flexRender,
+  createColumnHelper
 } from '@tanstack/react-table';
 import type { SortingState } from '@tanstack/react-table';
 import { Button } from './ui/button';
@@ -41,7 +43,7 @@ export const InvoicesDashboard: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'paid' | 'unpaid' | 'overdue'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  
+
   // Dialog visibility state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
@@ -66,7 +68,7 @@ export const InvoicesDashboard: React.FC = () => {
     onSubmit: async ({ value }) => {
       // Calculate total amount in cents
       const totalAmountCents = value.lineItems.reduce((sum, item) => sum + (item.qty * Math.round(item.rate * 100)), 0);
-      
+
       // Format items
       const itemsFormatted = value.lineItems.map(item => ({
         description: item.description || "General Services",
@@ -85,7 +87,7 @@ export const InvoicesDashboard: React.FC = () => {
     },
   });
 
-  const liveLineItems = form.useStore((state) => state.values.lineItems) || [];
+  const liveLineItems = useStore(form.store, (state) => state.values.lineItems) || [];
 
   const handleAiScan = async () => {
     if (!aiPrompt.trim()) return;
@@ -93,13 +95,9 @@ export const InvoicesDashboard: React.FC = () => {
     setAiError(null);
     setMathError(null);
     try {
-      const res = await fetch('/api/cfo/parse-invoice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: aiPrompt })
-      });
-      if (!res.ok) throw new Error('Failed to parse invoice with AI');
-      const data = await res.json();
+      const res = await api.parseInvoice({ data: { text: aiPrompt } });
+
+      const data = await res;
       if (data.clientName) form.setFieldValue('clientName', data.clientName);
       if (data.type) form.setFieldValue('invoiceType', data.type);
       if (data.dueDateOffsetDays) {
@@ -143,13 +141,9 @@ export const InvoicesDashboard: React.FC = () => {
         reader.readAsDataURL(selectedFile);
       });
 
-      const res = await fetch('/api/cfo/parse-invoice-secure', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileBase64: base64Data.cleanBase64, mimeType: base64Data.mimeType })
-      });
-      if (!res.ok) throw new Error('Failed to scan document with AI');
-      const data = await res.json();
+      const res = await api.parseInvoiceDocument({ data: { fileBase64: base64Data.cleanBase64, mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']).parse(base64Data.mimeType) } });
+
+      const data = await res;
 
       if (data.clientName) form.setFieldValue('clientName', data.clientName);
       if (data.type) form.setFieldValue('invoiceType', data.type);
@@ -182,14 +176,10 @@ export const InvoicesDashboard: React.FC = () => {
 
   // Mutate Invoice Status
   const statusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string, status: string }) => {
-      const res = await fetch(`/api/cfo/invoices/${id}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
-      });
-      if (!res.ok) throw new Error('Failed to update invoice status');
-      return res.json();
+    mutationFn: async ({ id, status }: { id: string, status: 'paid' | 'unpaid' | 'overdue' }) => {
+      const res = await api.updateInvoiceStatus({ data: { id: id, payload: { status } } });
+
+      return res;
     },
     onSuccess: () => {
       refetch();
@@ -204,13 +194,9 @@ export const InvoicesDashboard: React.FC = () => {
   // Save Invoice
   const saveMutation = useMutation({
     mutationFn: async (newInvoice: any) => {
-      const res = await fetch('/api/cfo/invoices', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newInvoice)
-      });
-      if (!res.ok) throw new Error('Failed to save invoice');
-      return res.json();
+      const res = await api.createInvoice({ data: newInvoice });
+
+      return res;
     },
     onSuccess: () => {
       refetch();
@@ -260,7 +246,7 @@ export const InvoicesDashboard: React.FC = () => {
     return invoices.filter(inv => {
       const matchesType = filterType === 'all' || inv.type === filterType;
       const matchesStatus = filterStatus === 'all' || inv.status === filterStatus;
-      const matchesSearch = inv.clientName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      const matchesSearch = inv.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesType && matchesStatus && matchesSearch;
     });
@@ -387,7 +373,7 @@ export const InvoicesDashboard: React.FC = () => {
         const row = info.row.original;
         return (
           <div className="flex justify-center pr-5" onClick={(e) => e.stopPropagation()}>
-            <Button 
+            <Button
               variant="ghost"
               size="icon"
               onClick={() => setSelectedInvoice(row)}
@@ -400,7 +386,7 @@ export const InvoicesDashboard: React.FC = () => {
         );
       }
     })
-  ], [selectedInvoice]);
+  ], []);
 
   const table = useReactTable({
     data: filteredInvoices,
@@ -430,7 +416,7 @@ export const InvoicesDashboard: React.FC = () => {
           <h2 className="text-2xl font-bold text-foreground tracking-tight">Sales & Purchase Invoices</h2>
           <p className="text-muted-foreground text-xs mt-1">Manage corporate accounts receivable/payable, track client collections, and register vendor bills.</p>
         </div>
-        <Button 
+        <Button
           onClick={() => setIsCreateOpen(true)}
           className="flex items-center gap-2 self-start sm:self-auto"
         >
@@ -466,16 +452,16 @@ export const InvoicesDashboard: React.FC = () => {
 
       {/* Operations Grid: Lists + Side Preview */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
+
         {/* Invoices List */}
         <div className={`${selectedInvoice ? 'lg:col-span-7' : 'lg:col-span-12'} space-y-4 transition-all duration-300`}>
           {/* Filters Bar */}
           <div className="flex flex-col sm:flex-row gap-3 items-center justify-between border border-border p-3 rounded-xl bg-card/60 backdrop-blur-md">
-            
-            <Tabs 
-              value={filterType} 
+
+            <Tabs
+              value={filterType}
               // SAFETY: Radix Tabs onValueChange value corresponds to tab trigger values
-              onValueChange={(val) => setFilterType(val as 'all' | 'sales' | 'purchase')} 
+              onValueChange={(val) => setFilterType(val as 'all' | 'sales' | 'purchase')}
               className="w-full sm:w-auto"
             >
               <TabsList className="grid grid-cols-3 w-full sm:w-60 h-9">
@@ -487,8 +473,8 @@ export const InvoicesDashboard: React.FC = () => {
 
             {/* Status & Search Selector */}
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Select 
-                value={filterStatus} 
+              <Select
+                value={filterStatus}
                 // SAFETY: Radix Select onValueChange value corresponds to select item values
                 onValueChange={(val) => setFilterStatus(val as 'all' | 'paid' | 'unpaid' | 'overdue')}
               >
@@ -505,7 +491,7 @@ export const InvoicesDashboard: React.FC = () => {
 
               <div className="relative flex-1 sm:flex-none">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={13} />
-                <Input 
+                <Input
                   type="text"
                   placeholder="Search invoice..."
                   value={searchQuery}
@@ -548,8 +534,8 @@ export const InvoicesDashboard: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-border/30">
                   {table.getRowModel().rows.map(row => (
-                    <tr 
-                      key={row.id} 
+                    <tr
+                      key={row.id}
                       onClick={() => setSelectedInvoice(row.original)}
                       className={`hover:bg-white/[0.01] transition-colors duration-150 group cursor-pointer ${
                         selectedInvoice?.id === row.original.id ? 'bg-primary/5 hover:bg-primary/10 border-primary/20' : ''
@@ -578,14 +564,14 @@ export const InvoicesDashboard: React.FC = () => {
                 <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-black mt-0.5">Official Document Record</p>
               </div>
               <div className="flex gap-2">
-                <Button 
+                <Button
                   variant="outline"
                   onClick={() => statusMutation.mutate({ id: selectedInvoice.id, status: selectedInvoice.status === 'paid' ? 'unpaid' : 'paid' })}
                   className={`h-7 px-2.5 rounded-lg text-[9px] font-bold uppercase tracking-wider ${selectedInvoice.status === 'paid' ? 'text-amber-400 hover:text-amber-300 bg-amber-500/5 border-amber-500/20 hover:bg-amber-500/10' : 'text-emerald-400 hover:text-emerald-300 bg-emerald-500/5 border-emerald-500/20 hover:bg-emerald-500/10'}`}
                 >
                   {selectedInvoice.status === 'paid' ? 'Mark Unpaid' : 'Mark Paid'}
                 </Button>
-                <Button 
+                <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setSelectedInvoice(null)}
@@ -665,7 +651,7 @@ export const InvoicesDashboard: React.FC = () => {
               </div>
             </div>
 
-            <Button 
+            <Button
               variant="outline"
               onClick={() => window.print()}
               className="w-full flex items-center justify-center gap-2 text-xs font-bold bg-black/10 border-border"
@@ -712,8 +698,8 @@ export const InvoicesDashboard: React.FC = () => {
                 <p className="text-[10px] text-muted-foreground">Upload any scanned receipt, quotation, or invoice (PDF, PNG, JPEG) for zero-hallucination structured visual processing.</p>
                 <div className="flex items-center gap-3">
                   <div className="flex-1 relative">
-                    <input 
-                      type="file" 
+                    <input
+                      type="file"
                       accept="application/pdf,image/png,image/jpeg"
                       onChange={(e) => {
                         if (e.target.files && e.target.files[0]) {
@@ -723,7 +709,7 @@ export const InvoicesDashboard: React.FC = () => {
                       className="hidden"
                       id="invoice-file-upload"
                     />
-                    <label 
+                    <label
                       htmlFor="invoice-file-upload"
                       className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-dashed border-border bg-black/10 hover:bg-black/20 text-xs font-bold cursor-pointer transition-all w-full text-center"
                     >
@@ -745,7 +731,7 @@ export const InvoicesDashboard: React.FC = () => {
               <TabsContent value="text" className="space-y-3 focus-visible:outline-none">
                 <p className="text-[10px] text-muted-foreground">Paste plain text receipt details or email transcript notes to draft a pre-filled invoice outline.</p>
                 <div className="flex gap-2.5">
-                  <textarea 
+                  <textarea
                     placeholder="e.g. 'Wayne Enterprises billed us $500 for legal review on Q2 contracts, due in 30 days'"
                     value={aiPrompt}
                     onChange={(e) => setAiPrompt(e.target.value)}
@@ -776,16 +762,16 @@ export const InvoicesDashboard: React.FC = () => {
             )}
           </div>
 
-          <form 
+          <form
             onSubmit={(e) => {
               e.preventDefault();
               e.stopPropagation();
               form.handleSubmit();
-            }} 
+            }}
             className="space-y-4 relative z-10 pt-2"
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              
+
               {/* Client Name Field */}
               <form.Field
                 name="clientName"
@@ -797,9 +783,9 @@ export const InvoicesDashboard: React.FC = () => {
                     <label htmlFor={field.name} className="text-[10px] text-muted-foreground uppercase tracking-widest font-black flex items-center gap-1.5 pl-0.5">
                       <Briefcase size={10} /> Client / Vendor Name
                     </label>
-                    <Input 
+                    <Input
                       id={field.name}
-                      type="text" 
+                      type="text"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
@@ -852,9 +838,9 @@ export const InvoicesDashboard: React.FC = () => {
                     <label htmlFor={field.name} className="text-[10px] text-muted-foreground uppercase tracking-widest font-black flex items-center gap-1.5 pl-0.5">
                       <FileText size={10} /> Invoice Number (Optional)
                     </label>
-                    <Input 
+                    <Input
                       id={field.name}
-                      type="text" 
+                      type="text"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
@@ -875,9 +861,9 @@ export const InvoicesDashboard: React.FC = () => {
                     <label htmlFor={field.name} className="text-[10px] text-muted-foreground uppercase tracking-widest font-black flex items-center gap-1.5 pl-0.5">
                       <Calendar size={10} /> Payment Due Date
                     </label>
-                    <Input 
+                    <Input
                       id={field.name}
-                      type="date" 
+                      type="date"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
@@ -911,7 +897,7 @@ export const InvoicesDashboard: React.FC = () => {
                 {liveLineItems.map((item, i) => (
                   <div key={i} className="flex gap-2 items-center animate-in fade-in duration-150">
                     <div className="flex-1">
-                      <Input 
+                      <Input
                         type="text"
                         required
                         value={item.description}
@@ -921,7 +907,7 @@ export const InvoicesDashboard: React.FC = () => {
                       />
                     </div>
                     <div className="w-16">
-                      <Input 
+                      <Input
                         type="number"
                         required
                         min="1"
@@ -932,7 +918,7 @@ export const InvoicesDashboard: React.FC = () => {
                       />
                     </div>
                     <div className="w-24">
-                      <Input 
+                      <Input
                         type="number"
                         required
                         min="0"
@@ -966,15 +952,15 @@ export const InvoicesDashboard: React.FC = () => {
             </div>
 
             <div className="flex gap-2 pt-2">
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={saveMutation.isPending}
                 className="flex-1 h-10 text-xs font-bold gap-1.5"
               >
                 {saveMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
                 <span>Generate Official Record</span>
               </Button>
-              <Button 
+              <Button
                 type="button"
                 variant="outline"
                 onClick={() => { setIsCreateOpen(false); resetForm(); }}

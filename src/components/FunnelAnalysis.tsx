@@ -10,8 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from './ui/table';
-import { 
-  Percent, Users, Target, MousePointerClick, 
+import {
+  Percent, Users, Target, MousePointerClick,
   Sparkles, Activity
 } from 'lucide-react';
 
@@ -78,7 +78,7 @@ export const FunnelAnalysis: React.FC = () => {
     <div className="space-y-8 animate-in fade-in duration-300">
       <header>
         <h2 className="text-3xl font-bold mb-1.5 text-foreground tracking-tight">
-          Funnel Analysis & Forecasting
+          Funnel simulation & Forecasting
         </h2>
         <p className="text-muted-foreground text-sm font-medium">Verify drop-off rates across stages and simulate ROAS impact from conversion changes.</p>
       </header>
@@ -100,16 +100,16 @@ export const FunnelAnalysis: React.FC = () => {
               const widthPct = Math.max(10, 100 - index * 18);
               return (
                 <div key={step.stage} className="flex flex-col items-center">
-                  <div 
+                  <div
                     style={{ width: `${widthPct}%`, backgroundColor: `${step.fill}15`, borderColor: step.fill }}
                     className="h-12 border rounded-xl flex items-center justify-between px-4 transition-all duration-300 relative overflow-hidden group hover:bg-black/15 shadow-sm"
                   >
                     {/* Inner progress bar highlighting conversion percentage */}
-                    <div 
-                      style={{ width: `${ratio}%`, backgroundColor: step.fill }} 
+                    <div
+                      style={{ width: `${ratio}%`, backgroundColor: step.fill }}
                       className="absolute left-0 top-0 bottom-0 opacity-[0.06] transition-all duration-300"
                     />
-                    
+
                     <div className="flex items-center gap-2.5 z-10">
                       <div style={{ color: step.fill }} className="w-5 h-5 rounded-md bg-black/25 flex items-center justify-center font-bold text-xs shrink-0">
                         {index + 1}
@@ -159,7 +159,7 @@ export const FunnelAnalysis: React.FC = () => {
                 <span className="text-muted-foreground uppercase">Ad Budget Spend ($)</span>
                 <span className="text-primary font-black">${monthlySpend.toLocaleString()}</span>
               </div>
-              <Slider 
+              <Slider
                 min={1000}
                 max={50000}
                 step={500}
@@ -174,7 +174,7 @@ export const FunnelAnalysis: React.FC = () => {
                 <span className="text-muted-foreground uppercase">Click-Through Rate (CTR)</span>
                 <span className="text-indigo-400 font-black">{ctrSim}%</span>
               </div>
-              <Slider 
+              <Slider
                 min={0.5}
                 max={10}
                 step={0.1}
@@ -189,7 +189,7 @@ export const FunnelAnalysis: React.FC = () => {
                 <span className="text-muted-foreground uppercase">Paid CVR (Trials to Paid)</span>
                 <span className="text-purple-400 font-black">{cvrSim}%</span>
               </div>
-              <Slider 
+              <Slider
                 min={0.5}
                 max={15}
                 step={0.1}
@@ -204,7 +204,7 @@ export const FunnelAnalysis: React.FC = () => {
                 <span className="text-muted-foreground uppercase">Average Customer AOV ($)</span>
                 <span className="text-pink-400 font-black">${avgOrderVal}</span>
               </div>
-              <Slider 
+              <Slider
                 min={10}
                 max={500}
                 step={5}

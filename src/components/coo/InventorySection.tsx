@@ -1,3 +1,4 @@
+import * as api from '../../lib/server-functions'
 import React, { useState } from 'react';
 import { ShoppingBag, Plus, Loader2, AlertTriangle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -37,21 +38,17 @@ export const InventorySection: React.FC = () => {
   const { data: inventory = [], isLoading } = useQuery<InventoryItem[]>({
     queryKey: ['inventory'],
     queryFn: async () => {
-      const res = await fetch('/api/operations/inventory');
-      if (!res.ok) throw new Error('Failed to fetch inventory');
-      return res.json();
+      const res = await api.listInventory();
+
+      return res;
     }
   });
 
   const adjustStockMutation = useMutation({
     mutationFn: async (stockData: any) => {
-      const res = await fetch('/api/operations/inventory', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(stockData)
-      });
-      if (!res.ok) throw new Error('Failed to adjust stock');
-      return res.json();
+      const res = await api.saveInventory({ data: stockData });
+
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
@@ -75,7 +72,7 @@ export const InventorySection: React.FC = () => {
         rate: rateCents,
         warehouse: itemWarehouse
       });
-    } catch (err) {}
+    } catch { /* Mutation error is shown by RequestErrors; keep the entered values. */ }
     setIsSaving(false);
   };
 

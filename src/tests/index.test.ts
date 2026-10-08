@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { handleApiRequest } from '../server/dispatcher';
+import { handleApiRequest } from './mocks/apiHarness';
 
 test('GET /api/health returns 200 OK', async () => {
   const res = await handleApiRequest(new Request('http://localhost' + '/api/health', undefined));

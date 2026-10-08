@@ -1,6 +1,7 @@
+import * as api from '../lib/server-functions'
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, Plus, Award, FileText, 
+import {
+  Users, Plus, Award, FileText,
   Loader2, AlertCircle, Sparkles, Shield, DollarSign, Calendar, RefreshCw, Copy, Check, X
 } from 'lucide-react';
 import { Button } from './ui/button';
@@ -29,7 +30,7 @@ interface Employee {
   role: string;
   department: string;
   salary: number; // in cents
-  status: 'active' | 'onboarding' | 'suspended';
+  status: 'active' | 'onboarding' | 'inactive';
   startDate: string;
 }
 
@@ -60,9 +61,9 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
   const fetchEmployees = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/hr/employees');
-      if (!res.ok) throw new Error('Failed to fetch employee list');
-      const data = await res.json();
+      const res = await api.listEmployees();
+
+      const data = await res;
       setEmployees(data);
       setError(null);
     } catch (err: any) {
@@ -82,20 +83,16 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
 
     setIsSaving(true);
     try {
-      const salaryInCents = Math.round(parseFloat(empSalary) * 100) || 10000000;
-      const res = await fetch('/api/hr/employees', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const salaryInCents = Math.round(Number(empSalary) * 100);
+      await api.saveEmployee({ data: {
           name: empName,
           role: empRole,
           department: empDept,
           salary: salaryInCents,
           status: empStatus,
           startDate: new Date().toISOString()
-        })
-      });
-      if (res.ok) {
+        } });
+      {
         setEmpName('');
         setEmpRole('');
         setEmpSalary('110000');
@@ -103,7 +100,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
         fetchEmployees();
       }
     } catch (err) {
-      console.error('Error adding employee:', err);
+      setError(err instanceof Error ? err.message : 'Could not save employee.');
     } finally {
       setIsSaving(false);
     }
@@ -116,19 +113,15 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
     setIsGenerating(true);
     setGeneratedDoc('');
     try {
-      const res = await fetch('/api/hr/generate-doc', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const res = await api.generateDocument({ data: {
           docType,
           title,
           department,
           salary: salaryRange,
           details
-        })
-      });
-      if (!res.ok) throw new Error('Document generation failed');
-      const data = await res.json();
+        } });
+
+      const data = await res;
       setGeneratedDoc(data.document || 'No document text returned.');
     } catch (err: any) {
       setGeneratedDoc(`### Draft Creation Failure\nFailed to compile requested document: ${err.message}. Please check Gemini server connection.`);
@@ -168,7 +161,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
 
   const addedSalaryMonthly = employees.slice(5).reduce((sum, e) => sum + (e.salary / 100), 0) / 12;
   const totalPayrollMonthly = 142500.00 + addedSalaryMonthly;
-  
+
   const pipelineCandidates = 12;
   const eNpsScore = 78;
 
@@ -182,7 +175,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
             </h2>
             <p className="text-muted-foreground text-sm font-medium">Manage headcount, roster logs, and draft premium HR documentation with Gemini AI.</p>
           </div>
-          <Button 
+          <Button
             onClick={() => setIsFormOpen(!isFormOpen)}
             className="h-10 text-xs font-bold gap-2 self-start md:self-auto"
           >
@@ -200,7 +193,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
             </h2>
             <p className="text-muted-foreground text-sm font-medium">Verify employee profiles, base pay structures, and employment statuses.</p>
           </div>
-          <Button 
+          <Button
             onClick={() => setIsFormOpen(!isFormOpen)}
             className="h-10 text-xs font-bold gap-2 self-start md:self-auto"
           >
@@ -236,7 +229,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
             <form onSubmit={handleAddEmployee} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Full Name</label>
-                <Input 
+                <Input
                   type="text"
                   required
                   value={empName}
@@ -246,7 +239,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
               </div>
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Job Title</label>
-                <Input 
+                <Input
                   type="text"
                   required
                   value={empRole}
@@ -256,8 +249,8 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
               </div>
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Department</label>
-                <Select 
-                  value={empDept} 
+                <Select
+                  value={empDept}
                   onValueChange={(val) => setEmpDept(val)}
                 >
                   <SelectTrigger className="w-full text-xs font-bold uppercase tracking-wider h-10">
@@ -274,7 +267,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
               </div>
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Annual Base ($)</label>
-                <Input 
+                <Input
                   type="number"
                   required
                   value={empSalary}
@@ -283,15 +276,15 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                 />
               </div>
               <div className="flex gap-2">
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   disabled={isSaving}
                   className="flex-1 h-10 text-xs font-bold gap-1.5"
                 >
                   {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
                   <span>Add</span>
                 </Button>
-                <Button 
+                <Button
                   type="button"
                   variant="outline"
                   onClick={() => setIsFormOpen(false)}
@@ -368,7 +361,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                   <CardTitle className="text-sm font-bold">Official Employee Roster</CardTitle>
                   <p className="text-muted-foreground text-[10px] uppercase tracking-widest font-black mt-0.5">Database record log</p>
                 </div>
-                <Button 
+                <Button
                   variant="outline"
                   size="icon"
                   onClick={fetchEmployees}
@@ -447,24 +440,24 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Document Target Type</label>
                   <div className="grid grid-cols-3 gap-2">
-                    <Button 
-                      type="button" 
+                    <Button
+                      type="button"
                       variant={docType === 'job_description' ? 'default' : 'outline'}
                       onClick={() => { setDocType('job_description'); setGeneratedDoc(''); }}
                       className="py-1 text-[9px] font-black uppercase h-9 rounded-lg"
                     >
                       Job Desc
                     </Button>
-                    <Button 
-                      type="button" 
+                    <Button
+                      type="button"
                       variant={docType === 'offer_letter' ? 'default' : 'outline'}
                       onClick={() => { setDocType('offer_letter'); setGeneratedDoc(''); }}
                       className="py-1 text-[9px] font-black uppercase h-9 rounded-lg"
                     >
                       Offer Let
                     </Button>
-                    <Button 
-                      type="button" 
+                    <Button
+                      type="button"
                       variant={docType === 'policy' ? 'default' : 'outline'}
                       onClick={() => { setDocType('policy'); setGeneratedDoc(''); }}
                       className="py-1 text-[9px] font-black uppercase h-9 rounded-lg"
@@ -478,7 +471,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                   <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">
                     {docType === 'job_description' ? "Job Title" : docType === 'offer_letter' ? "Role Title" : "Policy Name"}
                   </label>
-                  <Input 
+                  <Input
                     type="text"
                     required
                     value={title}
@@ -491,7 +484,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Department</label>
-                    <Input 
+                    <Input
                       type="text"
                       required
                       value={department}
@@ -502,7 +495,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                   </div>
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Compensation</label>
-                    <Input 
+                    <Input
                       type="text"
                       required
                       value={salaryRange}
@@ -517,7 +510,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                   <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">
                     {docType === 'offer_letter' ? "Candidate Name / Special Perks" : "Requirements / Context Details"}
                   </label>
-                  <textarea 
+                  <textarea
                     rows={4}
                     value={details}
                     onChange={(e) => setDetails(e.target.value)}
@@ -527,8 +520,8 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                 </div>
 
                 <div className="flex gap-2 pt-1">
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     disabled={isGenerating}
                     className="flex-1 h-10 text-xs font-bold gap-1.5"
                   >
@@ -544,8 +537,8 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                       </>
                     )}
                   </Button>
-                  <Button 
-                    type="button" 
+                  <Button
+                    type="button"
                     variant="outline"
                     onClick={handleTryDemoInput}
                     title="Load Demo Parameters"
@@ -561,7 +554,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] uppercase tracking-widest font-black text-primary">Draft Document Compiled</span>
                     <div className="flex gap-2">
-                      <Button 
+                      <Button
                         variant="outline"
                         size="icon"
                         onClick={handleCopy}
@@ -570,7 +563,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                       >
                         {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
                       </Button>
-                      <Button 
+                      <Button
                         variant="outline"
                         size="icon"
                         onClick={() => setGeneratedDoc('')}
@@ -581,7 +574,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                       </Button>
                     </div>
                   </div>
-                  
+
                   <div className="bg-black/20 border border-border p-4 rounded-xl max-h-[350px] overflow-y-auto custom-scrollbar shadow-inner">
                     <MarkdownRenderer text={generatedDoc} />
                   </div>
@@ -600,7 +593,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                 <CardTitle className="text-sm font-bold">Official Employee Roster</CardTitle>
                 <p className="text-muted-foreground text-[10px] uppercase tracking-widest font-black mt-0.5">Database record log</p>
               </div>
-              <Button 
+              <Button
                 variant="outline"
                 size="icon"
                 onClick={fetchEmployees}
@@ -681,24 +674,24 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Document Target Type</label>
                   <div className="grid grid-cols-3 gap-2">
-                    <Button 
-                      type="button" 
+                    <Button
+                      type="button"
                       variant={docType === 'job_description' ? 'default' : 'outline'}
                       onClick={() => { setDocType('job_description'); setGeneratedDoc(''); }}
                       className="py-1 text-[9px] font-black uppercase h-9 rounded-lg"
                     >
                       Job Desc
                     </Button>
-                    <Button 
-                      type="button" 
+                    <Button
+                      type="button"
                       variant={docType === 'offer_letter' ? 'default' : 'outline'}
                       onClick={() => { setDocType('offer_letter'); setGeneratedDoc(''); }}
                       className="py-1 text-[9px] font-black uppercase h-9 rounded-lg"
                     >
                       Offer Let
                     </Button>
-                    <Button 
-                      type="button" 
+                    <Button
+                      type="button"
                       variant={docType === 'policy' ? 'default' : 'outline'}
                       onClick={() => { setDocType('policy'); setGeneratedDoc(''); }}
                       className="py-1 text-[9px] font-black uppercase h-9 rounded-lg"
@@ -712,7 +705,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                   <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">
                     {docType === 'job_description' ? "Job Title" : docType === 'offer_letter' ? "Role Title" : "Policy Name"}
                   </label>
-                  <Input 
+                  <Input
                     type="text"
                     required
                     value={title}
@@ -725,7 +718,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Department</label>
-                    <Input 
+                    <Input
                       type="text"
                       required
                       value={department}
@@ -736,7 +729,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                   </div>
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Compensation</label>
-                    <Input 
+                    <Input
                       type="text"
                       required
                       value={salaryRange}
@@ -751,7 +744,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                   <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">
                     {docType === 'offer_letter' ? "Candidate Name / Special Perks" : "Requirements / Context Details"}
                   </label>
-                  <textarea 
+                  <textarea
                     rows={4}
                     value={details}
                     onChange={(e) => setDetails(e.target.value)}
@@ -761,8 +754,8 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                 </div>
 
                 <div className="flex gap-2 pt-1">
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     disabled={isGenerating}
                     className="flex-1 h-10 text-xs font-bold gap-1.5"
                   >
@@ -778,8 +771,8 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                       </>
                     )}
                   </Button>
-                  <Button 
-                    type="button" 
+                  <Button
+                    type="button"
                     variant="outline"
                     onClick={handleTryDemoInput}
                     title="Load Demo Parameters"
@@ -798,7 +791,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                 <div className="flex items-center justify-between mb-4 border-b border-border pb-4">
                   <span className="text-[10px] uppercase tracking-widest font-black text-primary">Draft Document Compiled</span>
                   <div className="flex gap-2">
-                    <Button 
+                    <Button
                       variant="outline"
                       size="icon"
                       onClick={handleCopy}
@@ -807,7 +800,7 @@ export const HRDashboard: React.FC<{ filterSection?: 'all' | 'roster' | 'documen
                     >
                       {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
                     </Button>
-                    <Button 
+                    <Button
                       variant="outline"
                       size="icon"
                       onClick={() => setGeneratedDoc('')}
@@ -847,7 +840,7 @@ const MarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
       {lines.map((line, i) => {
         const content = line.trim();
         if (!content) return <div key={i} className="h-1.5" />;
-        
+
         // Headers
         if (content.startsWith('### ')) {
           return <h5 key={i} className="text-[11px] font-bold text-primary mt-3 mb-1 uppercase tracking-wide">{content.slice(4)}</h5>;

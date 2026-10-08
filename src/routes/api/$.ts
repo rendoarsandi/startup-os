@@ -1,8 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { handleApiRequest } from '../../server/dispatcher'
+import { getRuntimeEnv } from '#runtime-env'
 
 const handler = async ({ request }: { request: Request }) => {
-  return handleApiRequest(request)
+  return handleApiRequest(request, getRuntimeEnv())
 }
 
 export const Route = createFileRoute('/api/$')({

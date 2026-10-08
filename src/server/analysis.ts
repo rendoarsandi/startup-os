@@ -4,11 +4,12 @@ import { Effect } from "effect";
 import { DatabaseError } from "./errors";
 
 export class AnalysisService {
-  constructor(private db: any) {}
+  private readonly db: import('drizzle-orm/d1').DrizzleD1Database;
+  constructor(db: import('drizzle-orm/d1').DrizzleD1Database) { this.db = db; }
 
   async getUserContext(userId: string): Promise<string> {
     const user = await this.db.select().from(users).where(eq(users.id, userId)).get();
-    
+
     // Fetch last 20 transactions for context
     const recentTransactions = await this.db
       .select()
@@ -21,7 +22,7 @@ export class AnalysisService {
     if (!user) return "No user data found.";
 
     let context = `User Name: ${user.name || 'User'}\n`;
-    
+
     if (recentTransactions.length > 0) {
       context += "Recent Transactions:\n";
       recentTransactions.forEach((tx: any) => {
@@ -40,7 +41,8 @@ export class AnalysisService {
       context += `- Rolling Average Monthly Variable Spend: $${(runway.variableExpenses / 100).toFixed(2)}\n`;
       context += `- Rolling Average Monthly Revenue: $${(runway.monthlyRevenue / 100).toFixed(2)}\n`;
       context += `- Net Monthly Burn: $${(runway.netBurn / 100).toFixed(2)}\n`;
-      context += `- Current Runway: ${runway.runwayMonths === "Infinite" ? "Infinite / Profitable" : runway.runwayMonths + " Months"}\n`;
+      context += `- Current Runway: ${runway.dataQuality === "missing" ? "Insufficient records" : runway.runwayMonths === "Infinite" ? "Recorded costs covered" : runway.runwayMonths + " Months"}\n`;
+      context += `- Data quality: ${runway.dataQuality}. ${runway.assumptions.join(" ")}\n`;
       context += `- SaaS Starting MRR: $${(runway.startingMrr / 100).toFixed(2)}\n`;
       context += `- SaaS Monthly Churn Rate: ${(runway.churnRate / 100).toFixed(2)}%\n`;
     } catch (e) {
@@ -58,6 +60,9 @@ export class AnalysisService {
     netBurn: number;
     runwayMonths: number | "Infinite";
     projections: { month: string; balance: number }[];
+    dataQuality: 'missing' | 'limited' | 'recorded';
+    historyDays: number;
+    assumptions: string[];
     startingMrr: number;
     churnRate: number;
     cac: number;
@@ -69,8 +74,8 @@ export class AnalysisService {
       .from(financialAccounts)
       .where(eq(financialAccounts.userId, userId))
       .all();
-    
-    const cashBalance = accounts.reduce((sum: number, acc: any) => sum + acc.balance, 0);
+
+    const cashBalance = accounts.filter(account => ['checking', 'savings', 'cash', 'money market'].includes(account.type) && account.currency === 'USD').reduce((sum, account) => sum + account.balance, 0);
 
     // 2. Fetch all employees and calculate monthly payroll
     const employeeList = await this.db
@@ -78,11 +83,11 @@ export class AnalysisService {
       .from(employees)
       .where(eq(employees.userId, userId))
       .all();
-    
+
     // Sum annual salaries of active/onboarding employees, convert to monthly cents
     const activeEmployees = employeeList.filter((emp: any) => emp.status === 'active' || emp.status === 'onboarding');
     const annualPayroll = activeEmployees.reduce((sum: number, emp: any) => sum + emp.salary, 0);
-    const monthlyPayroll = Math.round(annualPayroll / 12);
+    let monthlyPayroll = Math.round(annualPayroll / 12);
 
     // 3. Fetch recent transactions to compute rolling variable expenses, subscription expenses, and revenue
     const txs = await this.db
@@ -98,26 +103,31 @@ export class AnalysisService {
 
     const now = Date.now();
     const ninetyDaysAgo = now - 90 * 24 * 60 * 60 * 1000;
-    
-    if (txs.length > 0) {
-      txs.forEach((tx: any) => {
+
+    const recent = txs.filter(tx => tx.date.getTime() >= ninetyDaysAgo && tx.date.getTime() <= now);
+    const historyDays = recent.length ? Math.min(90, Math.max(30, Math.ceil((now - Math.min(...recent.map(tx => tx.date.getTime()))) / 86400000))) : 0;
+    let observedPayroll = 0;
+    if (recent.length > 0) {
+      recent.forEach((tx: any) => {
         const txDate = tx.date instanceof Date ? tx.date.getTime() : new Date(tx.date).getTime();
-        
+
         // Parse transactions from the last 90 days for rolling metrics
-        if (txDate >= ninetyDaysAgo) {
+        if (txDate >= ninetyDaysAgo && txDate <= now) {
+          if (/^(transfer|funding|loan|credit card payment)$/i.test(tx.category)) return;
           const amount = tx.amount;
-          
+
           if (amount < 0) {
             const absAmt = Math.abs(amount);
             const descLower = (tx.description || "").toLowerCase();
             const merchantLower = (tx.merchant || "").toLowerCase();
-            const isRecurringKeyword = descLower.includes("subscription") || 
-                                       descLower.includes("saas") || 
+            if (/payroll|salary/i.test(tx.category + ' ' + descLower + ' ' + merchantLower) || /gusto|rippling/i.test(merchantLower)) { observedPayroll += absAmt; return; }
+            const isRecurringKeyword = descLower.includes("subscription") ||
+                                       descLower.includes("saas") ||
                                        descLower.includes("cloud") ||
                                        descLower.includes("license") ||
-                                       merchantLower.includes("aws") || 
-                                       merchantLower.includes("google") || 
-                                       merchantLower.includes("slack") || 
+                                       merchantLower.includes("aws") ||
+                                       merchantLower.includes("google workspace") ||
+                                       merchantLower.includes("slack") ||
                                        merchantLower.includes("github") ||
                                        merchantLower.includes("zoom") ||
                                        merchantLower.includes("netflix") ||
@@ -126,7 +136,7 @@ export class AnalysisService {
                                        tx.category === "Utilities" ||
                                        tx.category === "Insurance" ||
                                        tx.category === "Housing";
-            
+
             if (isRecurringKeyword) {
               monthlySubscriptions += absAmt;
             } else {
@@ -139,10 +149,11 @@ export class AnalysisService {
       });
 
       // Scale to 30 days
-      const dayRange = 90;
+      const dayRange = historyDays;
       monthlySubscriptions = Math.round((monthlySubscriptions * 30) / dayRange);
       totalVariableExpenses = Math.round((totalVariableExpenses * 30) / dayRange);
       totalRevenue = Math.round((totalRevenue * 30) / dayRange);
+      monthlyPayroll = Math.max(monthlyPayroll, Math.round(observedPayroll * 30 / dayRange));
     }
 
     // 4. Fetch SaaS Config and auto-detect recurring revenue
@@ -167,22 +178,6 @@ export class AnalysisService {
       churnRate = saasConfig.churnRate;
       cac = saasConfig.cac;
       arpu = saasConfig.arpu;
-    } else if (txs.length > 0) {
-      // Auto-detect recurring deposits in last 90 days
-      let totalRecurringDeposits = 0;
-      txs.forEach((tx: any) => {
-        const txDate = tx.date instanceof Date ? tx.date.getTime() : new Date(tx.date).getTime();
-        if (txDate >= ninetyDaysAgo && tx.amount > 0) {
-          const mLower = (tx.merchant || tx.description || "").toLowerCase();
-          if (mLower.includes("stripe") || mLower.includes("paypal") || mLower.includes("shopify") || mLower.includes("app store") || mLower.includes("deposit")) {
-            totalRecurringDeposits += tx.amount;
-          }
-        }
-      });
-      startingMrr = Math.round(totalRecurringDeposits / 3);
-      if (startingMrr === 0) {
-        startingMrr = Math.round(totalRevenue * 0.7); // 70% of total revenue is assumed recurring
-      }
     }
 
     const totalFixedCosts = monthlyPayroll + monthlySubscriptions;
@@ -200,7 +195,6 @@ export class AnalysisService {
       balance: Math.round(currentProjBalance)
     });
 
-    let totalProjectedNetBurn = 0;
     let currentMrr = startingMrr;
 
     for (let i = 1; i <= 12; i++) {
@@ -209,12 +203,11 @@ export class AnalysisService {
 
       // Decaying MRR month-over-month
       currentMrr = Math.round(currentMrr * (1 - churnRate / 10000));
-      
+
       const projectedRevenue = currentMrr + nonRecurringRevenue;
       const projectedExpenses = totalFixedCosts + totalVariableExpenses;
       const monthNetBurn = projectedExpenses - projectedRevenue;
 
-      totalProjectedNetBurn += monthNetBurn;
       currentProjBalance -= monthNetBurn;
       if (currentProjBalance < 0) {
         currentProjBalance = 0;
@@ -226,7 +219,7 @@ export class AnalysisService {
       });
     }
 
-    const netBurn = Math.round(totalProjectedNetBurn / 12);
+    const netBurn = totalFixedCosts + totalVariableExpenses - Math.max(totalRevenue, startingMrr);
 
     // 6. Calculate Runway in Months
     let runwayMonths: number | "Infinite" = "Infinite";
@@ -236,6 +229,9 @@ export class AnalysisService {
 
     return {
       cashBalance,
+      dataQuality: !accounts.length || (!recent.length && !monthlyPayroll && !saasConfig) ? 'missing' : historyDays < 90 ? 'limited' : 'recorded',
+      historyDays,
+      assumptions: [`Monthly averages use ${historyDays || 0} days of recorded transactions.`, 'Cash excludes credit and investment accounts. Unrecorded costs are excluded.', 'MRR and churn use your explicit SaaS settings; they are not inferred from deposits.'],
       fixedCosts: {
         payroll: monthlyPayroll,
         subscriptions: monthlySubscriptions,
@@ -256,23 +252,23 @@ export class AnalysisService {
   async getFinancialAdvice(userId: string, gemini: any): Promise<string> {
     const context = await this.getUserContext(userId);
     const prompt = "Based on my financial profile, give me one short, actionable piece of advice for today.";
-    
+
     return gemini.generateResponse(prompt, context);
   }
 
   async categorizeTransaction(merchant: string, description: string, gemini: any): Promise<string> {
     const categories = [
-      "Housing", "Transport", "Food", "Utilities", "Insurance", "Healthcare", 
+      "Housing", "Transport", "Food", "Utilities", "Insurance", "Healthcare",
       "Savings", "Personal", "Entertainment", "Income", "Other"
     ];
-    const prompt = `Categorize this transaction into one of these: ${categories.join(", ")}. 
+    const prompt = `Categorize this transaction into one of these: ${categories.join(", ")}.
     Merchant: ${merchant}
     Description: ${description}
     Respond with ONLY the category name.`;
-    
+
     const category = await gemini.generateResponse(prompt);
     const trimmed = category.trim();
-    
+
     return categories.includes(trimmed) ? trimmed : "Other";
   }
 

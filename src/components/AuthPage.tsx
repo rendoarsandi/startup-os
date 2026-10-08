@@ -39,7 +39,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        throw new Error(data.message || (isLogin ? 'Failed to sign in' : 'Failed to sign up'));
+        throw new Error((data && typeof data === 'object' && 'message' in data ? String(data.message) : '') || (isLogin ? 'Failed to sign in' : 'Failed to sign up'));
       }
 
       if (isLogin) {
@@ -78,10 +78,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
       <Card className="w-full max-w-md border-border bg-card/60 backdrop-blur-md relative z-10 shadow-2xl animate-in fade-in duration-500">
         <CardHeader className="flex flex-col items-center pb-6 text-center">
           <div className="h-14 w-14 rounded-lg border border-border p-2 mb-4 bg-black/20 flex items-center justify-center">
-            <img 
-              src="/logo.png" 
-              alt="Startup OS Logo" 
-              className="w-full h-full object-contain" 
+            <img
+              src="/logo.png"
+              alt="Startup OS Logo"
+              className="w-full h-full object-contain"
             />
           </div>
           <CardTitle className="text-xl font-black tracking-widest text-foreground">
@@ -100,8 +100,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
               onClick={() => { setIsLogin(true); setError(null); setSuccessMsg(null); }}
               className={cn(
                 "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 cursor-pointer hover:text-foreground/80 active:scale-[0.98]",
-                isLogin 
-                  ? "bg-primary/10 text-foreground shadow-sm font-extrabold" 
+                isLogin
+                  ? "bg-primary/10 text-foreground shadow-sm font-extrabold"
                   : "text-muted-foreground"
               )}
             >
@@ -112,8 +112,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
               onClick={() => { setIsLogin(false); setError(null); setSuccessMsg(null); }}
               className={cn(
                 "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 cursor-pointer hover:text-foreground/80 active:scale-[0.98]",
-                !isLogin 
-                  ? "bg-primary/10 text-foreground shadow-sm font-extrabold" 
+                !isLogin
+                  ? "bg-primary/10 text-foreground shadow-sm font-extrabold"
                   : "text-muted-foreground"
               )}
             >

@@ -1,257 +1,418 @@
-import React, { useState } from 'react';
-import { Cpu, Play, Plus, Loader2, Trash2, CheckCircle2 } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Badge } from '../ui/badge';
-import { Card } from '../ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { useForm } from "@tanstack/react-form";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { z } from "zod";
+import * as api from "../../lib/server-functions";
+import { ruleSchema } from "../../lib/workspace-schemas";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Card } from "../ui/card";
 
-export interface Employee {
-  id: string;
-  name: string;
-  role: string;
-}
+const initialRule: z.input<typeof ruleSchema> = {
+  name: "",
+  triggerType: "low_stock",
+  triggerValue: "5",
+  actionType: "auto_task",
+  active: true,
+};
+const statusLabel = {
+  running: "Running",
+  awaiting_approval: "Needs review",
+  completed: "Completed",
+  failed: "Failed",
+  dismissed: "Dismissed",
+  approved: "Draft approved",
+};
 
-export const AutopilotSection: React.FC = () => {
-  const queryClient = useQueryClient();
-  const [isRuleOpen, setIsRuleOpen] = useState(false);
-  const [ruleName, setRuleName] = useState('');
-  const [ruleTriggerType, setRuleTriggerType] = useState<'runway_low' | 'low_stock' | 'high_priority_ticket' | 'mrr_surge'>('runway_low');
-  const [ruleTriggerValue, setRuleTriggerValue] = useState('6');
-  const [ruleActionType, setRuleActionType] = useState<'ai_audit' | 'auto_task' | 'ai_reply' | 'webhook_alert'>('ai_audit');
-  const [ruleActionTarget, setRuleActionTarget] = useState('');
-  const [executionLogs, setExecutionLogs] = useState<any[]>([]);
-  const [isRunningChecks, setIsRunningChecks] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-
-  const { data: employees = [] } = useQuery<Employee[]>({ queryKey: ['employees'] });
-
-  const { data: autopilotRulesList = [], isLoading } = useQuery<any[]>({
-    queryKey: ['autopilotRules'],
-    queryFn: async () => {
-      const res = await fetch('/api/operations/autopilot');
-      if (!res.ok) throw new Error('Failed to fetch autopilot rules');
-      return res.json();
-    }
+export function AutopilotSection() {
+  const [creating, setCreating] = useState(false);
+  const rules = useQuery({
+    queryKey: ["autopilotRules"],
+    queryFn: () => api.listRules(),
   });
-
-  const saveRuleMutation = useMutation({
-    mutationFn: async (ruleData: any) => {
-      const res = await fetch('/api/operations/autopilot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(ruleData)
-      });
-      if (!res.ok) throw new Error('Failed to save autopilot rule');
-      return res.json();
-    },
+  const runs = useQuery({
+    queryKey: ["automationRuns"],
+    queryFn: () => api.listRuns(),
+    refetchInterval: 15_000,
+  });
+  const integrations = useQuery({
+    queryKey: ["integrations"],
+    queryFn: () => api.getIntegrations(),
+  });
+  const save = useMutation({
+    mutationFn: (data: z.input<typeof ruleSchema>) => api.saveRule({ data }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['autopilotRules'] });
-      setIsRuleOpen(false);
-      setRuleName('');
-      setRuleTriggerValue('6');
-      setRuleActionTarget('');
-    }
-  });
-
-  const toggleRuleMutation = useMutation({
-    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
-      const res = await fetch(`/api/operations/autopilot/${id}/toggle`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ active })
-      });
-      if (!res.ok) throw new Error('Failed to toggle rule');
-      return res.json();
+      form.reset();
+      setCreating(false);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['autopilotRules'] });
-    }
   });
-
-  const deleteRuleMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`/api/operations/autopilot/${id}`, {
-        method: 'DELETE'
-      });
-      if (!res.ok) throw new Error('Failed to delete rule');
-      return res.json();
+  const toggle = useMutation({
+    mutationFn: (data: { id: string; active: boolean }) =>
+      api.toggleRule({ data }),
+  });
+  const remove = useMutation({
+    mutationFn: (id: string) => api.deleteRule({ data: { id } }),
+  });
+  const checks = useMutation({ mutationFn: () => api.runChecks() });
+  const review = useMutation({
+    mutationFn: (data: {
+      id: string;
+      decision: "approve" | "dismiss" | "retry";
+    }) => api.reviewRun({ data }),
+  });
+  const form = useForm({
+    defaultValues: initialRule,
+    validators: { onSubmit: ruleSchema },
+    onSubmit: async ({ value }) => {
+      await save.mutateAsync(value);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['autopilotRules'] });
-    }
   });
-
-  const handleRuleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ruleName.trim()) return;
-    setIsSaving(true);
-    try {
-      await saveRuleMutation.mutateAsync({
-        name: ruleName,
-        triggerType: ruleTriggerType,
-        triggerValue: ruleTriggerValue,
-        actionType: ruleActionType,
-        actionTarget: ruleActionTarget,
-        active: true
-      });
-    } catch (err) {}
-    setIsSaving(false);
-  };
-
-  const handleRunChecks = async () => {
-    setIsRunningChecks(true);
-    try {
-      const res = await fetch('/api/operations/autopilot/run-checks', { method: 'POST' });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.logs) {
-          setExecutionLogs(data.logs);
-        }
-      }
-    } catch (err) {}
-    setIsRunningChecks(false);
-    queryClient.invalidateQueries({ queryKey: ['autopilotRules'] });
-  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold text-lg text-foreground">Autopilot Autonomous Rules Engine</h3>
-          <p className="text-xs text-muted-foreground">Configure autonomous rules triggered by operational, financial, or support conditions.</p>
+    <div className="space-y-8">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="max-w-2xl">
+          <h2 className="text-2xl font-semibold">Automation</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Delegate recurring work. Review what your AI prepares and track
+            every task it completes.
+          </p>
         </div>
-        <div className="flex space-x-3">
-          <Button onClick={handleRunChecks} disabled={isRunningChecks} variant="outline" className="text-xs">
-            {isRunningChecks ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Play className="w-3.5 h-3.5 mr-1" />}
-            Run Autonomous Checks
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            disabled={
+              checks.isPending || !rules.data?.some((rule) => rule.active)
+            }
+            onClick={() => checks.mutate()}
+          >
+            {checks.isPending ? "Checking your records…" : "Run checks"}
           </Button>
-          <Button onClick={() => setIsRuleOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs">
-            <Plus className="w-3.5 h-3.5 mr-1" /> Create Rule
+          <Button onClick={() => setCreating(!creating)}>
+            {creating ? "Close rule form" : "Create rule"}
           </Button>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="p-6 border border-border/50 bg-card rounded-xl">
-          <h4 className="font-semibold text-sm text-foreground mb-4">Active Rules ({autopilotRulesList.length})</h4>
-          {isLoading ? (
-            <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
-          ) : autopilotRulesList.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-6 text-center">No rules configured yet.</p>
-          ) : (
-            <div className="space-y-3">
-              {autopilotRulesList.map((rule: any) => (
-                <div key={rule.id} className="p-4 border rounded-xl bg-muted/30 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-2">
-                      <Cpu className="w-4 h-4 text-indigo-500" />
-                      <p className="font-medium text-sm text-foreground">{rule.name}</p>
-                      <Badge variant="outline" className={rule.active ? "bg-emerald-500/10 text-emerald-500" : "bg-slate-500/10 text-slate-500"}>
-                        {rule.active ? "Active" : "Disabled"}
-                      </Badge>
+      </header>
+      {integrations.data && !integrations.data.ai && (
+        <p className="rounded-lg border border-border p-4 text-sm">
+          AI is not connected yet. Task rules work now; AI drafts and audits
+          need a connection configured by your workspace administrator.
+        </p>
+      )}
+      {integrations.data && (
+        <p className="text-sm text-muted-foreground">
+          {integrations.data.scheduled
+            ? "Active rules run every 15 minutes."
+            : "Rules run when you select Run checks in this environment."}{" "}
+          Customer replies are saved as drafts for review.
+        </p>
+      )}
+      {checks.isSuccess && (
+        <p role="status" className="text-sm">
+          Matched {checks.data.matched} records and created{" "}
+          {checks.data.created} new runs. Previously processed records are
+          skipped.
+        </p>
+      )}
+      {creating && (
+        <Card className="p-5">
+          <h3 className="text-lg font-semibold mb-4">Create a rule</h3>
+          <form
+            className="grid gap-4 sm:grid-cols-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void form.handleSubmit().catch(() => {});
+            }}
+          >
+            <form.Field name="name">
+              {(field) => (
+                <div className="sm:col-span-2">
+                  <label htmlFor="rule-name" className="block text-sm mb-2">
+                    Rule name
+                  </label>
+                  <Input
+                    id="rule-name"
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    required
+                    maxLength={160}
+                    placeholder="Create a task when stock is low"
+                  />
+                </div>
+              )}
+            </form.Field>
+            <form.Field name="triggerType">
+              {(field) => (
+                <div>
+                  <label htmlFor="rule-trigger" className="block text-sm mb-2">
+                    When
+                  </label>
+                  <select
+                    id="rule-trigger"
+                    className="w-full rounded-md border border-input bg-background p-3 text-sm"
+                    value={field.state.value}
+                    onChange={(event) => {
+                      const trigger = ruleSchema.shape.triggerType.parse(
+                        event.target.value,
+                      );
+                      field.handleChange(trigger);
+                      form.setFieldValue("actionType", "auto_task");
+                    }}
+                  >
+                    <option value="low_stock">
+                      Stock falls below a threshold
+                    </option>
+                    <option value="runway_low">
+                      Cash runway falls below a threshold
+                    </option>
+                    <option value="high_priority_ticket">
+                      A high-priority ticket is open
+                    </option>
+                  </select>
+                </div>
+              )}
+            </form.Field>
+            <form.Subscribe selector={(state) => state.values.triggerType}>
+              {(trigger) =>
+                trigger !== "high_priority_ticket" && (
+                  <form.Field name="triggerValue">
+                    {(field) => (
+                      <div>
+                        <label
+                          htmlFor="rule-threshold"
+                          className="block text-sm mb-2"
+                        >
+                          {trigger === "low_stock"
+                            ? "Stock threshold (items)"
+                            : "Runway threshold (months)"}
+                        </label>
+                        <Input
+                          id="rule-threshold"
+                          type="number"
+                          min="0.1"
+                          step="any"
+                          value={field.state.value}
+                          onChange={(event) =>
+                            field.handleChange(event.target.value)
+                          }
+                          required
+                        />
+                      </div>
+                    )}
+                  </form.Field>
+                )
+              }
+            </form.Subscribe>
+            <form.Subscribe selector={(state) => state.values.triggerType}>
+              {(trigger) => (
+                <form.Field name="actionType">
+                  {(field) => (
+                    <div>
+                      <label
+                        htmlFor="rule-action"
+                        className="block text-sm mb-2"
+                      >
+                        Do this
+                      </label>
+                      <select
+                        id="rule-action"
+                        className="w-full rounded-md border border-input bg-background p-3 text-sm"
+                        value={field.state.value}
+                        onChange={(event) =>
+                          field.handleChange(
+                            ruleSchema.shape.actionType.parse(
+                              event.target.value,
+                            ),
+                          )
+                        }
+                      >
+                        <option value="auto_task">
+                          Create an internal task
+                        </option>
+                        {trigger === "runway_low" && (
+                          <option value="ai_audit">
+                            Prepare an AI cash audit
+                          </option>
+                        )}
+                        {trigger === "high_priority_ticket" && (
+                          <option value="ai_reply">
+                            Draft a support reply
+                          </option>
+                        )}
+                      </select>
                     </div>
-                    <p className="text-xs text-muted-foreground">Trigger: <span className="font-mono">{rule.triggerType}</span> | Action: <span className="font-mono">{rule.actionType}</span></p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button size="sm" variant="ghost" className="text-xs" onClick={() => toggleRuleMutation.mutate({ id: rule.id, active: !rule.active })}>
-                      {rule.active ? "Pause" : "Enable"}
-                    </Button>
-                    <Button size="sm" variant="ghost" className="text-xs text-rose-500 hover:text-rose-600" onClick={() => deleteRuleMutation.mutate(rule.id)}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                  )}
+                </form.Field>
+              )}
+            </form.Subscribe>
+            <form.Subscribe selector={(state) => state.errors}>
+              {(errors) =>
+                errors.length > 0 && (
+                  <p
+                    role="alert"
+                    className="sm:col-span-2 text-sm text-destructive"
+                  >
+                    {errors
+                      .flatMap((error) => Object.values(error || {}))
+                      .map((error) => String(error))
+                      .join(" ")}
+                  </p>
+                )
+              }
+            </form.Subscribe>
+            <div className="sm:col-span-2 flex gap-2">
+              <Button type="submit" disabled={save.isPending}>
+                {save.isPending ? "Saving…" : "Save rule"}
+              </Button>
+              <Button
+                variant="ghost"
+                type="button"
+                onClick={() => setCreating(false)}
+              >
+                Cancel
+              </Button>
             </div>
-          )}
-        </Card>
-
-        <Card className="p-6 border border-border/50 bg-card rounded-xl">
-          <h4 className="font-semibold text-sm text-foreground mb-4">Execution Audit Trail</h4>
-          {executionLogs.length === 0 ? (
-            <div className="text-xs text-muted-foreground py-8 text-center border border-dashed rounded-lg">
-              No recent audit logs. Click "Run Autonomous Checks" to execute rules engine.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {executionLogs.map((log, idx) => (
-                <div key={idx} className="p-3 border rounded-lg bg-muted/20 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-xs text-foreground flex items-center">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mr-1.5" />
-                      {log.name}
-                    </span>
-                    <span className="text-[10px] font-mono text-muted-foreground">{new Date(log.timestamp).toLocaleTimeString()}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{log.actionTaken}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-      </div>
-
-      <Dialog open={isRuleOpen} onOpenChange={setIsRuleOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Create Autonomous Rule</DialogTitle></DialogHeader>
-          <form onSubmit={handleRuleSubmit} className="space-y-4 pt-2">
-            <div>
-              <label className="block text-xs font-medium mb-1">Rule Name *</label>
-              <Input placeholder="Auto-restock Low Stock SKUs" value={ruleName} onChange={e => setRuleName(e.target.value)} required />
-            </div>
-            <div>
-              <label className="block text-xs font-medium mb-1">Trigger Condition</label>
-              <Select value={ruleTriggerType} onValueChange={(v: any) => setRuleTriggerType(v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="runway_low">Cash Runway &lt; X months</SelectItem>
-                  <SelectItem value="low_stock">Inventory Stock &lt; X items</SelectItem>
-                  <SelectItem value="high_priority_ticket">High Priority Support Ticket Received</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium mb-1">Threshold Value</label>
-              <Input placeholder="6" value={ruleTriggerValue} onChange={e => setRuleTriggerValue(e.target.value)} />
-            </div>
-            <div>
-              <label className="block text-xs font-medium mb-1">Autonomous Action</label>
-              <Select value={ruleActionType} onValueChange={(v: any) => setRuleActionType(v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ai_audit">Trigger AI CFO Burn Audit</SelectItem>
-                  <SelectItem value="auto_task">Automatically Generate Purchase Task</SelectItem>
-                  <SelectItem value="ai_reply">AI Auto-reply to Support Ticket</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {ruleActionType === 'auto_task' && (
-              <div>
-                <label className="block text-xs font-medium mb-1">Assign Task To</label>
-                <Select value={ruleActionTarget} onValueChange={setRuleActionTarget}>
-                  <SelectTrigger><SelectValue placeholder="Select Employee" /></SelectTrigger>
-                  <SelectContent>
-                    {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white" disabled={isSaving}>
-              {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-              Save Autonomous Rule
-            </Button>
           </form>
-        </DialogContent>
-      </Dialog>
+        </Card>
+      )}
+      <section aria-labelledby="rules-title">
+        <h3 id="rules-title" className="text-lg font-semibold mb-3">
+          Your rules
+        </h3>
+        {rules.isPending ? (
+          <p className="text-sm" role="status">
+            Loading rules…
+          </p>
+        ) : !rules.data?.length ? (
+          <div className="rounded-lg border border-dashed border-border p-6">
+            <p className="font-medium">Start with one recurring task.</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Choose low stock, cash runway, or urgent support tickets. Every
+              action appears in the activity list below.
+            </p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-border border-y border-border">
+            {rules.data.map((rule) => (
+              <li
+                key={rule.id}
+                className="flex flex-wrap items-center justify-between gap-3 py-4"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium break-words">{rule.name}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {rule.triggerType.replaceAll("_", " ")} ·{" "}
+                    {rule.actionType.replaceAll("_", " ")} ·{" "}
+                    {rule.active ? "Active" : "Paused"}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={toggle.isPending}
+                    onClick={() =>
+                      toggle.mutate({ id: rule.id, active: !rule.active })
+                    }
+                  >
+                    {rule.active ? "Pause" : "Enable"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={remove.isPending}
+                    onClick={() => remove.mutate(rule.id)}
+                  >
+                    Delete rule
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section aria-labelledby="activity-title">
+        <h3 id="activity-title" className="text-lg font-semibold mb-3">
+          Activity and approvals
+        </h3>
+        {runs.isPending ? (
+          <p className="text-sm" role="status">
+            Loading activity…
+          </p>
+        ) : !runs.data?.length ? (
+          <p className="text-sm text-muted-foreground">
+            No runs yet. Create a rule, add matching business records, then run
+            checks.
+          </p>
+        ) : (
+          <ol className="space-y-5">
+            {runs.data.map((run) => (
+              <li key={run.id} className="rounded-lg border border-border p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h4 className="font-medium break-words">{run.ruleName}</h4>
+                  <span className="text-sm">{statusLabel[run.status]}</span>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {new Date(run.createdAt).toLocaleString()} · Attempt{" "}
+                  {run.attempts}
+                </p>
+                {run.output && (
+                  <p className="mt-4 whitespace-pre-wrap break-words text-sm leading-relaxed">
+                    {run.output}
+                  </p>
+                )}
+                {run.error && (
+                  <p className="mt-3 text-sm text-destructive">{run.error}</p>
+                )}
+                {run.actionType === "ai_reply" && (
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    This draft has not been sent to the customer.
+                  </p>
+                )}
+                {run.status === "awaiting_approval" && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      disabled={review.isPending}
+                      onClick={() =>
+                        review.mutate({ id: run.id, decision: "approve" })
+                      }
+                    >
+                      {run.actionType === "auto_task"
+                        ? "Approve and create task"
+                        : "Approve draft"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={review.isPending}
+                      onClick={() =>
+                        review.mutate({ id: run.id, decision: "dismiss" })
+                      }
+                    >
+                      Dismiss
+                    </Button>
+                  </div>
+                )}
+                {run.status === "failed" && (
+                  <Button
+                    className="mt-4"
+                    size="sm"
+                    variant="outline"
+                    disabled={review.isPending}
+                    onClick={() =>
+                      review.mutate({ id: run.id, decision: "retry" })
+                    }
+                  >
+                    Retry run
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
     </div>
   );
-};
+}

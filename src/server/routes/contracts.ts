@@ -1,10 +1,12 @@
+import type { DrizzleD1Database } from 'drizzle-orm/d1';
+import type { AppEnv } from '../env';
 import { eq, and, desc, asc } from 'drizzle-orm';
 import { contracts } from '../../db/schema';
 import { v4 as uuidv4 } from 'uuid';
 import { decodeCreateContract, decodeUpdateContract } from '../schemas';
 import { getValidatedBody, jsonResponse, matchRoute } from '../utils';
 
-export async function handleContractsRoutes(request: Request, path: string, method: string, db: any, userId: string, _env?: any): Promise<Response | null> {
+export async function handleContractsRoutes(request: Request, path: string, method: string, db: DrizzleD1Database, userId: string, _env: AppEnv): Promise<Response | null> {
   const url = new URL(request.url);
   if (path === '/api/contracts') {
     if (method === 'GET') {

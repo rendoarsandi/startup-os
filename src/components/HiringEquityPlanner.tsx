@@ -1,16 +1,15 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  Users, Plus, Trash2, TrendingDown, DollarSign, Calendar, Sparkles, 
-  ChevronDown, ChevronUp, AlertTriangle, CheckCircle2, Award, Percent, RefreshCw
+import {
+  Users, Plus, Trash2, TrendingDown, DollarSign,
+  ChevronDown, ChevronUp, AlertTriangle, Award, Percent
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import {
-  ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend,
+  ResponsiveContainer, PieChart, Pie, Cell, Tooltip,
   AreaChart, Area, XAxis, YAxis, CartesianGrid
 } from 'recharts';
 
@@ -123,7 +122,6 @@ export function calculateRunway(
     if (projectionCash < currentMonthBurn) {
       // Fractional runway month remaining
       adjustedRunwayMonths += projectionCash / currentMonthBurn;
-      projectionCash = 0;
       break;
     } else {
       projectionCash -= currentMonthBurn;
@@ -300,7 +298,7 @@ export const HiringEquityPlanner: React.FC = () => {
 
     for (let m = 0; m <= horizonMonths; m++) {
       const projectedCashPlanned = runwayResult.monthlyCashBalance[m];
-      
+
       // Calculate cash if NO hires were added
       const projectedCashBase = Math.max(0, baseCash - (m * baseBurn));
 
@@ -446,7 +444,7 @@ export const HiringEquityPlanner: React.FC = () => {
                   <label htmlFor="startingCash" className="text-[10px] font-bold text-white/80 uppercase tracking-widest">Starting Cash ($)</label>
                   <span className="text-xs font-mono font-bold text-[#00E5FF]">${startingCash.toLocaleString()}</span>
                 </div>
-                <Input 
+                <Input
                   id="startingCash"
                   type="number"
                   value={startingCash}
@@ -461,7 +459,7 @@ export const HiringEquityPlanner: React.FC = () => {
                   <label htmlFor="baseMonthlyBurn" className="text-[10px] font-bold text-white/80 uppercase tracking-widest">Base Monthly Burn ($)</label>
                   <span className="text-xs font-mono font-bold text-[#00FF87]">${baseMonthlyBurn.toLocaleString()}/mo</span>
                 </div>
-                <Input 
+                <Input
                   id="baseMonthlyBurn"
                   type="number"
                   value={baseMonthlyBurn}
@@ -473,8 +471,8 @@ export const HiringEquityPlanner: React.FC = () => {
               {/* Planning Horizon */}
               <div className="space-y-2">
                 <label id="planningHorizonLabel" className="block text-[10px] font-bold text-white/80 uppercase tracking-widest pl-0.5">Planning Horizon</label>
-                <Select 
-                  value={horizonMonths.toString()} 
+                <Select
+                  value={horizonMonths.toString()}
                   onValueChange={(val) => setHorizonMonths(parseInt(val))}
                 >
                   <SelectTrigger aria-labelledby="planningHorizonLabel" className="w-full text-xs font-bold uppercase tracking-wider h-10 bg-black/25 border-white/5 text-white">
@@ -505,9 +503,9 @@ export const HiringEquityPlanner: React.FC = () => {
                     <p className="text-[10px] text-white/40 uppercase font-bold tracking-widest mt-0.5">Configure equity shares</p>
                   </div>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className="w-8 h-8 rounded-full border border-white/5 text-white/60 hover:text-white hover:bg-white/5"
                   onClick={() => setShowAdvancedCap(!showAdvancedCap)}
                   aria-label={showAdvancedCap ? "Collapse advanced cap table settings" : "Expand advanced cap table settings"}
@@ -537,7 +535,7 @@ export const HiringEquityPlanner: React.FC = () => {
                   {/* Total Shares */}
                   <div className="space-y-1.5">
                     <label htmlFor="totalOutstandingShares" className="block text-[10px] font-bold text-white/80 uppercase tracking-widest pl-0.5">Total Outstanding Shares</label>
-                    <Input 
+                    <Input
                       id="totalOutstandingShares"
                       type="number"
                       value={totalShares}
@@ -552,7 +550,7 @@ export const HiringEquityPlanner: React.FC = () => {
                    {/* Founder Shares */}
                   <div className="space-y-1.5">
                     <label htmlFor="founderShares" className="block text-[10px] font-bold text-white/80 uppercase tracking-widest pl-0.5">Founder Shares</label>
-                    <Input 
+                    <Input
                       id="founderShares"
                       type="number"
                       value={founderShares}
@@ -564,7 +562,7 @@ export const HiringEquityPlanner: React.FC = () => {
                    {/* Investor Shares */}
                   <div className="space-y-1.5">
                     <label htmlFor="investorShares" className="block text-[10px] font-bold text-white/80 uppercase tracking-widest pl-0.5">Investor Shares</label>
-                    <Input 
+                    <Input
                       id="investorShares"
                       type="number"
                       value={investorShares}
@@ -576,7 +574,7 @@ export const HiringEquityPlanner: React.FC = () => {
                    {/* Existing Option Pool Shares */}
                   <div className="space-y-1.5">
                     <label htmlFor="optionPoolShares" className="block text-[10px] font-bold text-white/80 uppercase tracking-widest pl-0.5">Option Pool Shares</label>
-                    <Input 
+                    <Input
                       id="optionPoolShares"
                       type="number"
                       value={optionPoolShares}
@@ -636,9 +634,9 @@ export const HiringEquityPlanner: React.FC = () => {
                             </span>
                           </div>
                         </div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-7 w-7 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 flex-shrink-0"
                           onClick={() => handleDeleteHire(hire.id)}
                           aria-label={`Delete headcount ${hire.name}`}
@@ -655,7 +653,7 @@ export const HiringEquityPlanner: React.FC = () => {
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
                       <label htmlFor="newHireName" className="text-[10px] font-bold text-white/80 uppercase tracking-wider">Candidate Name</label>
-                      <Input 
+                      <Input
                         id="newHireName"
                         type="text"
                         required
@@ -667,7 +665,7 @@ export const HiringEquityPlanner: React.FC = () => {
                     </div>
                     <div className="space-y-1">
                       <label htmlFor="newHireRole" className="text-[10px] font-bold text-white/80 uppercase tracking-wider">Role Title</label>
-                      <Input 
+                      <Input
                         id="newHireRole"
                         type="text"
                         required
@@ -682,7 +680,7 @@ export const HiringEquityPlanner: React.FC = () => {
                   <div className="grid grid-cols-3 gap-2">
                     <div className="space-y-1">
                       <label htmlFor="newHireSalary" className="text-[10px] font-bold text-white/80 uppercase tracking-wider">Salary ($/yr)</label>
-                      <Input 
+                      <Input
                         id="newHireSalary"
                         type="number"
                         required
@@ -694,7 +692,7 @@ export const HiringEquityPlanner: React.FC = () => {
                     </div>
                     <div className="space-y-1">
                       <label htmlFor="newHireStartMonth" className="text-[10px] font-bold text-white/80 uppercase tracking-wider">Start Month</label>
-                      <Input 
+                      <Input
                         id="newHireStartMonth"
                         type="number"
                         required
@@ -708,7 +706,7 @@ export const HiringEquityPlanner: React.FC = () => {
                     </div>
                     <div className="space-y-1">
                       <label htmlFor="newHireEquity" className="text-[10px] font-bold text-white/80 uppercase tracking-wider">Equity Grant (%)</label>
-                      <Input 
+                      <Input
                         id="newHireEquity"
                         type="number"
                         step="0.01"
@@ -721,8 +719,8 @@ export const HiringEquityPlanner: React.FC = () => {
                     </div>
                   </div>
 
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="w-full h-8 text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-[#00FF87] to-[#00E5FF] text-black hover:scale-[1.01] hover:brightness-110 active:scale-[0.99] transition-all duration-300 flex items-center justify-center gap-1"
                   >
                     <Plus size={11} className="stroke-[3px]" />
@@ -763,7 +761,7 @@ export const HiringEquityPlanner: React.FC = () => {
                           <Cell key={`cell-${index}`} fill={entry.color} stroke="rgba(255,255,255,0.05)" strokeWidth={1} />
                         ))}
                       </Pie>
-                      <Tooltip 
+                      <Tooltip
                         content={({ active, payload }) => {
                           if (active && payload && payload.length) {
                             const data = payload[0].payload;
@@ -839,20 +837,20 @@ export const HiringEquityPlanner: React.FC = () => {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                    <XAxis 
-                      dataKey="name" 
-                      stroke="rgba(255,255,255,0.3)" 
+                    <XAxis
+                      dataKey="name"
+                      stroke="rgba(255,255,255,0.3)"
                       fontSize={9}
                       tickLine={false}
                     />
-                    <YAxis 
-                      stroke="rgba(255,255,255,0.3)" 
+                    <YAxis
+                      stroke="rgba(255,255,255,0.3)"
                       fontSize={9}
                       tickLine={false}
                       axisLine={false}
                       tickFormatter={(val) => `$${(val / 1000).toFixed(0)}k`}
                     />
-                    <Tooltip 
+                    <Tooltip
                       content={({ active, payload }) => {
                         if (active && payload && payload.length) {
                           return (
@@ -869,22 +867,22 @@ export const HiringEquityPlanner: React.FC = () => {
                         return null;
                       }}
                     />
-                    <Area 
-                      type="monotone" 
-                      dataKey="Adjusted Cash (Hires)" 
-                      stroke="#00E5FF" 
+                    <Area
+                      type="monotone"
+                      dataKey="Adjusted Cash (Hires)"
+                      stroke="#00E5FF"
                       strokeWidth={2}
-                      fillOpacity={1} 
-                      fill="url(#colorAdjusted)" 
+                      fillOpacity={1}
+                      fill="url(#colorAdjusted)"
                     />
-                    <Area 
-                      type="monotone" 
-                      dataKey="Base Cash (No Hires)" 
-                      stroke="#00FF87" 
+                    <Area
+                      type="monotone"
+                      dataKey="Base Cash (No Hires)"
+                      stroke="#00FF87"
                       strokeWidth={1.5}
                       strokeDasharray="4 4"
-                      fillOpacity={1} 
-                      fill="url(#colorBase)" 
+                      fillOpacity={1}
+                      fill="url(#colorBase)"
                     />
                   </AreaChart>
                 </ResponsiveContainer>

@@ -38,7 +38,7 @@ export const InvestorBriefing: React.FC<InvestorBriefingProps> = ({
         <div className="flex items-center space-x-2">
           <FileText className="w-5 h-5 text-indigo-500" />
           <h3 className="font-semibold text-foreground">AI Executive Briefing Generator</h3>
-          <Badge variant="outline" className="bg-indigo-500/10 text-indigo-500 text-xs">Live Synthesis</Badge>
+          <Badge variant="outline" className="bg-indigo-500/10 text-indigo-500 text-xs">Scenario template</Badge>
         </div>
         <div className="flex items-center space-x-2">
           {(['bullish', 'institutional', 'pragmatic', 'casual'] as const).map(tone => (

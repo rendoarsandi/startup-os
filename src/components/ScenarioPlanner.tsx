@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { 
-  Sliders, Plus, Trash2, Calendar, 
+import {
+  Sliders, Plus, Trash2, Calendar,
   Sparkles, TrendingUp, RefreshCw, MessageSquare, Users, Percent, ShieldAlert,
   AlertTriangle, CheckCircle2, Target
 } from 'lucide-react';
@@ -27,7 +27,7 @@ interface ScenarioPlannerProps {
 
 export const ScenarioPlanner: React.FC<ScenarioPlannerProps> = ({ baseline, onOpenChat }) => {
   const scenario = useScenario(baseline);
-  
+
   // Hiring Modal Form State
   const [showAddHire, setShowAddHire] = useState(false);
   const [hireName, setHireName] = useState('');
@@ -42,10 +42,10 @@ export const ScenarioPlanner: React.FC<ScenarioPlannerProps> = ({ baseline, onOp
 
   // 1. Burn & Runway Alert
   const runwayMonths = scenario.runwayMonths;
-  let runwayStatus: 'healthy' | 'warning' | 'critical' = 'healthy';
-  let runwayTitle = 'Healthy Runway';
-  let runwayDescription = 'Your cash runway is stable or profitable.';
-  let runwayMitigation = '';
+  let runwayStatus: 'healthy' | 'warning' | 'critical';
+  let runwayTitle: string;
+  let runwayDescription: string;
+  let runwayMitigation: string;
 
   if (runwayMonths !== "Infinite") {
     if (runwayMonths < 6) {
@@ -76,10 +76,10 @@ export const ScenarioPlanner: React.FC<ScenarioPlannerProps> = ({ baseline, onOp
   const ltv = churnDecimal > 0 ? scenario.inputs.arpu / churnDecimal : 999999;
   const ltvToCacRatio = scenario.inputs.cac > 0 ? ltv / scenario.inputs.cac : 999999;
 
-  let ltvCacStatus: 'healthy' | 'warning' | 'critical' = 'healthy';
-  let ltvCacTitle = 'Excellent LTV:CAC';
-  let ltvCacDescription = `Ratio: ${ltvToCacRatio === 999999 ? 'Infinite' : ltvToCacRatio.toFixed(1) + 'x'}.`;
-  let ltvCacMitigation = '';
+  let ltvCacStatus: 'healthy' | 'warning' | 'critical';
+  let ltvCacTitle: string;
+  let ltvCacDescription: string;
+  let ltvCacMitigation: string;
 
   if (ltvToCacRatio < 1.0) {
     ltvCacStatus = 'critical';
@@ -108,10 +108,10 @@ export const ScenarioPlanner: React.FC<ScenarioPlannerProps> = ({ baseline, onOp
 
   const payrollToRevenueRatio = finalMonthRevenue > 0 ? (finalMonthPayroll / finalMonthRevenue) * 100 : 0;
 
-  let headcountStatus: 'healthy' | 'warning' | 'critical' = 'healthy';
-  let headcountTitle = 'Balanced Headcount';
-  let headcountDescription = `Payroll consumes ${payrollToRevenueRatio.toFixed(0)}% of month 12 revenue.`;
-  let headcountMitigation = '';
+  let headcountStatus: 'healthy' | 'warning' | 'critical';
+  let headcountTitle: string;
+  let headcountDescription: string;
+  let headcountMitigation: string;
 
   if (payrollToRevenueRatio > 70) {
     headcountStatus = 'critical';
@@ -134,13 +134,13 @@ export const ScenarioPlanner: React.FC<ScenarioPlannerProps> = ({ baseline, onOp
   const finalMonthMarketingSpend = Math.round(scenario.inputs.marketingSpendDelta * 100);
   const marketingToRevenueRatio = finalMonthRevenue > 0 ? (finalMonthMarketingSpend / finalMonthRevenue) * 100 : 0;
 
-  let marketingStatus: 'healthy' | 'warning' | 'critical' = 'healthy';
-  let marketingTitle = 'Optimized Ad Spend';
-  let marketingDescription = `Marketing budget consumes ${marketingToRevenueRatio.toFixed(0)}% of monthly revenue.`;
-  let marketingMitigation = '';
+  let marketingStatus: 'healthy' | 'warning' | 'critical';
+  let marketingTitle: string;
+  let marketingDescription: string;
+  let marketingMitigation: string;
 
   if (marketingToRevenueRatio > 40) {
-    marketingStatus = 'warning';
+    marketingStatus = scenario.inputs.marketingRoas < 1 ? 'critical' : 'warning';
     marketingTitle = 'High Acquisition Exposure';
     marketingDescription = `Marketing budget consumes ${marketingToRevenueRatio.toFixed(0)}% of monthly revenue. High reliance on paid ads.`;
     marketingMitigation = 'De-risk by diversifying into organic channels (SEO, product-led loops) or optimizing conversion rates.';
@@ -183,7 +183,7 @@ export const ScenarioPlanner: React.FC<ScenarioPlannerProps> = ({ baseline, onOp
 
   const handleDiscussWithAI = () => {
     const activeNewHires = scenario.inputs.newHires;
-    const hireSummary = activeNewHires.length > 0 
+    const hireSummary = activeNewHires.length > 0
       ? activeNewHires.map(h => `${h.name} (${h.role} in ${h.department}, starting Month ${h.startMonth} at $${h.salary.toLocaleString()}/yr)`).join(', ')
       : "No new hires simulated";
 
@@ -278,10 +278,10 @@ Please analyze my active scenario. What are the key financial risks, and how can
             )}
           </div>
           <div className="text-[9px] text-muted-foreground/60 font-bold mt-2 uppercase tracking-wide">
-            {scenario.runwayDelta > 0 
-              ? "Extends business survival runway" 
-              : scenario.runwayDelta < 0 
-                ? "Simulated outflows outpace revenue growth" 
+            {scenario.runwayDelta > 0
+              ? "Extends business survival runway"
+              : scenario.runwayDelta < 0
+                ? "Simulated outflows outpace revenue growth"
                 : "Aligns exactly with baseline setups"}
           </div>
         </Card>
@@ -297,7 +297,7 @@ Please analyze my active scenario. What are the key financial risks, and how can
               <span>Simulated Parameters</span>
             </h3>
             {scenario.active && (
-              <Button 
+              <Button
                 variant="outline"
                 size="sm"
                 onClick={scenario.reset}
@@ -316,7 +316,7 @@ Please analyze my active scenario. What are the key financial risks, and how can
                 <Percent size={12} /> {scenario.inputs.revenueGrowthRate}%
               </span>
             </div>
-            <Slider 
+            <Slider
               min={0}
               max={25}
               step={0.5}
@@ -335,7 +335,7 @@ Please analyze my active scenario. What are the key financial risks, and how can
                 +${scenario.inputs.marketingSpendDelta.toLocaleString()}/mo
               </span>
             </div>
-            <Slider 
+            <Slider
               min={0}
               max={20000}
               step={500}
@@ -363,7 +363,7 @@ Please analyze my active scenario. What are the key financial risks, and how can
                   {scenario.inputs.startingMrrDelta >= 0 ? '+' : ''}${scenario.inputs.startingMrrDelta.toLocaleString()}
                 </span>
               </div>
-              <Slider 
+              <Slider
                 min={-20000}
                 max={20000}
                 step={500}
@@ -381,7 +381,7 @@ Please analyze my active scenario. What are the key financial risks, and how can
                   {scenario.inputs.churnRate}% MoM
                 </span>
               </div>
-              <Slider 
+              <Slider
                 min={0}
                 max={15}
                 step={0.1}
@@ -399,7 +399,7 @@ Please analyze my active scenario. What are the key financial risks, and how can
                   ${scenario.inputs.cac}
                 </span>
               </div>
-              <Slider 
+              <Slider
                 min={10}
                 max={500}
                 step={5}
@@ -417,7 +417,7 @@ Please analyze my active scenario. What are the key financial risks, and how can
                   ${scenario.inputs.arpu}
                 </span>
               </div>
-              <Slider 
+              <Slider
                 min={5}
                 max={250}
                 step={5}
@@ -436,7 +436,7 @@ Please analyze my active scenario. What are the key financial risks, and how can
                 {scenario.inputs.overheadMultiplier}%
               </span>
             </div>
-            <Slider 
+            <Slider
               min={50}
               max={200}
               step={5}
@@ -470,12 +470,12 @@ Please analyze my active scenario. What are the key financial risks, and how can
                   Dual Line Forecast
                 </Badge>
               </div>
-              <ComparativeRunwayChart 
-                baselineProjections={baseline.projections} 
-                scenarioProjections={scenario.projections} 
+              <ComparativeRunwayChart
+                baselineProjections={baseline.projections}
+                scenarioProjections={scenario.projections}
               />
             </div>
-            
+
             {/* New Hires Tracker */}
             <div className="border-t border-border pt-5 mt-6 relative z-10">
               <div className="flex justify-between items-center mb-4">
@@ -499,30 +499,30 @@ Please analyze my active scenario. What are the key financial risks, and how can
                   <form onSubmit={handleAddHireSubmit} className="grid grid-cols-1 md:grid-cols-5 gap-3.5 items-end">
                     <div className="space-y-1">
                       <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Name</label>
-                      <Input 
-                        type="text" 
+                      <Input
+                        type="text"
                         required
                         value={hireName}
                         onChange={(e) => setHireName(e.target.value)}
-                        placeholder="e.g. Sandra B." 
+                        placeholder="e.g. Sandra B."
                         className="h-9 text-xs"
                       />
                     </div>
                     <div className="space-y-1">
                       <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Role</label>
-                      <Input 
-                        type="text" 
+                      <Input
+                        type="text"
                         required
                         value={hireRole}
                         onChange={(e) => setHireRole(e.target.value)}
-                        placeholder="e.g. Staff Backend" 
+                        placeholder="e.g. Staff Backend"
                         className="h-9 text-xs"
                       />
                     </div>
                     <div className="space-y-1">
                       <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Department</label>
-                      <Select 
-                        value={hireDept} 
+                      <Select
+                        value={hireDept}
                         onValueChange={(val) => setHireDept(val)}
                       >
                         <SelectTrigger className="w-full h-9 text-xs uppercase font-bold tracking-wider">
@@ -539,8 +539,8 @@ Please analyze my active scenario. What are the key financial risks, and how can
                     </div>
                     <div className="space-y-1">
                       <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Salary ($/yr)</label>
-                      <Input 
-                        type="number" 
+                      <Input
+                        type="number"
                         required
                         value={hireSalary}
                         onChange={(e) => setHireSalary(e.target.value)}
@@ -550,8 +550,8 @@ Please analyze my active scenario. What are the key financial risks, and how can
                     <div className="flex gap-2">
                       <div className="flex-1 space-y-1">
                         <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Start Month</label>
-                        <Select 
-                          value={hireStartMonth} 
+                        <Select
+                          value={hireStartMonth}
                           onValueChange={(val) => setHireStartMonth(val)}
                         >
                           <SelectTrigger className="w-full h-9 text-xs uppercase font-bold tracking-wider">
@@ -567,7 +567,7 @@ Please analyze my active scenario. What are the key financial risks, and how can
                           </SelectContent>
                         </Select>
                       </div>
-                      <Button 
+                      <Button
                         type="submit"
                         className="h-9 text-xs font-bold px-4 shrink-0"
                       >
@@ -595,7 +595,7 @@ Please analyze my active scenario. What are the key financial risks, and how can
                           <div className="text-xs font-bold text-foreground leading-tight">{hire.name}</div>
                           <div className="text-[10px] text-muted-foreground font-bold mt-0.5">{hire.role}</div>
                           <div className="flex items-center gap-1.5 mt-1.5">
-                            <span className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border ${deptColors[hire.department] || 'bg-white/5 border-white/10'}`}>
+                            <span className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border ${Object.entries(deptColors).find(([name]) => name === hire.department)?.[1] || 'bg-white/5 border-white/10'}`}>
                               {hire.department}
                             </span>
                             <span className="text-[9px] text-muted-foreground font-bold flex items-center gap-0.5">
@@ -643,8 +643,8 @@ Please analyze my active scenario. What are the key financial risks, and how can
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Card 1: Runway Check */}
               <div className={`p-4 rounded-xl border transition-all duration-300 shadow-md ${
-                runwayStatus === 'critical' 
-                  ? 'bg-rose-950/5 border-rose-500/20 hover:border-rose-500/40 shadow-rose-500/5' 
+                runwayStatus === 'critical'
+                  ? 'bg-rose-950/5 border-rose-500/20 hover:border-rose-500/40 shadow-rose-500/5'
                   : runwayStatus === 'warning'
                     ? 'bg-amber-950/5 border-amber-500/20 hover:border-amber-500/40 shadow-amber-500/5'
                     : 'bg-emerald-950/5 border-emerald-500/20 hover:border-emerald-500/40 shadow-emerald-500/5'
@@ -674,8 +674,8 @@ Please analyze my active scenario. What are the key financial risks, and how can
 
               {/* Card 2: LTV:CAC Unit Economics */}
               <div className={`p-4 rounded-xl border transition-all duration-300 shadow-md ${
-                ltvCacStatus === 'critical' 
-                  ? 'bg-rose-950/5 border-rose-500/20 hover:border-rose-500/40 shadow-rose-500/5' 
+                ltvCacStatus === 'critical'
+                  ? 'bg-rose-950/5 border-rose-500/20 hover:border-rose-500/40 shadow-rose-500/5'
                   : ltvCacStatus === 'warning'
                     ? 'bg-amber-950/5 border-amber-500/20 hover:border-amber-500/40 shadow-amber-500/5'
                     : 'bg-emerald-950/5 border-emerald-500/20 hover:border-emerald-500/40 shadow-emerald-500/5'
@@ -683,10 +683,10 @@ Please analyze my active scenario. What are the key financial risks, and how can
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Target className={
-                      ltvCacStatus === 'critical' 
-                        ? 'text-rose-400' 
-                        : ltvCacStatus === 'warning' 
-                          ? 'text-amber-400' 
+                      ltvCacStatus === 'critical'
+                        ? 'text-rose-400'
+                        : ltvCacStatus === 'warning'
+                          ? 'text-amber-400'
                           : 'text-emerald-400'
                     } size={16} />
                     <span className="font-bold text-xs text-foreground">{ltvCacTitle}</span>
@@ -705,8 +705,8 @@ Please analyze my active scenario. What are the key financial risks, and how can
 
               {/* Card 3: Headcount Leverage */}
               <div className={`p-4 rounded-xl border transition-all duration-300 shadow-md ${
-                headcountStatus === 'critical' 
-                  ? 'bg-rose-950/5 border-rose-500/20 hover:border-rose-500/40 shadow-rose-500/5' 
+                headcountStatus === 'critical'
+                  ? 'bg-rose-950/5 border-rose-500/20 hover:border-rose-500/40 shadow-rose-500/5'
                   : headcountStatus === 'warning'
                     ? 'bg-amber-950/5 border-amber-500/20 hover:border-amber-500/40 shadow-amber-500/5'
                     : 'bg-emerald-950/5 border-emerald-500/20 hover:border-emerald-500/40 shadow-emerald-500/5'
@@ -714,10 +714,10 @@ Please analyze my active scenario. What are the key financial risks, and how can
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Users className={
-                      headcountStatus === 'critical' 
-                        ? 'text-rose-400' 
-                        : headcountStatus === 'warning' 
-                          ? 'text-amber-400' 
+                      headcountStatus === 'critical'
+                        ? 'text-rose-400'
+                        : headcountStatus === 'warning'
+                          ? 'text-amber-400'
                           : 'text-emerald-400'
                     } size={16} />
                     <span className="font-bold text-xs text-foreground">{headcountTitle}</span>
@@ -736,8 +736,8 @@ Please analyze my active scenario. What are the key financial risks, and how can
 
               {/* Card 4: Marketing Efficiency */}
               <div className={`p-4 rounded-xl border transition-all duration-300 shadow-md ${
-                marketingStatus === 'critical' 
-                  ? 'bg-rose-950/5 border-rose-500/20 hover:border-rose-500/40 shadow-rose-500/5' 
+                marketingStatus === 'critical'
+                  ? 'bg-rose-950/5 border-rose-500/20 hover:border-rose-500/40 shadow-rose-500/5'
                   : marketingStatus === 'warning'
                     ? 'bg-amber-950/5 border-amber-500/20 hover:border-amber-500/40 shadow-amber-500/5'
                     : 'bg-emerald-950/5 border-emerald-500/20 hover:border-emerald-500/40 shadow-emerald-500/5'
@@ -745,10 +745,10 @@ Please analyze my active scenario. What are the key financial risks, and how can
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Percent className={
-                      marketingStatus === 'critical' 
-                        ? 'text-rose-400' 
-                        : marketingStatus === 'warning' 
-                          ? 'text-amber-400' 
+                      marketingStatus === 'critical'
+                        ? 'text-rose-400'
+                        : marketingStatus === 'warning'
+                          ? 'text-amber-400'
                           : 'text-emerald-400'
                     } size={16} />
                     <span className="font-bold text-xs text-foreground">{marketingTitle}</span>

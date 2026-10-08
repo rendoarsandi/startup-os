@@ -1,87 +1,20 @@
-import { expect, test, describe, vi } from 'vitest';
-import { handleApiRequest } from '../server/dispatcher';
-
-vi.mock('../server/gemini', () => ({
-  GeminiService: class {
-    generateResponse = vi.fn().mockResolvedValue('Food')
-  }
-}));
-
-interface TransactionsTestEnv {
-  GEMINI_API_KEY?: string;
-  DB?: any;
-}
-
-describe('Transactions & Accounts Endpoints', () => {
-  test('POST /api/accounts creates an account', async () => {
-    const env: TransactionsTestEnv = {
-      DB: {
-        prepare: vi.fn().mockReturnValue({
-          bind: vi.fn().mockReturnThis(),
-          run: vi.fn().mockResolvedValue({ success: true }),
-        }),
-      },
-    };
-
-    const res = await handleApiRequest(new Request('http://localhost' + '/api/accounts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'Checking', type: 'checking', balance: 100000 }),
-    }), env);
-
-    expect(res.status).toBe(201);
-    // SAFETY: Response contains created account name
-    const data = (await res.json()) as { name: string };
-    expect(data.name).toBe('Checking');
-  });
-
-  test('POST /api/transactions creates a transaction with AI categorization', async () => {
-    const env: TransactionsTestEnv = {
-      GEMINI_API_KEY: 'test-key',
-      DB: {
-        prepare: vi.fn().mockReturnValue({
-          bind: vi.fn().mockReturnThis(),
-          raw: vi.fn().mockResolvedValue([
-            ['acc-123', 'test-user', 'Checking', 'checking', 0, 'USD', null, null, new Date(), new Date()],
-          ]),
-          run: vi.fn().mockResolvedValue({ success: true }),
-        }),
-      },
-    };
-
-    const res = await handleApiRequest(new Request('http://localhost' + '/api/transactions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        accountId: 'acc-123', 
-        amount: -5000, 
-        merchant: 'McDonalds' 
-      }),
-    }), env);
-
-    expect(res.status).toBe(201);
-    // SAFETY: Response contains created transaction fields
-    const data = (await res.json()) as { merchant: string; category: string };
-    expect(data.merchant).toBe('McDonalds');
-    expect(data.category).toBe('Food'); // Mocked value
-  });
-
-  test('POST /api/transactions rejects an account outside the current user', async () => {
-    const env: TransactionsTestEnv = {
-      DB: {
-        prepare: vi.fn().mockReturnValue({
-          bind: vi.fn().mockReturnThis(),
-          raw: vi.fn().mockResolvedValue([]),
-        }),
-      },
-    };
-
-    const res = await handleApiRequest(new Request('http://localhost/api/transactions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accountId: 'other-user-account', amount: -5000, merchant: 'McDonalds' }),
-    }), env);
-
-    expect(res.status).toBe(404);
-  });
-});
+// @vitest-environment node
+import { beforeEach, expect, test } from 'vitest'
+import { handleApiRequest } from './mocks/apiHarness'
+import { createRealSqliteD1 } from './mocks/d1Simulator'
+let env: any
+async function request(path: string, method = 'GET', body?: object) { return handleApiRequest(new Request('http://localhost' + path, { method, headers: { 'Content-Type': 'application/json' }, body: method === 'GET' ? undefined : JSON.stringify(body) }), env) }
+beforeEach(async () => { env = { DB: await createRealSqliteD1(), TEST_USER_ID: 'founder' }; const now = Math.floor(Date.now()/1000); await env.DB.prepare('INSERT INTO user (id,name,email,email_verified,created_at,updated_at) VALUES (?,?,?,?,?,?)').bind('founder','Founder','founder@test.local',1,now,now).run() })
+test('concurrent ledger entries update the same account balance without losing money', async () => {
+  const account = await (await request('/api/accounts','POST',{name:'Operating',type:'checking',balance:10000})).json()
+  const responses = await Promise.all([-1500,2500].map(amount => request('/api/transactions','POST',{accountId:account.id,amount,category:'Other',merchant:'Manual'})))
+  expect(responses.map(response => response.status)).toEqual([201,201])
+  expect((await (await request('/api/accounts')).json())[0].balance).toBe(11000)
+  expect(await (await request('/api/transactions')).json()).toHaveLength(2)
+})
+test('invalid dates and fractional cents never change the ledger or balance', async () => {
+ const account = await (await request('/api/accounts','POST',{name:'Cash',type:'cash',balance:10000})).json()
+ for (const input of [{amount:1.5,date:'2026-01-01'},{amount:-100,date:'invalid'}]) expect((await request('/api/transactions','POST',{accountId:account.id,...input})).status).toBe(400)
+ expect((await (await request('/api/accounts')).json())[0].balance).toBe(10000)
+ expect(await (await request('/api/transactions')).json()).toEqual([])
+})

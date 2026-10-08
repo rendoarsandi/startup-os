@@ -111,18 +111,18 @@ export const generateInvestorUpdateText = (
   const newCustomersPerMonth = calculateNewCustomers(metrics.leads, metrics.conversionRate);
   const ltvEst = Math.round((metrics.avgSalary * 0.1) || 2500);
   const ltvToCacRatio = metrics.cac > 0 ? parseFloat((ltvEst / metrics.cac).toFixed(1)) : 0;
-  
+
   const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const formattedCash = metrics.cashBalance.toLocaleString();
   const formattedBurn = metrics.monthlyBurn.toLocaleString();
   const runwayStatus = runwayMonths < 6 ? 'CRITICAL RISK ALERT' : runwayMonths < 12 ? 'WATCH LIST - SECURE CAPITAL' : 'OPTIMALLY FUNDED';
 
-  let summaryPara = '';
-  let outlookPara = '';
+  let summaryPara: string;
+  let outlookPara: string;
 
   if (reportTone === 'bullish') {
     summaryPara = `We are excited to deliver a strong corporate update indicating rapid market expansion and high product engineering momentum. With a robust customer acquisition pipeline pulling in ${metrics.leads.toLocaleString()} monthly opportunities at an optimized $${metrics.cac} CAC, our business is scaling efficiently.`;
-    outlookPara = runwayMonths < 6 
+    outlookPara = runwayMonths < 6
       ? `Given our rapid growth trajectory and aggressive shipping speed, we are actively raising a $2M Growth Round to accelerate marketing and double engineering resources.`
       : `With ${runwayMonths} months of robust capital reserves, we are moving full steam ahead on commercial expansion.`;
   } else if (reportTone === 'pragmatic') {
@@ -175,12 +175,12 @@ ${outlookPara}
 export const evaluateResponse = (
   userResponse: string,
   selectedPersonaId: string,
-  selectedQuestionIdx: number,
+  _selectedQuestionIdx: number,
   metrics: BoardroomMetrics
 ): EvaluationResult => {
   const responseText = userResponse.toLowerCase();
   const runwayMonths = calculateRunway(metrics.cashBalance, metrics.monthlyBurn);
-  
+
   let score = 50;
   const critiquePoints: string[] = [];
   const gapPoints: string[] = [];
@@ -197,12 +197,12 @@ export const evaluateResponse = (
   }
 
   if (selectedPersonaId === 'skeptical_vc') {
-    if (/\b\d+/.test(responseText)) { 
-      score += 12; 
-      critiquePoints.push("Referenced exact current cash reserves."); 
-    } else { 
-      score -= 10; 
-      gapPoints.push("Failed to state exact metric values."); 
+    if (/\b\d+/.test(responseText)) {
+      score += 12;
+      critiquePoints.push("Referenced exact current cash reserves.");
+    } else {
+      score -= 10;
+      gapPoints.push("Failed to state exact metric values.");
     }
 
     if (responseText.includes("burn") || responseText.includes("monthly burn")) {
@@ -210,9 +210,9 @@ export const evaluateResponse = (
       critiquePoints.push("Cited exact monthly cash burn rate.");
     }
 
-    if (responseText.includes("runway") || responseText.includes("cash conservation") || responseText.includes("gross margin")) { 
-      score += 8; 
-      critiquePoints.push("Addressed runway length or cash conservation strategies directly."); 
+    if (responseText.includes("runway") || responseText.includes("cash conservation") || responseText.includes("gross margin")) {
+      score += 8;
+      critiquePoints.push("Addressed runway length or cash conservation strategies directly.");
     }
   } else if (selectedPersonaId === 'growth_angel') {
     if (responseText.includes("growth") || responseText.includes("scale")) {
@@ -232,7 +232,7 @@ export const evaluateResponse = (
   }
 
   score = Math.min(100, Math.max(0, score));
-  let verdict: 'Excellent' | 'Strong' | 'Needs Refinement' | 'Vulnerable' = 'Needs Refinement';
+  let verdict: 'Excellent' | 'Strong' | 'Needs Refinement' | 'Vulnerable' ;
   if (score >= 90) verdict = 'Excellent';
   else if (score >= 75) verdict = 'Strong';
   else if (score >= 50) verdict = 'Needs Refinement';
@@ -249,7 +249,7 @@ export const evaluateResponse = (
 
 export const AIBoardroom: React.FC = () => {
   const [selectedPreset, setSelectedPreset] = useState<keyof typeof PRESETS>('steady');
-  
+
   const [cashBalance, setCashBalance] = useState<number>(PRESETS.steady.cashBalance);
   const [monthlyBurn, setMonthlyBurn] = useState<number>(PRESETS.steady.monthlyBurn);
   const [cac, setCac] = useState<number>(PRESETS.steady.cac);
@@ -313,7 +313,7 @@ export const AIBoardroom: React.FC = () => {
 
       <PresetSelector selectedPreset={selectedPreset} onSelectPreset={handleSelectPreset} />
 
-      <MetricsGrid
+      <MetricsGrid calculateRunway={calculateRunway} calculateNewCustomers={calculateNewCustomers}
         cashBalance={cashBalance}
         setCashBalance={setCashBalance}
         monthlyBurn={monthlyBurn}
@@ -336,13 +336,13 @@ export const AIBoardroom: React.FC = () => {
         setMilestoneCompletion={setMilestoneCompletion}
       />
 
-      <Tabs 
-        value={activeTab} 
+      <Tabs
+        value={activeTab}
         onValueChange={(v) => {
           if (v === 'briefing' || v === 'qa') {
             setActiveTab(v);
           }
-        }} 
+        }}
         className="w-full"
       >
         <TabsList className="grid grid-cols-2 w-full max-w-md h-10 bg-black/10">
@@ -356,14 +356,14 @@ export const AIBoardroom: React.FC = () => {
 
         <TabsContent value="briefing" className="mt-4">
           <InvestorBriefing
-            metrics={metrics}
             reportTone={reportTone}
             setReportTone={setReportTone}
+            investorUpdateMarkdown={generateInvestorUpdateText(metrics, reportTone)}
           />
         </TabsContent>
 
         <TabsContent value="qa" className="mt-4">
-          <QASimulator metrics={metrics} />
+          <QASimulator metrics={metrics} evaluateResponse={evaluateResponse} />
         </TabsContent>
       </Tabs>
     </div>

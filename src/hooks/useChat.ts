@@ -1,85 +1,78 @@
-import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useCallback, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { sendChat } from "../lib/server-functions";
+import { sessionOptions } from "../lib/query-options";
 
+type Role = "cfo" | "marketer" | "hr" | "operations";
 export interface Message {
-  role: 'user' | 'model';
+  role: "user" | "model";
   parts: { text: string }[];
 }
-
-export const useChat = (activeRole: 'cfo' | 'marketer' | 'hr' | 'operations') => {
-  const [messagesMap, setMessagesMap] = useState<Record<'cfo' | 'marketer' | 'hr' | 'operations', Message[]>>({
+export function useChat(activeRole: Role) {
+  const { data: session } = useQuery(sessionOptions);
+  const [messagesMap, setMessagesMap] = useState<Record<Role, Message[]>>({
     cfo: [],
     marketer: [],
     hr: [],
-    operations: []
+    operations: [],
   });
-
-  const currentMessages = messagesMap[activeRole] || [];
-
   const mutation = useMutation({
-    mutationFn: async (text: string) => {
-      // Read active scenario from localStorage to inject into AI context
+    mutationFn: async ({
+      text,
+      role,
+      history,
+    }: {
+      text: string;
+      role: Role;
+      history: Message[];
+    }) => {
       let activeScenario = null;
       try {
-        const isActive = localStorage.getItem('ai_cfo_scenario_active') === 'true';
-        if (isActive && activeRole === 'cfo') {
-          const stored = localStorage.getItem('ai_cfo_scenario_inputs');
-          if (stored) {
-            activeScenario = JSON.parse(stored);
-          }
-        }
-      } catch (e) {
-        console.warn("Failed to read scenario from localStorage", e);
+        const prefix = `startup-os:${session?.user.id || "anonymous"}:scenario`;
+        if (
+          role === "cfo" &&
+          localStorage.getItem(`${prefix}:active`) === "true"
+        )
+          activeScenario = JSON.parse(
+            localStorage.getItem(`${prefix}:inputs`) || "null",
+          );
+      } catch {
+        /* Ignore malformed local simulation data. */
       }
-
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          history: currentMessages,
-          role: activeRole,
-          activeScenario
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to send message');
-      const data = await response.json();
-      return data.response;
+      return (
+        await sendChat({
+          data: {
+            message: text,
+            role,
+            history: history.slice(-30),
+            activeScenario,
+          },
+        })
+      ).response;
     },
-    onMutate: (text) => {
-      const userMessage: Message = { role: 'user', parts: [{ text }] };
-      setMessagesMap(prev => ({
-        ...prev,
-        [activeRole]: [...(prev[activeRole] || []), userMessage]
-      }));
-    },
-    onSuccess: (responseText) => {
-      const modelMessage: Message = { role: 'model', parts: [{ text: responseText }] };
-      setMessagesMap(prev => ({
-        ...prev,
-        [activeRole]: [...(prev[activeRole] || []), modelMessage]
-      }));
-    },
+    onMutate: ({ text, role }) =>
+      setMessagesMap((previous) => ({
+        ...previous,
+        [role]: [...previous[role], { role: "user", parts: [{ text }] }],
+      })),
+    onSuccess: (text, { role }) =>
+      setMessagesMap((previous) => ({
+        ...previous,
+        [role]: [...previous[role], { role: "model", parts: [{ text }] }],
+      })),
   });
-
-  const sendMessage = (text: string) => {
-    mutation.mutate(text);
-  };
-
-  const clearChat = () => {
-    setMessagesMap(prev => ({
-      ...prev,
-      [activeRole]: []
-    }));
-  };
-
+  const { mutate } = mutation;
+  const sendMessage = useCallback(
+    (text: string) =>
+      mutate({ text, role: activeRole, history: messagesMap[activeRole] }),
+    [mutate, activeRole, messagesMap],
+  );
   return {
-    messages: currentMessages,
+    messages: messagesMap[activeRole],
     sendMessage,
-    clearChat,
+    clearChat: () =>
+      setMessagesMap((previous) => ({ ...previous, [activeRole]: [] })),
     isLoading: mutation.isPending,
-    error: mutation.error ? (mutation.error instanceof Error ? mutation.error.message : String(mutation.error)) : null,
+    error: mutation.error?.message || null,
   };
-};
-
+}

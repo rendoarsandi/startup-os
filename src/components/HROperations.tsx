@@ -1,5 +1,6 @@
+import * as api from '../lib/server-functions'
 import React, { useState } from 'react';
-import { 
+import {
   Users, CheckCircle2, XCircle, Plus, Loader2, LogIn, LogOut, DollarSign
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -68,7 +69,7 @@ export const HROperations: React.FC<{
 }> = ({ activeTab: propActiveTab, onTabChange }) => {
   const queryClient = useQueryClient();
   const [localActiveTab, setLocalActiveTab] = useState<'attendance' | 'leaves' | 'expenses'>('attendance');
-  
+
   const activeTab = propActiveTab || localActiveTab;
   const setActiveTab = onTabChange || setLocalActiveTab;
   const [selectedEmpId, setSelectedEmpId] = useState('');
@@ -89,9 +90,9 @@ export const HROperations: React.FC<{
   const { data: employees = [] } = useQuery<Employee[]>({
     queryKey: ['employees'],
     queryFn: async () => {
-      const res = await fetch('/api/hr/employees');
-      if (!res.ok) throw new Error('Failed to fetch employees');
-      const data = await res.json();
+      const res = await api.listEmployees();
+
+      const data = await res;
       // Set default selected employee if not set
       if (data.length > 0 && !selectedEmpId) {
         setSelectedEmpId(data[0].id);
@@ -103,40 +104,36 @@ export const HROperations: React.FC<{
   const { data: attendanceLogs = [], isLoading: attLoading } = useQuery<AttendanceLog[]>({
     queryKey: ['attendance'],
     queryFn: async () => {
-      const res = await fetch('/api/hr/attendance');
-      if (!res.ok) throw new Error('Failed to fetch attendance');
-      return res.json();
+      const res = await api.listAttendance();
+
+      return res;
     }
   });
 
   const { data: leaves = [], isLoading: leavesLoading } = useQuery<LeaveRequest[]>({
     queryKey: ['leaves'],
     queryFn: async () => {
-      const res = await fetch('/api/hr/leaves');
-      if (!res.ok) throw new Error('Failed to fetch leaves');
-      return res.json();
+      const res = await api.listLeaves();
+
+      return res;
     }
   });
 
   const { data: expenses = [], isLoading: expLoading } = useQuery<ExpenseClaim[]>({
     queryKey: ['expenses'],
     queryFn: async () => {
-      const res = await fetch('/api/hr/expenses');
-      if (!res.ok) throw new Error('Failed to fetch expenses');
-      return res.json();
+      const res = await api.listExpenses();
+
+      return res;
     }
   });
 
   // Mutations
   const clockInMutation = useMutation({
     mutationFn: async (employeeId: string) => {
-      const res = await fetch('/api/hr/attendance/clock-in', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ employeeId })
-      });
-      if (!res.ok) throw new Error('Failed to clock in');
-      return res.json();
+      const res = await api.clockIn({ data: { employeeId } });
+
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
@@ -145,13 +142,9 @@ export const HROperations: React.FC<{
 
   const clockOutMutation = useMutation({
     mutationFn: async (employeeId: string) => {
-      const res = await fetch('/api/hr/attendance/clock-out', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ employeeId })
-      });
-      if (!res.ok) throw new Error('Failed to clock out');
-      return res.json();
+      const res = await api.clockOut({ data: { employeeId } });
+
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
@@ -160,13 +153,9 @@ export const HROperations: React.FC<{
 
   const leaveMutation = useMutation({
     mutationFn: async (leaveData: any) => {
-      const res = await fetch('/api/hr/leaves', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(leaveData)
-      });
-      if (!res.ok) throw new Error('Failed to save leave request');
-      return res.json();
+      const res = await api.createLeave({ data: leaveData });
+
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leaves'] });
@@ -177,14 +166,10 @@ export const HROperations: React.FC<{
   });
 
   const leaveStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string, status: string }) => {
-      const res = await fetch(`/api/hr/leaves/${id}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
-      });
-      if (!res.ok) throw new Error('Failed to update leave status');
-      return res.json();
+    mutationFn: async ({ id, status }: { id: string, status: 'pending' | 'approved' | 'rejected' }) => {
+      const res = await api.updateLeaveStatus({ data: { id: id, payload: { status } } });
+
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leaves'] });
@@ -193,13 +178,9 @@ export const HROperations: React.FC<{
 
   const expenseMutation = useMutation({
     mutationFn: async (expData: any) => {
-      const res = await fetch('/api/hr/expenses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(expData)
-      });
-      if (!res.ok) throw new Error('Failed to save expense');
-      return res.json();
+      const res = await api.createExpense({ data: expData });
+
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
@@ -210,14 +191,10 @@ export const HROperations: React.FC<{
   });
 
   const expenseStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string, status: string }) => {
-      const res = await fetch(`/api/hr/expenses/${id}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
-      });
-      if (!res.ok) throw new Error('Failed to update expense status');
-      return res.json();
+    mutationFn: async ({ id, status }: { id: string, status: 'pending' | 'approved' | 'rejected' }) => {
+      const res = await api.updateExpenseStatus({ data: { id: id, payload: { status } } });
+
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
@@ -301,8 +278,8 @@ export const HROperations: React.FC<{
         <div className="flex items-center gap-2.5">
           <span className="text-[10px] text-muted-foreground uppercase font-black tracking-widest shrink-0">Punch Card:</span>
           {employees.length > 0 && (
-            <Select 
-              value={selectedEmpId} 
+            <Select
+              value={selectedEmpId}
               onValueChange={(val) => setSelectedEmpId(val)}
             >
               <SelectTrigger className="w-52 h-9 text-xs uppercase font-bold tracking-wider">
@@ -319,10 +296,10 @@ export const HROperations: React.FC<{
       </header>
 
       {/* Tab bar */}
-      <Tabs 
-        value={activeTab} 
+      <Tabs
+        value={activeTab}
         // SAFETY: Radix Tabs onValueChange corresponds to activeTab union types
-        onValueChange={(val) => setActiveTab(val as 'attendance' | 'leaves' | 'expenses')} 
+        onValueChange={(val) => setActiveTab(val as 'attendance' | 'leaves' | 'expenses')}
         className="w-full space-y-6"
       >
         <TabsList className="grid grid-cols-3 w-full sm:w-[480px] h-10 bg-black/10">
@@ -425,8 +402,8 @@ export const HROperations: React.FC<{
               <form onSubmit={handleLeaveSubmit} className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Leave Category</label>
-                  <Select 
-                    value={leaveType} 
+                  <Select
+                    value={leaveType}
                     onValueChange={(val) => setLeaveType(val)}
                   >
                     <SelectTrigger className="w-full text-xs font-bold uppercase tracking-wider h-10">
@@ -606,8 +583,8 @@ export const HROperations: React.FC<{
 
                 <div className="space-y-1.5">
                   <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Category</label>
-                  <Select 
-                    value={expenseCategory} 
+                  <Select
+                    value={expenseCategory}
                     onValueChange={(val) => setExpenseCategory(val)}
                   >
                     <SelectTrigger className="w-full text-xs font-bold uppercase tracking-wider h-10">

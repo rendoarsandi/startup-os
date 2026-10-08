@@ -1,3 +1,10 @@
-import { createStart } from '@tanstack/react-start'
+import { createStart, createCsrfMiddleware } from "@tanstack/react-start";
 
-export const startInstance = createStart(() => ({}))
+// A custom Start entry replaces the framework's default middleware list.
+export const startInstance = createStart(() => ({
+  requestMiddleware: [
+    createCsrfMiddleware({
+      filter: (context) => context.handlerType === "serverFn",
+    }),
+  ],
+}));

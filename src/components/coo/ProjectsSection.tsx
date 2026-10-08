@@ -1,3 +1,4 @@
+import * as api from '../../lib/server-functions'
 import React, { useState } from 'react';
 import { Clock, Plus } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -24,7 +25,7 @@ export interface Project {
   id: string;
   name: string;
   description: string | null;
-  status: 'active' | 'completed' | 'onhold';
+  status: 'active' | 'completed' | 'on_hold';
   dueDate: string | null;
 }
 
@@ -33,7 +34,7 @@ export interface ProjectTask {
   projectId: string;
   title: string;
   assignedEmployeeId: string | null;
-  status: 'todo' | 'inprogress' | 'completed';
+  status: 'todo' | 'in_progress' | 'done';
   hoursLogged: number;
 }
 
@@ -53,14 +54,14 @@ export const ProjectsSection: React.FC = () => {
   const [logTaskId, setLogTaskId] = useState('');
   const [logHours, setLogHours] = useState('');
 
-  const { data: employees = [] } = useQuery<Employee[]>({ queryKey: ['employees'] });
-  
+  const { data: employees = [] } = useQuery<Employee[]>({ queryKey: ['employees'], queryFn: () => api.listEmployees() });
+
   const { data: projects = [], isLoading: _projLoading } = useQuery<Project[]>({
     queryKey: ['projects'],
     queryFn: async () => {
-      const res = await fetch('/api/operations/projects');
-      if (!res.ok) throw new Error('Failed to fetch projects');
-      const data = await res.json();
+      const res = await api.listProjects();
+
+      const data = await res;
       if (data.length > 0 && !selectedProjId) {
         setSelectedProjId(data[0].id);
       }
@@ -71,25 +72,21 @@ export const ProjectsSection: React.FC = () => {
   const { data: tasks = [] } = useQuery<ProjectTask[]>({
     queryKey: ['tasks'],
     queryFn: async () => {
-      const res = await fetch('/api/operations/tasks');
-      if (!res.ok) throw new Error('Failed to fetch tasks');
-      return res.json();
+      const res = await api.listTasks();
+
+      return res;
     }
   });
 
   const createProjMutation = useMutation({
     mutationFn: async (projData: any) => {
-      const res = await fetch('/api/operations/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(projData)
-      });
-      if (!res.ok) throw new Error('Failed to create project');
-      return res.json();
+      const res = await api.createProject({ data: projData });
+
+      return res;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      setSelectedProjId(data.id);
+      if (data.id) setSelectedProjId(data.id);
       setIsProjOpen(false);
       setProjName('');
       setProjDesc('');
@@ -99,13 +96,9 @@ export const ProjectsSection: React.FC = () => {
 
   const createTaskMutation = useMutation({
     mutationFn: async (taskData: any) => {
-      const res = await fetch('/api/operations/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(taskData)
-      });
-      if (!res.ok) throw new Error('Failed to create task');
-      return res.json();
+      const res = await api.createTask({ data: taskData });
+
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -115,14 +108,10 @@ export const ProjectsSection: React.FC = () => {
   });
 
   const updateTaskMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const res = await fetch(`/api/operations/tasks/${id}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
-      });
-      if (!res.ok) throw new Error('Failed to update task status');
-      return res.json();
+    mutationFn: async ({ id, status }: { id: string; status: 'todo' | 'in_progress' | 'done' }) => {
+      const res = await api.updateTaskStatus({ data: { id: id, payload: { status } } });
+
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -131,13 +120,9 @@ export const ProjectsSection: React.FC = () => {
 
   const logHoursMutation = useMutation({
     mutationFn: async ({ id, hours }: { id: string; hours: number }) => {
-      const res = await fetch(`/api/operations/tasks/${id}/log-hours`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hours })
-      });
-      if (!res.ok) throw new Error('Failed to log hours');
-      return res.json();
+      const res = await api.logTaskHours({ data: { id: id, payload: { hours } } });
+
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -206,11 +191,11 @@ export const ProjectsSection: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {(['todo', 'inprogress', 'completed'] as const).map(colStatus => (
+        {(['todo', 'in_progress', 'completed'] as const).map(colStatus => (
           <Card key={colStatus} className="p-4 border border-border/50 bg-card rounded-xl">
             <div className="flex items-center justify-between mb-3 pb-2 border-b">
               <h4 className="font-semibold text-xs capitalize text-muted-foreground tracking-wider">
-                {colStatus === 'todo' ? 'To Do' : colStatus === 'inprogress' ? 'In Progress' : 'Completed'}
+                {colStatus === 'todo' ? 'To Do' : colStatus === 'in_progress' ? 'In Progress' : 'Completed'}
               </h4>
               <Badge variant="secondary" className="text-xs font-mono">
                 {filteredTasks.filter(t => t.status === colStatus).length}
@@ -236,14 +221,14 @@ export const ProjectsSection: React.FC = () => {
                     >
                       Log Hours
                     </Button>
-                    <Select value={t.status} onValueChange={status => updateTaskMutation.mutate({ id: t.id, status })}>
+                    <Select value={t.status} onValueChange={status => { if (status === 'todo' || status === 'in_progress' || status === 'done') updateTaskMutation.mutate({ id: t.id, status }) }}>
                       <SelectTrigger className="h-6 text-[10px] w-[110px] bg-background">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="todo">To Do</SelectItem>
-                        <SelectItem value="inprogress">In Progress</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="done">Done</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

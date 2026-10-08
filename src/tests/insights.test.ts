@@ -1,10 +1,10 @@
 import { expect, test, describe, vi } from 'vitest';
-import { handleApiRequest } from '../server/dispatcher';
+import { handleApiRequest } from './mocks/apiHarness';
 
-vi.mock('../server/gemini', () => ({
-  GeminiService: class {
-    generateResponse = vi.fn().mockResolvedValue('Invest more in your savings!')
-  }
+vi.mock('../server/ai', () => ({
+  createAIService: () => ({
+    generateResponse: vi.fn().mockResolvedValue('Invest more in your savings!')
+  })
 }));
 
 interface InsightsTestEnv {

@@ -8,7 +8,7 @@ type Props = {
 export function BoomerangVideoBg({ src, className }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const displayCanvasRef = useRef<HTMLCanvasElement>(null);
-  const [framesReady, setFramesReady] = useState(false);
+  const [_framesReady, setFramesReady] = useState(false);
   const framesRef = useRef<HTMLCanvasElement[]>([]);
   const scrollFractionRef = useRef(0);
 
@@ -25,7 +25,7 @@ export function BoomerangVideoBg({ src, className }: Props) {
 
     const captureFrame = () => {
       if (!capturing || video.readyState < 2) return;
-      
+
       const currentTime = video.currentTime;
       // Skip if video time hasn't changed or hasn't advanced enough
       if (currentTime === lastTime || (lastTime !== -1 && currentTime - lastTime < minTimeDelta)) {
@@ -157,11 +157,11 @@ export function BoomerangVideoBg({ src, className }: Props) {
         scrollRafId = 0;
         const scrollTop = window.scrollY || document.documentElement.scrollTop;
         const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
-        
+
         // Calculate fraction of page scrolled (bound between 0 and 1)
         const scrollFraction = scrollHeight > 0 ? Math.max(0, Math.min(1, scrollTop / scrollHeight)) : 0;
         scrollFractionRef.current = scrollFraction;
-        
+
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 

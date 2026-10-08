@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { sessionOptions } from '../lib/query-options';
 
 export interface SimulatedHire {
   id: string;
@@ -68,6 +70,7 @@ export const SEASONALITY_PROFILES = {
 } satisfies Record<string, Record<string, SeasonalityWeight>>;
 
 export interface BaselineRunwayData {
+  dataQuality?: 'missing' | 'limited' | 'recorded';
   cashBalance: number;
   fixedCosts: { payroll: number; subscriptions: number; total: number };
   variableExpenses: number;
@@ -86,6 +89,7 @@ export interface BaselineRunwayData {
 
 export function calculateCustomProjections(
   baseline: {
+    dataQuality?: 'missing' | 'limited' | 'recorded';
     cashBalance: number;
     fixedCosts?: { payroll: number; subscriptions: number; total: number };
     variableExpenses: number;
@@ -127,8 +131,8 @@ export function calculateCustomProjections(
   for (let i = 1; i <= 12; i++) {
     const monthIdx = (currentMonthIdx + i) % 12;
     const monthLabel = MONTH_NAMES[monthIdx];
-    const profile = SEASONALITY_PROFILES[seasonalityProfile] || SEASONALITY_PROFILES.steady;
-    const weights = profile[monthLabel] || { rev: 1.0, exp: 1.0 };
+    const profile = Object.entries(SEASONALITY_PROFILES).find(([name]) => name === seasonalityProfile)?.[1] || SEASONALITY_PROFILES.steady;
+    const weights = Object.entries(profile).find(([name]) => name === monthLabel)?.[1] || { rev: 1.0, exp: 1.0 };
 
     // MRR decays by churn, and grows by organic growth scaled with seasonality
     const churnDecay = currentMrr * (baseChurnRate / 10000);
@@ -161,8 +165,8 @@ export function calculateCustomProjections(
   // Calculate average net burn across month 1 to 12
   for (let i = 1; i <= 12; i++) {
     const monthLabel = MONTH_NAMES[(currentMonthIdx + i) % 12];
-    const profile = SEASONALITY_PROFILES[seasonalityProfile] || SEASONALITY_PROFILES.steady;
-    const weights = profile[monthLabel] || { rev: 1.0, exp: 1.0 };
+    const profile = Object.entries(SEASONALITY_PROFILES).find(([name]) => name === seasonalityProfile)?.[1] || SEASONALITY_PROFILES.steady;
+    const weights = Object.entries(profile).find(([name]) => name === monthLabel)?.[1] || { rev: 1.0, exp: 1.0 };
 
     const churnDecay = currentMrrForBurn * (baseChurnRate / 10000);
     const organicGrowth = currentMrrForBurn * (revGrowth / 100) * weights.rev;
@@ -186,6 +190,7 @@ export function calculateCustomProjections(
   }
 
   return {
+    dataQuality: baseline?.dataQuality,
     cashBalance: baseCash,
     fixedCosts: baseline?.fixedCosts || { payroll: basePayroll, subscriptions: baseSubs, total: basePayroll + baseSubs },
     variableExpenses: baseVariable,
@@ -204,15 +209,10 @@ export function calculateCustomProjections(
 }
 
 export const useScenario = (baseline: BaselineRunwayData | undefined) => {
+  const { data: session } = useQuery(sessionOptions);
+  const storagePrefix = `startup-os:${session?.user.id || 'anonymous'}:scenario`;
+  const [loaded, setLoaded] = useState(false);
   const [inputs, setInputs] = useState<ScenarioInputs>(() => {
-    try {
-      const stored = localStorage.getItem('ai_cfo_scenario_inputs');
-      if (stored) {
-        return JSON.parse(stored);
-      }
-    } catch (e) {
-      console.warn("Failed to load scenario inputs from localStorage", e);
-    }
     return {
       ...DEFAULT_INPUTS,
       churnRate: baseline?.churnRate !== undefined ? baseline.churnRate / 100 : DEFAULT_INPUTS.churnRate,
@@ -221,22 +221,28 @@ export const useScenario = (baseline: BaselineRunwayData | undefined) => {
     };
   });
 
-  const [active, setActive] = useState<boolean>(() => {
+  const [active, setActive] = useState(false);
+  useEffect(() => {
     try {
-      return localStorage.getItem('ai_cfo_scenario_active') === 'true';
-    } catch {
-      return false;
-    }
-  });
+      const stored = localStorage.getItem(`${storagePrefix}:inputs`);
+      if (stored) {
+        const value = JSON.parse(stored);
+        if (Array.isArray(value.newHires) && typeof value.revenueGrowthRate === 'number') setInputs({ ...DEFAULT_INPUTS, ...value });
+      }
+      setActive(localStorage.getItem(`${storagePrefix}:active`) === 'true');
+    } catch { /* Discard malformed local scenarios. */ }
+    setLoaded(true);
+  }, [storagePrefix]);
 
   useEffect(() => {
     try {
-      localStorage.setItem('ai_cfo_scenario_inputs', JSON.stringify(inputs));
-      localStorage.setItem('ai_cfo_scenario_active', String(active));
+      if (!loaded) return;
+      localStorage.setItem(`${storagePrefix}:inputs`, JSON.stringify(inputs));
+      localStorage.setItem(`${storagePrefix}:active`, String(active));
     } catch (e) {
       console.warn("Failed to save scenario to localStorage", e);
     }
-  }, [inputs, active]);
+  }, [inputs, active, loaded, storagePrefix]);
 
   const updateInput = <K extends keyof ScenarioInputs>(key: K, value: ScenarioInputs[K]) => {
     setInputs(prev => ({
@@ -308,7 +314,7 @@ export const useScenario = (baseline: BaselineRunwayData | undefined) => {
   // Compiling simulated values over 12 months
   const projections: { month: string; balance: number; revenue: number; expenses: number }[] = [];
   const currentMonthIdx = new Date().getMonth();
-  
+
   let currentProjBalance = baseCash;
 
   // Let's compute month by month
@@ -328,8 +334,8 @@ export const useScenario = (baseline: BaselineRunwayData | undefined) => {
   for (let i = 1; i <= 12; i++) {
     const monthIdx = (currentMonthIdx + i) % 12;
     const monthLabel = MONTH_NAMES[monthIdx];
-    const profile = SEASONALITY_PROFILES[baselineSeasonality] || SEASONALITY_PROFILES.steady;
-    const weights = profile[monthLabel] || { rev: 1.0, exp: 1.0 };
+    const profile = Object.entries(SEASONALITY_PROFILES).find(([name]) => name === baselineSeasonality)?.[1] || SEASONALITY_PROFILES.steady;
+    const weights = Object.entries(profile).find(([name]) => name === monthLabel)?.[1] || { rev: 1.0, exp: 1.0 };
 
     // 1. Calculate Simulated New Hire Payroll for this month (i)
     // newHires startMonth is 1-indexed (1 means starts in month 1)

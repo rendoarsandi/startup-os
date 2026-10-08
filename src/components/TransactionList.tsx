@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  Utensils, ShoppingBag, Gamepad2, Home, Car, MoreHorizontal, 
+import {
+  Utensils, ShoppingBag, Gamepad2, Home, Car, MoreHorizontal,
   ArrowUpRight, ArrowDownLeft, Calendar, ArrowUpDown, Search, Sparkles
 } from 'lucide-react';
 import { useTransactions } from '../hooks/useTransactions';
@@ -41,7 +41,7 @@ export const TransactionList: React.FC = () => {
 
   // Local Search Filtering
   const filteredData = useMemo(() => {
-    return transactions.filter(tx => 
+    return transactions.filter(tx =>
       tx.merchant.toLowerCase().includes(search.toLowerCase()) ||
       tx.category.toLowerCase().includes(search.toLowerCase())
     );
@@ -60,8 +60,8 @@ export const TransactionList: React.FC = () => {
       ),
       cell: (info) => {
         const category = info.getValue();
-        const categoryStyle = categoryClasses[category] || 'bg-slate-500/5 border-slate-500/10 text-slate-400';
-        const icon = categoryIcons[category] || <MoreHorizontal size={14} className="text-slate-400" />;
+        const categoryStyle = Object.entries(categoryClasses).find(([name]) => name === category)?.[1] || 'bg-slate-500/5 border-slate-500/10 text-slate-400';
+        const icon = Object.entries(categoryIcons).find(([name]) => name === category)?.[1] || <MoreHorizontal size={14} className="text-slate-400" />;
         return (
           <div className="flex items-center gap-3">
             <div className={`w-8 h-8 rounded-lg border flex items-center justify-center transition-transform duration-200 hover:scale-105 ${categoryStyle}`}>
@@ -214,8 +214,8 @@ export const TransactionList: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-border/30">
                 {table.getRowModel().rows.map(row => (
-                  <tr 
-                    key={row.id} 
+                  <tr
+                    key={row.id}
                     className="hover:bg-white/[0.01] transition-colors duration-150 group"
                   >
                     {row.getVisibleCells().map(cell => (

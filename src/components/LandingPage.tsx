@@ -18,26 +18,26 @@ export function LandingPage() {
     {
       phase: "Phase 1: CFO Module",
       status: "Active Beta",
-      description: "Real-time runway analytics, live SaaS valuation modelers, Plaid integration, and scenario calculators. Replaces standard $5k/mo fractional CFOs with continuous ledger tracking.",
+      description: "Recorded cash and runway estimates, manual accounts, optional Plaid imports, and a financial planning sandbox. Estimates depend on the data you supply.",
       points: ["Burn Rate Projections", "SaaS Economics Model", "Scenario Planner"]
     },
     {
       phase: "Phase 2: CMO & Growth Agent",
-      status: "Q3 2026",
-      description: "Autonomous funnel analysis, marketing brainstorm models, programmatic display buying, and ad creative optimization engines. Synchronizes advertising spend directly with runway data.",
-      points: ["Funnel Analysis", "Creative Strategist", "Programmatic Ad Buyer"]
+      status: "Prototype",
+      description: "Track leads and recorded campaigns. Generate ideas for review. Connected ad buying and delivery remain planned.",
+      points: ["Funnel Analysis", "Creative Strategist", "Campaign Drafts"]
     },
     {
       phase: "Phase 3: CHRO & Sourcing Orchestrator",
-      status: "Q4 2026",
-      description: "Hiring equity planner, contract workflow checks, sovereign health system mandates, and candidate profiling. Handles legal compliance and talent pipeline automations.",
-      points: ["Hiring Equity Planner", "Compliance Checker", "Workflow Steward"]
+      status: "Prototype",
+      description: "Record your team, expenses, and leave requests. Prepare HR documents and explore hiring scenarios; review drafts before use.",
+      points: ["Hiring Equity Planner", "Document Drafts", "Workflow Steward"]
     },
     {
       phase: "Phase 4: COO Multi-Agent Mesh",
-      status: "Q1 2027",
-      description: "Comprehensive multi-agent boardroom simulation, real-time verifiable investor reporting, and automated cap table governance. Absolute automation of cross-department operations.",
-      points: ["AIBoardroom Simulation", "Verifiable Investor Ledger", "Lean Capacity Planner"]
+      status: "Active Beta",
+      description: "Manage projects and support tickets. Active rules propose tasks and AI support drafts, with approvals and a recorded history of results.",
+      points: ["AIBoardroom Simulation", "Approval History", "Lean Capacity Planner"]
     }
   ];
 
@@ -73,7 +73,7 @@ export function LandingPage() {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-6 animate-fade-in">
             <Sparkles className="w-3.5 h-3.5 text-[#DEDBC8] animate-pulse" />
             <span className="text-[10px] font-semibold uppercase tracking-widest text-[#DEDBC8]/90">
-              Autonomous C-Suite Command Engine
+              AI operations for small teams
             </span>
           </div>
 
@@ -85,7 +85,7 @@ export function LandingPage() {
 
           {/* Hero Subtitle */}
           <p className="text-[#E1E0CC]/70 text-sm md:text-base lg:text-lg max-w-xl leading-relaxed mb-10 font-normal tracking-wide animate-fade-up delay-200">
-            Startup OS displaces disjointed agency services and fractional executives with a unified, autonomous network of AI C-suite agents running on real-time transaction ledgers.
+            Give your startup one place to track business records, delegate recurring checks, and review the work AI prepares.
           </p>
 
           {/* Coming Soon Call to Action */}
@@ -112,7 +112,7 @@ export function LandingPage() {
               <span className="h-0.5 w-6 bg-[#DEDBC8]" />
             </div>
             <h2 className="font-serif text-4xl md:text-6xl text-[#E1E0CC] font-normal leading-tight">
-              A Unified C-Suite, <span className="italic text-[#DEDBC8]">Autonomous By Design</span>
+              A Unified C-Suite, <span className="italic text-[#DEDBC8]">Built For Small Teams</span>
             </h2>
             <p className="text-[#E1E0CC]/70 text-sm leading-relaxed max-w-xl mx-auto">
               Startups spend billions on fragmented agency contracts and fractional executives. Startup OS replaces high latency and overhead with continuous, cross-agent execution running on real-time transaction ledgers.
@@ -156,7 +156,7 @@ export function LandingPage() {
               <div className="absolute top-0 right-0 h-32 w-32 bg-[#DEDBC8]/5 blur-xl rounded-full pointer-events-none" />
               <div className="space-y-4">
                 <div className="flex justify-between items-center border-b border-[#DEDBC8]/20 pb-4">
-                  <span className="text-xs font-bold uppercase tracking-widest text-[#DEDBC8]">Startup OS Autonomous ERP</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-[#DEDBC8]">Startup OS workspace</span>
                   <span className="text-[9px] bg-[#DEDBC8]/10 text-[#DEDBC8] border border-[#DEDBC8]/30 px-2.5 py-0.5 rounded-full uppercase tracking-wider font-semibold flex items-center gap-1.5">
                     Continuous <Cpu className="w-3 h-3 animate-spin" />
                   </span>
@@ -230,7 +230,7 @@ export function LandingPage() {
               Product Roadmap
             </h2>
             <p className="text-[#E1E0CC]/70 text-sm leading-relaxed max-w-xl mx-auto">
-              Our phased releases establish deep integrations for each functional pillar, culminating in a fully federated, autonomous C-suite courtroom simulation.
+              The current workspace combines business records, recurring checks, and AI drafts. External delivery and shared-team access are planned.
             </p>
           </div>
 
@@ -291,7 +291,7 @@ export function LandingPage() {
       <footer className="relative z-10 bg-transparent border-t border-white/5 py-12 text-center text-[10px] text-[#E1E0CC]/40 uppercase tracking-widest font-bold">
         <div className="max-w-7xl mx-auto px-6 md:px-12 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2.5">
-            <span className="text-[#DEDBC8]">STARTUP OS</span> &bull; <span>Autonomous C-Suite</span>
+            <span className="text-[#DEDBC8]">STARTUP OS</span> &bull; <span>AI-assisted operations</span>
           </div>
           <div>
             &copy; {new Date().getFullYear()} Startup OS Inc. All rights reserved.

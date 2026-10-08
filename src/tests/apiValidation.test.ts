@@ -1,5 +1,5 @@
 import { expect, test, describe, vi } from 'vitest';
-import { handleApiRequest } from '../server/dispatcher';
+import { handleApiRequest } from './mocks/apiHarness';
 
 describe('API Input Validation Tests via @effect/schema', () => {
   describe('POST /api/accounts', () => {

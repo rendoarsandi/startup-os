@@ -1,6 +1,7 @@
+import * as api from '../lib/server-functions'
 import React, { useState, useEffect } from 'react';
-import { 
-  Sparkles, Plus, Play, Pause, TrendingUp, BarChart3, 
+import {
+  Sparkles, Plus, Play, Pause, TrendingUp, BarChart3,
   DollarSign, Target, Percent, Loader2, AlertCircle, RefreshCw, Copy, Check, X
 } from 'lucide-react';
 import {
@@ -63,9 +64,9 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
   const fetchCampaigns = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/marketing/campaigns');
-      if (!res.ok) throw new Error('Failed to fetch campaigns');
-      const data = await res.json();
+      const res = await api.listCampaigns();
+
+      const data = await res;
       setCampaigns(data);
       setError(null);
     } catch (err: any) {
@@ -82,19 +83,15 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
   const toggleCampaignStatus = async (campaign: Campaign) => {
     const updatedStatus = campaign.status === 'active' ? 'paused' : 'active';
     try {
-      const res = await fetch('/api/marketing/campaigns', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      await api.saveCampaign({ data: {
           ...campaign,
           status: updatedStatus
-        })
-      });
-      if (res.ok) {
+        } });
+      {
         setCampaigns(prev => prev.map(c => c.id === campaign.id ? { ...c, status: updatedStatus } : c));
       }
     } catch (err) {
-      console.error('Error updating status:', err);
+      setError(err instanceof Error ? err.message : 'Could not update campaign.');
     }
   };
 
@@ -104,27 +101,23 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
 
     setIsSaving(true);
     try {
-      const budgetInCents = Math.round(parseFloat(newBudget) * 100) || 500000;
-      const res = await fetch('/api/marketing/campaigns', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const budgetInCents = Math.round(Number(newBudget) * 100);
+      await api.saveCampaign({ data: {
           name: newName,
           budget: budgetInCents,
           spend: 0,
           conversions: 0,
           roas: 0,
           status: newStatus
-        })
-      });
-      if (res.ok) {
+        } });
+      {
         setNewName('');
         setNewBudget('5000');
         setIsFormOpen(false);
         fetchCampaigns();
       }
     } catch (err) {
-      console.error('Error creating campaign:', err);
+      setError(err instanceof Error ? err.message : 'Could not create campaign.');
     } finally {
       setIsSaving(false);
     }
@@ -137,13 +130,9 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
     setIsGenerating(true);
     setGeneratedIdeas('');
     try {
-      const res = await fetch('/api/marketing/generate-ideas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productDescription, targetAudience })
-      });
-      if (!res.ok) throw new Error('Generation failed');
-      const data = await res.json();
+      const res = await api.generateIdeas({ data: { productDescription, targetAudience } });
+
+      const data = await res;
       setGeneratedIdeas(data.ideas || 'No concept ideas returned.');
     } catch (err: any) {
       setGeneratedIdeas(`### Concept Ideas Generation Failure\nFailed to generate campaign concepts: ${err.message}. Please verify Gemini API settings.`);
@@ -167,12 +156,12 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
   // Calculations
   const totalSpend = campaigns.reduce((acc, c) => acc + (c.spend || 0), 0) / 100;
   const totalBudget = campaigns.reduce((acc, c) => acc + (c.budget || 0), 0) / 100;
-  
+
   const blendedCAC = 42.80;
   const ltvToCac = 3.8;
 
   const activeCampaigns = campaigns.filter(c => c.status === 'active');
-  const avgRoasVal = activeCampaigns.length > 0 
+  const avgRoasVal = activeCampaigns.length > 0
     ? (activeCampaigns.reduce((acc, c) => acc + (c.roas || 0), 0) / activeCampaigns.length) / 100
     : 4.2;
 
@@ -217,7 +206,7 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
           <p className="text-muted-foreground text-sm font-medium">{headerInfo.subtitle}</p>
         </div>
         {headerInfo.showNewCampaign && (
-          <Button 
+          <Button
             onClick={() => setIsFormOpen(!isFormOpen)}
             className="h-10 text-xs font-bold gap-2 self-start md:self-auto"
           >
@@ -242,7 +231,7 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
             <form onSubmit={handleCreateCampaign} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Campaign Name</label>
-                <Input 
+                <Input
                   type="text"
                   required
                   value={newName}
@@ -252,7 +241,7 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
               </div>
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Budget ($ USD)</label>
-                <Input 
+                <Input
                   type="number"
                   required
                   min="1"
@@ -263,10 +252,10 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
               </div>
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Initial Status</label>
-                <Select 
-                  value={newStatus} 
+                <Select
+                  value={newStatus}
                   // SAFETY: Radix Select onValueChange corresponds to campaign status options
-                  onValueChange={(val) => setNewStatus(val as 'active' | 'paused' | 'completed')}
+                  onValueChange={(val) => setNewStatus(val as 'active' | 'paused')}
                 >
                   <SelectTrigger className="w-full text-xs font-bold uppercase tracking-wider h-10">
                     <SelectValue placeholder="STATUS" />
@@ -278,15 +267,15 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
                 </Select>
               </div>
               <div className="flex gap-2">
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   disabled={isSaving}
                   className="flex-1 h-10 text-xs font-bold gap-1.5"
                 >
                   {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
                   <span>Create</span>
                 </Button>
-                <Button 
+                <Button
                   type="button"
                   variant="outline"
                   onClick={() => setIsFormOpen(false)}
@@ -311,8 +300,8 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
             <h4 className="text-2xl font-black tracking-tight text-foreground">${totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-3.5">
               <div className="w-full bg-black/30 h-1.5 rounded-full overflow-hidden border border-border/50">
-                <div 
-                  className="bg-primary h-full transition-all duration-1000" 
+                <div
+                  className="bg-primary h-full transition-all duration-1000"
                   style={{ width: `${Math.min((totalSpend / (totalBudget || 1)) * 100, 100)}%` }}
                 />
               </div>
@@ -320,7 +309,7 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
             </div>
             <p className="text-[9px] text-muted-foreground/60 mt-2 uppercase tracking-widest font-black">Limit: ${totalBudget.toLocaleString()}</p>
           </Card>
-  
+
           <Card className="p-5 hover:border-primary/30 transition-all cursor-default relative overflow-hidden group">
             <div className="absolute -right-3 -top-3 w-14 h-14 rounded-full bg-primary/5 group-hover:scale-105 transition-transform flex items-center justify-center border border-border/30">
               <Target size={18} className="text-primary" />
@@ -332,7 +321,7 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
             </Badge>
             <p className="text-[9px] text-muted-foreground/60 mt-2.5 uppercase tracking-widest font-black">Optimized dynamically</p>
           </Card>
-  
+
           <Card className="p-5 hover:border-primary/30 transition-all cursor-default relative overflow-hidden group">
             <div className="absolute -right-3 -top-3 w-14 h-14 rounded-full bg-primary/5 group-hover:scale-105 transition-transform flex items-center justify-center border border-border/30">
               <TrendingUp size={18} className="text-primary" />
@@ -344,7 +333,7 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
             </Badge>
             <p className="text-[9px] text-muted-foreground/60 mt-2.5 uppercase tracking-widest font-black">Calculated last 30d</p>
           </Card>
-  
+
           <Card className="p-5 hover:border-primary/30 transition-all cursor-default relative overflow-hidden group">
             <div className="absolute -right-3 -top-3 w-14 h-14 rounded-full bg-primary/5 group-hover:scale-105 transition-transform flex items-center justify-center border border-border/30">
               <Percent size={18} className="text-primary" />
@@ -396,22 +385,22 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
                       </linearGradient>
                     </defs>
                     <CartesianGrid stroke="rgba(255,255,255,0.03)" vertical={false} />
-                    <XAxis 
-                      dataKey="name" 
-                      axisLine={false} 
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
                       tickLine={false}
                       tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10, fontFamily: 'Outfit' }}
                     />
-                    <YAxis 
-                      axisLine={false} 
+                    <YAxis
+                      axisLine={false}
                       tickLine={false}
                       tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10, fontFamily: 'Outfit' }}
                       tickFormatter={(v) => `$${v}`}
                     />
-                    <Tooltip 
-                      contentStyle={{ 
-                        background: 'rgba(8,7,16,0.85)', 
-                        border: '1px solid rgba(255,255,255,0.08)', 
+                    <Tooltip
+                      contentStyle={{
+                        background: 'rgba(8,7,16,0.85)',
+                        border: '1px solid rgba(255,255,255,0.08)',
                         borderRadius: '8px',
                         color: 'white',
                         fontSize: '11px',
@@ -420,8 +409,8 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
                       }}
                       formatter={(v) => [`$${Number(v).toFixed(2)}`]}
                     />
-                    <Legend 
-                      verticalAlign="top" 
+                    <Legend
+                      verticalAlign="top"
                       height={36}
                       iconType="circle"
                       iconSize={6}
@@ -442,7 +431,7 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
                 <CardTitle className="text-sm font-bold">Growth Operations Dashboard</CardTitle>
                 <p className="text-muted-foreground text-[10px] uppercase tracking-widest font-black mt-0.5">Individual campaigns monitor</p>
               </div>
-              <Button 
+              <Button
                 variant="outline"
                 size="icon"
                 onClick={fetchCampaigns}
@@ -496,14 +485,14 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
                           {camp.roas ? `${(camp.roas / 100).toFixed(1)}x` : '-'}
                         </TableCell>
                         <TableCell className="text-center pr-4">
-                          <Button 
+                          <Button
                             variant="outline"
                             size="icon"
                             onClick={() => toggleCampaignStatus(camp)}
                             title={camp.status === 'active' ? "Pause Campaign" : "Resume Campaign"}
                             className={`w-7 h-7 rounded-lg ${
-                              camp.status === 'active' 
-                                ? 'bg-amber-500/5 border-amber-500/20 text-amber-400 hover:bg-amber-500/10' 
+                              camp.status === 'active'
+                                ? 'bg-amber-500/5 border-amber-500/20 text-amber-400 hover:bg-amber-500/10'
                                 : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10'
                             }`}
                           >
@@ -537,7 +526,7 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
             <form onSubmit={handleGenerateIdeas} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Product Description</label>
-                <textarea 
+                <textarea
                   required
                   rows={4}
                   value={productDescription}
@@ -549,7 +538,7 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
 
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Target Audience</label>
-                <Input 
+                <Input
                   type="text"
                   required
                   value={targetAudience}
@@ -560,8 +549,8 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
               </div>
 
               <div className="flex gap-2 pt-1">
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   disabled={isGenerating}
                   className="flex-1 h-10 text-xs font-bold gap-1.5"
                 >
@@ -577,8 +566,8 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
                     </>
                   )}
                 </Button>
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={handleTryDemoInput}
                   title="Inject Specialty Coffee Demo"
@@ -594,7 +583,7 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] uppercase tracking-widest font-black text-primary">Generated Brand Blueprint</span>
                   <div className="flex gap-2">
-                    <Button 
+                    <Button
                       variant="outline"
                       size="icon"
                       onClick={handleCopy}
@@ -603,7 +592,7 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
                     >
                       {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
                     </Button>
-                    <Button 
+                    <Button
                       variant="outline"
                       size="icon"
                       onClick={() => setGeneratedIdeas('')}
@@ -614,7 +603,7 @@ export const MarketingDashboard: React.FC<MarketingDashboardProps> = ({ showOnly
                     </Button>
                   </div>
                 </div>
-                
+
                 <div className="bg-black/20 border border-border p-4 rounded-xl max-h-[350px] overflow-y-auto custom-scrollbar shadow-inner">
                   <MarkdownRenderer text={generatedIdeas} />
                 </div>
@@ -637,7 +626,7 @@ const MarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
       {lines.map((line, i) => {
         const content = line.trim();
         if (!content) return <div key={i} className="h-1.5" />;
-        
+
         // Headers
         if (content.startsWith('### ')) {
           return <h5 key={i} className="text-[11px] font-bold text-primary mt-3 mb-1 uppercase tracking-wide">{content.slice(4)}</h5>;

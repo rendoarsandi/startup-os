@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
 
 export const users = sqliteTable('user', {
   id: text('id').primaryKey(),
@@ -115,7 +115,7 @@ export const marketingCampaigns = sqliteTable('marketing_campaign', {
     .notNull()
     .references(() => users.id),
   name: text('name').notNull(),
-  status: text('status').notNull().default('active'),
+  status: text('status', { enum: ["active","paused"] }).notNull().default('active'),
   budget: integer('budget').notNull(), // in cents
   spend: integer('spend').notNull().default(0), // in cents
   conversions: integer('conversions').notNull().default(0),
@@ -133,7 +133,7 @@ export const employees = sqliteTable('employee', {
   role: text('role').notNull(),
   department: text('department').notNull(),
   salary: integer('salary').notNull(), // in cents
-  status: text('status').notNull().default('active'),
+  status: text('status', { enum: ["active","onboarding","inactive"] }).notNull().default('active'),
   startDate: integer('start_date', { mode: 'timestamp' }).notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
@@ -158,9 +158,9 @@ export const invoices = sqliteTable('invoice', {
   userId: text('user_id').notNull().references(() => users.id),
   invoiceNumber: text('invoice_number').notNull(),
   clientName: text('client_name').notNull(),
-  type: text('type').notNull().default('sales'), // 'sales' or 'purchase'
+  type: text('type', { enum: ['sales', 'purchase'] }).notNull().default('sales'), // 'sales' or 'purchase'
   amount: integer('amount').notNull(), // in cents
-  status: text('status').notNull().default('unpaid'), // 'paid', 'unpaid', 'overdue'
+  status: text('status', { enum: ["paid","unpaid","overdue"] }).notNull().default('unpaid'), // 'paid', 'unpaid', 'overdue'
   issueDate: integer('issue_date', { mode: 'timestamp' }).notNull(),
   dueDate: integer('due_date', { mode: 'timestamp' }).notNull(),
   items: text('items').notNull(), // JSON string representing array of items: { description: string, qty: number, rate: number }
@@ -176,7 +176,7 @@ export const crmLeads = sqliteTable('crm_lead', {
   email: text('email'),
   phone: text('phone'),
   value: integer('value').notNull().default(0), // in cents
-  status: text('status').notNull().default('lead'), // 'lead', 'contacted', 'proposal', 'won', 'lost'
+  status: text('status', { enum: ["lead","contacted","proposal","won","lost"] }).notNull().default('lead'), // 'lead', 'contacted', 'proposal', 'won', 'lost'
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
@@ -186,7 +186,7 @@ export const attendance = sqliteTable('attendance', {
   userId: text('user_id').notNull().references(() => users.id),
   employeeId: text('employee_id').notNull().references(() => employees.id),
   date: integer('date', { mode: 'timestamp' }).notNull(),
-  status: text('status').notNull().default('present'), // 'present', 'absent', 'late'
+  status: text('status', { enum: ["present","absent","late"] }).notNull().default('present'), // 'present', 'absent', 'late'
   clockIn: text('clock_in'),
   clockOut: text('clock_out'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
@@ -199,7 +199,7 @@ export const leaveRequests = sqliteTable('leave_request', {
   type: text('type').notNull(), // 'vacation', 'sick', 'unpaid', 'maternity'
   startDate: integer('start_date', { mode: 'timestamp' }).notNull(),
   endDate: integer('end_date', { mode: 'timestamp' }).notNull(),
-  status: text('status').notNull().default('pending'), // 'pending', 'approved', 'rejected'
+  status: text('status', { enum: ["pending","approved","rejected"] }).notNull().default('pending'), // 'pending', 'approved', 'rejected'
   reason: text('reason'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
@@ -212,7 +212,7 @@ export const expenseClaims = sqliteTable('expense_claim', {
   title: text('title').notNull(),
   amount: integer('amount').notNull(), // in cents
   category: text('category').notNull(), // 'travel', 'meals', 'supplies', 'software', 'other'
-  status: text('status').notNull().default('pending'), // 'pending', 'approved', 'rejected'
+  status: text('status', { enum: ["pending","approved","rejected"] }).notNull().default('pending'), // 'pending', 'approved', 'rejected'
   date: integer('date', { mode: 'timestamp' }).notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
@@ -237,7 +237,7 @@ export const projects = sqliteTable('project', {
   userId: text('user_id').notNull().references(() => users.id),
   name: text('name').notNull(),
   description: text('description'),
-  status: text('status').notNull().default('active'), // 'active', 'completed', 'onhold'
+  status: text('status', { enum: ["active","completed","on_hold"] }).notNull().default('active'), // 'active', 'completed', 'onhold'
   dueDate: integer('due_date', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
@@ -249,7 +249,7 @@ export const projectTasks = sqliteTable('project_task', {
   projectId: text('project_id').notNull().references(() => projects.id),
   title: text('title').notNull(),
   assignedEmployeeId: text('assigned_employee_id').references(() => employees.id),
-  status: text('status').notNull().default('todo'), // 'todo', 'inprogress', 'completed'
+  status: text('status', { enum: ["todo","in_progress","done"] }).notNull().default('todo'), // 'todo', 'inprogress', 'completed'
   hoursLogged: integer('hours_logged').notNull().default(0),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
@@ -261,8 +261,8 @@ export const supportTickets = sqliteTable('support_ticket', {
   customerName: text('customer_name').notNull(),
   subject: text('subject').notNull(),
   description: text('description').notNull(),
-  status: text('status').notNull().default('open'), // 'open', 'replied', 'resolved'
-  priority: text('priority').notNull().default('medium'), // 'low', 'medium', 'high'
+  status: text('status', { enum: ["open","replied","resolved"] }).notNull().default('open'), // 'open', 'replied', 'resolved'
+  priority: text('priority', { enum: ['low', 'medium', 'high'] }).notNull().default('medium'), // 'low', 'medium', 'high'
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
@@ -297,6 +297,30 @@ export const contracts = sqliteTable('contract', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
+export const workspaceSettings = sqliteTable('workspace_settings', {
+  userId: text('user_id').primaryKey().references(() => users.id),
+  companyName: text('company_name').notNull().default(''),
+  companyDescription: text('company_description').notNull().default(''),
+  autonomy: text('autonomy', { enum: ['review', 'internal'] }).notNull().default('review'),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const automationRuns = sqliteTable('automation_run', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  ruleId: text('rule_id').notNull(),
+  ruleName: text('rule_name').notNull(),
+  actionType: text('action_type').notNull(),
+  subjectId: text('subject_id').notNull(),
+  dedupeKey: text('dedupe_key').notNull().unique(),
+  status: text('status', { enum: ['running', 'awaiting_approval', 'completed', 'failed', 'dismissed', 'approved'] }).notNull(),
+  input: text('input').notNull(),
+  output: text('output'),
+  error: text('error'),
+  attempts: integer('attempts').notNull().default(1),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, table => [index('automation_run_owner_created').on(table.userId, table.createdAt)]);
 
 
 

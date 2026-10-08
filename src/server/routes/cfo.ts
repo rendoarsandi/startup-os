@@ -1,7 +1,9 @@
-import { eq, and, desc } from 'drizzle-orm';
+import type { DrizzleD1Database } from 'drizzle-orm/d1';
+import type { AppEnv } from '../env';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { financialAccounts, saasConfigs, transactions, budgets, invoices } from '../../db/schema';
 import { AnalysisService } from '../analysis';
-import { GeminiService } from '../gemini';
+import { createAIService } from '../ai';
 import { v4 as uuidv4 } from 'uuid';
 import {
   decodeCreateAccount,
@@ -15,7 +17,7 @@ import {
 } from '../schemas';
 import { getValidatedBody, jsonResponse, matchRoute } from '../utils';
 
-export async function handleCfoRoutes(request: Request, path: string, method: string, db: any, userId: string, env: any): Promise<Response | null> {
+export async function handleCfoRoutes(request: Request, path: string, method: string, db: DrizzleD1Database, userId: string, env: AppEnv): Promise<Response | null> {
   // Accounts
   if (path === '/api/accounts') {
     if (method === 'GET') {
@@ -76,14 +78,16 @@ export async function handleCfoRoutes(request: Request, path: string, method: st
 
   // Financial Insights
   if (path === '/api/insights' && method === 'GET') {
-    const gemini = new GeminiService(env.GEMINI_API_KEY);
+    const gemini = createAIService(env);
     const analysis = new AnalysisService(db);
     const advice = await analysis.getFinancialAdvice(userId, gemini);
     const runway = await analysis.calculateRunwayAndBurn(userId);
-    
-    const items: any[] = [{ type: 'opportunity', message: advice }];
 
-    if (runway.runwayMonths !== "Infinite" && runway.runwayMonths < 6) {
+    const items: Array<{ type: string; message: string }> = [{ type: 'opportunity', message: advice }];
+
+    if (runway.dataQuality === 'missing') {
+      items.push({ type: 'warning', message: 'Add a cash account and recent activity before assessing runway.' });
+    } else if (runway.runwayMonths !== "Infinite" && runway.runwayMonths < 6) {
       items.unshift({
         type: 'warning',
         message: `CRITICAL ALERT: Your cash runway is down to ${runway.runwayMonths} months ($${(runway.netBurn/100).toLocaleString('en-US', { maximumFractionDigits: 2 })}/mo net burn). Consider freezing non-essential hiring or reducing marketing spends immediately.`
@@ -91,7 +95,7 @@ export async function handleCfoRoutes(request: Request, path: string, method: st
     } else if (runway.runwayMonths === "Infinite") {
       items.push({
         type: 'success',
-        message: "STABLE HEALTH: Your business is currently cash-flow positive! You have infinite runway at current growth rates."
+        message: "Recorded revenue covers recorded costs. This estimate excludes unrecorded expenses."
       });
     } else {
       items.push({
@@ -109,16 +113,16 @@ export async function handleCfoRoutes(request: Request, path: string, method: st
       return jsonResponse(results);
     }
     if (method === 'POST') {
-      const gemini = new GeminiService(env.GEMINI_API_KEY);
+      const gemini = createAIService(env);
       const analysis = new AnalysisService(db);
       const body = await getValidatedBody(request, decodeCreateTransaction);
       const account = await db.select().from(financialAccounts).where(
         and(eq(financialAccounts.id, body.accountId), eq(financialAccounts.userId, userId))
       ).get();
       if (!account) return jsonResponse({ error: "Account not found" }, 404);
-      
+      if (account.plaidConnectionId) return jsonResponse({ error: 'Sync bank-linked accounts; record manual entries in a manual account.' }, 400);
       let category = body.category;
-      if (!category || category === "Other") {
+      if ((!category || category === "Other") && (env.OPENROUTER_API_KEY || env.GEMINI_API_KEY)) {
         try {
           category = await analysis.categorizeTransaction(body.merchant || "", body.description || "", gemini);
         } catch (error) {
@@ -132,14 +136,17 @@ export async function handleCfoRoutes(request: Request, path: string, method: st
         userId,
         accountId: body.accountId,
         amount: body.amount,
-        category,
+        category: category || "Other",
         merchant: body.merchant || "Unknown Merchant",
         description: body.description,
         date: new Date(body.date || Date.now()),
         createdAt: new Date(),
       };
 
-      await db.insert(transactions).values(newTransaction).run();
+      await db.batch([
+        db.insert(transactions).values(newTransaction),
+        db.update(financialAccounts).set({ balance: sql`${financialAccounts.balance} + ${body.amount}`, updatedAt: new Date() }).where(and(eq(financialAccounts.id, account.id), eq(financialAccounts.userId, userId))),
+      ]);
       return jsonResponse(newTransaction, 201);
     }
   }
@@ -175,7 +182,7 @@ export async function handleCfoRoutes(request: Request, path: string, method: st
     if (method === 'POST') {
       const body = await getValidatedBody(request, decodeCreateInvoice);
       const now = new Date();
-      const newInvoice = {
+      const newInvoice: typeof invoices.$inferInsert = {
         id: uuidv4(),
         userId,
         invoiceNumber: body.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
@@ -185,7 +192,7 @@ export async function handleCfoRoutes(request: Request, path: string, method: st
         status: body.status || 'unpaid',
         issueDate: body.issueDate ? new Date(body.issueDate) : now,
         dueDate: body.dueDate ? new Date(body.dueDate) : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
-        items: body.items ? JSON.stringify(body.items) : null,
+        items: typeof body.items === 'string' ? body.items : JSON.stringify(body.items || []),
         createdAt: now,
         updatedAt: now,
       };
@@ -200,18 +207,18 @@ export async function handleCfoRoutes(request: Request, path: string, method: st
     const invoiceId = cfoInvoiceParams.id;
     await db.update(invoices).set({ status, updatedAt: new Date() }).where(and(eq(invoices.id, invoiceId), eq(invoices.userId, userId))).run();
     const updated = await db.select().from(invoices).where(and(eq(invoices.id, invoiceId), eq(invoices.userId, userId))).get();
-    return jsonResponse(updated);
+    return updated ? jsonResponse(updated) : jsonResponse({ error: 'Invoice not found.' }, 404);
   }
 
   if (path === '/api/cfo/parse-invoice' && method === 'POST') {
-    const gemini = new GeminiService(env?.GEMINI_API_KEY);
+    const gemini = createAIService(env);
     const { text } = await getValidatedBody(request, decodeParseInvoice);
     const parsed = await gemini.parseInvoiceText(text);
     return jsonResponse(parsed);
   }
 
   if (path === '/api/cfo/parse-invoice-secure' && method === 'POST') {
-    const gemini = new GeminiService(env?.GEMINI_API_KEY);
+    const gemini = createAIService(env);
     const { fileBase64, mimeType } = await getValidatedBody(request, decodeParseInvoiceSecure);
     const parsed = await gemini.parseInvoiceDocument(fileBase64, mimeType);
     return jsonResponse(parsed);

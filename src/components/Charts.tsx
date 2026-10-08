@@ -71,28 +71,28 @@ export function SpendingTrendChart() {
             <stop offset="100%" stopColor="#9D4EDD" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <XAxis 
-          dataKey="date" 
-          axisLine={false} 
+        <XAxis
+          dataKey="date"
+          axisLine={false}
           tickLine={false}
           tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10, fontFamily: 'Outfit' }}
         />
-        <YAxis 
-          axisLine={false} 
+        <YAxis
+          axisLine={false}
           tickLine={false}
           tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10, fontFamily: 'Outfit' }}
           tickFormatter={(v) => `$${v}`}
         />
-        <Tooltip 
+        <Tooltip
           contentStyle={customTooltipStyle}
           formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Spending']}
         />
-        <Area 
-          type="monotone" 
-          dataKey="amount" 
-          stroke="#00E5FF" 
+        <Area
+          type="monotone"
+          dataKey="amount"
+          stroke="#00E5FF"
           strokeWidth={2}
-          fill="url(#spendGradient)" 
+          fill="url(#spendGradient)"
         />
       </AreaChart>
     </ResponsiveContainer>
@@ -161,12 +161,12 @@ export function CategoryBreakdownChart() {
       <div className="flex-1 space-y-2 max-h-[144px] overflow-y-auto pr-1">
         {displayData.slice(0, 5).map((item, i) => (
           <div key={item.name} className="flex items-center gap-3">
-            <div 
-              className="w-2.5 h-2.5 rounded-full shrink-0 shadow-[0_0_6px_rgba(255,255,255,0.05)]" 
-              style={{ background: COLORS[i % COLORS.length] }} 
+            <div
+              className="w-2.5 h-2.5 rounded-full shrink-0 shadow-[0_0_6px_rgba(255,255,255,0.05)]"
+              style={{ background: COLORS[i % COLORS.length] }}
             />
             <span className="text-xs text-white/50 flex-1 font-semibold">
-              {categoryIcons[item.name] || '📦'} {item.name}
+              {Object.entries(categoryIcons).find(([name]) => name === item.name)?.[1] || '📦'} {item.name}
             </span>
             <span className="text-xs font-bold text-white/80">${item.value.toFixed(0)}</span>
           </div>
@@ -200,38 +200,38 @@ export function RunwayProjectionChart({ projections = [] }: { projections: { mon
             <stop offset="100%" stopColor="#9D4EDD" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <XAxis 
-          dataKey="month" 
-          axisLine={false} 
+        <XAxis
+          dataKey="month"
+          axisLine={false}
           tickLine={false}
           tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10, fontFamily: 'Outfit' }}
         />
-        <YAxis 
-          axisLine={false} 
+        <YAxis
+          axisLine={false}
           tickLine={false}
           tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10, fontFamily: 'Outfit' }}
           tickFormatter={(v) => `$${v.toLocaleString()}`}
         />
-        <Tooltip 
+        <Tooltip
           contentStyle={customTooltipStyle}
           formatter={(value: any) => [`$${Number(value).toLocaleString()}`, 'Projected Cash']}
         />
-        <Area 
-          type="monotone" 
-          dataKey="balance" 
-          stroke="#9D4EDD" 
+        <Area
+          type="monotone"
+          dataKey="balance"
+          stroke="#9D4EDD"
           strokeWidth={2}
-          fill="url(#runwayGradient)" 
+          fill="url(#runwayGradient)"
         />
       </AreaChart>
     </ResponsiveContainer>
   );
 }
 
-export function ComparativeRunwayChart({ 
-  baselineProjections = [], 
-  scenarioProjections = [] 
-}: { 
+export function ComparativeRunwayChart({
+  baselineProjections = [],
+  scenarioProjections = []
+}: {
   baselineProjections: { month: string; balance: number }[],
   scenarioProjections: { month: string; balance: number }[]
 }) {
@@ -258,41 +258,41 @@ export function ComparativeRunwayChart({
             <stop offset="100%" stopColor="#00FF87" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <XAxis 
-          dataKey="month" 
-          axisLine={false} 
+        <XAxis
+          dataKey="month"
+          axisLine={false}
           tickLine={false}
           tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10, fontFamily: 'Outfit' }}
         />
-        <YAxis 
-          axisLine={false} 
+        <YAxis
+          axisLine={false}
           tickLine={false}
           tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10, fontFamily: 'Outfit' }}
           tickFormatter={(v) => `$${v.toLocaleString()}`}
         />
-        <Tooltip 
+        <Tooltip
           contentStyle={customTooltipStyle}
           formatter={(value: any, name: any) => [
-            `$${Number(value).toLocaleString()}`, 
+            `$${Number(value).toLocaleString()}`,
             name === 'baseline' ? 'Baseline Cash' : 'Simulated Cash'
           ]}
         />
-        <Area 
+        <Area
           name="baseline"
-          type="monotone" 
-          dataKey="baseline" 
-          stroke="#FF5E36" 
+          type="monotone"
+          dataKey="baseline"
+          stroke="#FF5E36"
           strokeWidth={2}
           strokeDasharray="4 4"
-          fill="url(#baselineGrad)" 
+          fill="url(#baselineGrad)"
         />
-        <Area 
+        <Area
           name="scenario"
-          type="monotone" 
-          dataKey="scenario" 
-          stroke="#00FF87" 
+          type="monotone"
+          dataKey="scenario"
+          stroke="#00FF87"
           strokeWidth={2.5}
-          fill="url(#scenarioGrad)" 
+          fill="url(#scenarioGrad)"
         />
       </AreaChart>
     </ResponsiveContainer>

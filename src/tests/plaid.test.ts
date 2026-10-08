@@ -1,183 +1,30 @@
-import { expect, test, describe, vi } from 'vitest';
-import { handleApiRequest } from '../server/dispatcher';
-
-// Mock the PlaidService for Hono endpoint testing
-vi.mock('../server/plaid', () => {
-  return {
-    PlaidService: class {
-      createLinkToken = vi.fn().mockResolvedValue('link-sandbox-test-token')
-      
-      exchangePublicToken = vi.fn().mockImplementation((token: string) => {
-        return Promise.resolve({
-          accessToken: `mock_access_token_${token.includes('svb') ? 'svb' : 'chase'}`,
-          itemId: 'item-sandbox-123'
-        });
-      })
-      
-      getAccounts = vi.fn().mockImplementation((_token: string) => {
-        return Promise.resolve([
-          {
-            account_id: 'mock_chase_checking',
-            name: 'Chase Business Checking',
-            type: 'depository',
-            subtype: 'checking',
-            balances: { current: 125450.00, available: 125450.00, iso_currency_code: 'USD' }
-          }
-        ]);
-      })
-      
-      getTransactions = vi.fn().mockImplementation((_token: string, _start: string, _end: string) => {
-        return Promise.resolve([
-          {
-            transaction_id: 'tx_chase_checking_aws',
-            account_id: 'mock_chase_checking',
-            amount: 850.00,
-            merchant_name: 'Amazon Web Services',
-            name: 'AWS Cloud Services',
-            category: ['Service', 'Technology'],
-            date: '2026-05-20',
-          }
-        ]);
-      })
-    }
-  };
-});
-
-interface PlaidTestEnv {
-  PLAID_CLIENT_ID?: string;
-  PLAID_SECRET?: string;
-  PLAID_ENV?: string;
-  GEMINI_API_KEY?: string;
-  DB?: any;
-}
-
-describe('Plaid Endpoint Routing Tests', () => {
-  test('POST /api/plaid/create-link-token returns a link token', async () => {
-    const env: PlaidTestEnv = {
-      PLAID_CLIENT_ID: 'test-client-id',
-      PLAID_SECRET: 'test-secret',
-      PLAID_ENV: 'sandbox',
-      DB: {
-        prepare: vi.fn().mockReturnValue({
-          bind: vi.fn().mockReturnThis(),
-          run: vi.fn().mockResolvedValue({ success: true }),
-        }),
-      },
-    };
-
-    const res = await handleApiRequest(new Request('http://localhost' + '/api/plaid/create-link-token', {
-      method: 'POST',
-    }), env);
-
-    expect(res.status).toBe(200);
-    // SAFETY: Response contains linkToken
-    const data = (await res.json()) as { linkToken: string };
-    expect(data.linkToken).toBe('link-sandbox-test-token');
-  });
-
-  test('POST /api/plaid/exchange-token performs flow successfully', async () => {
-    const env: PlaidTestEnv = {
-      PLAID_CLIENT_ID: 'test-client-id',
-      PLAID_SECRET: 'test-secret',
-      PLAID_ENV: 'sandbox',
-      GEMINI_API_KEY: 'test-gemini-key',
-      DB: {
-        prepare: vi.fn().mockReturnValue({
-          bind: vi.fn().mockReturnThis(),
-          run: vi.fn().mockResolvedValue({ success: true }),
-          get: vi.fn().mockResolvedValue(null),
-          all: vi.fn().mockResolvedValue({ results: [] }),
-          raw: vi.fn().mockResolvedValue([]),
-        }),
-      },
-    };
-
-    const res = await handleApiRequest(new Request('http://localhost' + '/api/plaid/exchange-token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ publicToken: 'mock_public_token_chase', institutionName: 'Chase Bank' }),
-    }), env);
-
-    if (res.status === 500) {
-      const errBody = await res.json();
-      console.error("EXCHANGE TOKEN 500 ERROR:", errBody);
-    }
-
-    expect(res.status).toBe(200);
-    // SAFETY: Response contains exchange success payload
-    const data = (await res.json()) as { success: boolean; itemId: string };
-    expect(data.success).toBe(true);
-    expect(data.itemId).toBe('item-sandbox-123');
-  });
-
-  test('POST /api/plaid/sync-transactions synchronizes accounts and transactions', async () => {
-    const env: PlaidTestEnv = {
-      PLAID_CLIENT_ID: 'test-client-id',
-      PLAID_SECRET: 'test-secret',
-      PLAID_ENV: 'sandbox',
-      GEMINI_API_KEY: 'test-gemini-key',
-      DB: {
-        prepare: vi.fn().mockImplementation((sql: string) => {
-          const isConnectionQuery = sql.toLowerCase().includes('plaid_connection');
-          return {
-            bind: vi.fn().mockReturnThis(),
-            run: vi.fn().mockResolvedValue({ success: true }),
-            get: vi.fn().mockResolvedValue(null),
-            all: vi.fn().mockImplementation(() => {
-              if (isConnectionQuery) {
-                return Promise.resolve({
-                  results: [
-                    {
-                      id: 'conn-123',
-                      userId: 'test-user',
-                      accessToken: 'mock_access_token_chase',
-                      itemId: 'item-sandbox-123',
-                      institutionName: 'Chase Bank',
-                      status: 'active',
-                      createdAt: new Date(),
-                      updatedAt: new Date(),
-                    }
-                  ]
-                });
-              }
-              return Promise.resolve({ results: [] });
-            }),
-            raw: vi.fn().mockImplementation(() => {
-              if (isConnectionQuery) {
-                return Promise.resolve([
-                  [
-                    'conn-123',
-                    'test-user',
-                    'mock_access_token_chase',
-                    'item-sandbox-123',
-                    'Chase Bank',
-                    'active',
-                    new Date(),
-                    new Date()
-                  ]
-                ]);
-              }
-              return Promise.resolve([]);
-            }),
-          };
-        }),
-      },
-    };
-
-    const res = await handleApiRequest(new Request('http://localhost' + '/api/plaid/sync-transactions', {
-      method: 'POST',
-    }), env);
-
-    if (res.status === 500) {
-      const errBody = await res.json();
-      console.error("SYNC TRANSACTIONS 500 ERROR:", errBody);
-    }
-
-    expect(res.status).toBe(200);
-    // SAFETY: Response contains sync transaction counts
-    const data = (await res.json()) as { success: boolean; accountsSynced: number; newTransactionsSynced: number };
-    expect(data.success).toBe(true);
-    expect(data.accountsSynced).toBe(1);
-    expect(data.newTransactionsSynced).toBe(1);
-  });
-});
+// @vitest-environment node
+import { beforeEach, expect, test } from 'vitest'
+import { http, HttpResponse } from 'msw'
+import { handleApiRequest } from './mocks/apiHarness'
+import { createRealSqliteD1 } from './mocks/d1Simulator'
+import { server } from './mocks/server'
+let env: any
+async function request(path: string, body?: object) { return handleApiRequest(new Request('http://localhost' + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) }), env) }
+beforeEach(async () => { env = { DB: await createRealSqliteD1(), TEST_USER_ID:'founder', PLAID_CLIENT_ID:'protocol-client',PLAID_SECRET:'protocol-secret' }; const now = Math.floor(Date.now()/1000); await env.DB.prepare('INSERT INTO user (id,name,email,email_verified,created_at,updated_at) VALUES (?,?,?,?,?,?)').bind('founder','Founder','founder@test.local',1,now,now).run() })
+test('bank imports page real provider responses and repeated sync retains one account and transaction', async () => {
+ server.use(
+  http.post('https://sandbox.plaid.com/item/public_token/exchange',()=>HttpResponse.json({access_token:'access-fixture',item_id:'item-fixture'})),
+  http.post('https://sandbox.plaid.com/accounts/balance/get',()=>HttpResponse.json({accounts:[{account_id:'bank-fixture',name:'Operating',type:'depository',subtype:'checking',balances:{current:1234.56,iso_currency_code:'USD'}}]})),
+  http.post('https://sandbox.plaid.com/transactions/get',()=>HttpResponse.json({transactions:[{transaction_id:'expense-fixture',account_id:'bank-fixture',amount:12.34,date:'2026-10-01',name:'Software',category:['Software']}],total_transactions:1})),
+ )
+ expect((await request('/api/plaid/exchange-token',{publicToken:'public-fixture'})).status).toBe(200)
+ expect((await request('/api/plaid/sync-transactions')).status).toBe(200)
+ const accounts = await env.DB.prepare('SELECT * FROM financial_account').all(); const transactions = await env.DB.prepare('SELECT * FROM "transaction"').all()
+ expect(accounts.results).toHaveLength(1); expect(accounts.results[0].balance).toBe(123456)
+ expect(transactions.results).toHaveLength(1); expect(transactions.results[0].amount).toBe(-1234)
+ expect((await request('/api/plaid/sync-transactions')).status).toBe(200)
+ expect((await env.DB.prepare('SELECT * FROM "transaction"').all()).results).toHaveLength(1)
+})
+test('missing credentials and fabricated Link tokens cannot create banking records', async () => {
+ env.PLAID_SECRET = undefined
+ expect((await request('/api/plaid/create-link-token')).status).toBe(503)
+ env.PLAID_SECRET = 'protocol-secret'
+ expect((await request('/api/plaid/exchange-token',{publicToken:'mock_public_token'})).status).toBe(400)
+ expect((await env.DB.prepare('SELECT * FROM financial_account').all()).results).toEqual([])
+})

@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { handleApiRequest } from '../../server/dispatcher';
+import { handleApiRequest } from '../mocks/apiHarness';
 
 export type DbValue = string | number | boolean | null | undefined;
 export type DbRow = Record<string, DbValue>;
@@ -94,17 +94,17 @@ export class MockD1Database {
       if (!this.tables[tableName]) {
         this.tables[tableName] = [];
       }
-      
+
       const colsMatch = sql.match(/INSERT INTO\s+\w+\s*\(([^)]+)\)/i);
       if (!colsMatch) throw new Error(`MockD1: Malformed INSERT statement: ${sql}`);
       const columns = colsMatch[1].split(',').map(c => c.trim().replace(/['"`]/g, ''));
-      
+
       const newRecord: DbRow = {};
       columns.forEach((col, idx) => {
         // SAFETY: Mock D1 bound params represent scalar column values
         newRecord[col] = params[idx] as DbValue;
       });
-      
+
       this.tables[tableName].push(newRecord);
       return { success: true, meta: { changes: 1 } };
     }
@@ -117,18 +117,18 @@ export class MockD1Database {
         this.tables[tableName] = [];
       }
       let filtered = [...this.tables[tableName]];
-      
+
       if (sql.includes('WHERE') || sql.includes('where')) {
         const whereClause = sql.split(/WHERE/i)[1].split(/LIMIT|ORDER/i)[0].trim();
-        
+
         // Match specific Drizzle-generated SQL patterns for contracts
         if (tableName === 'contract' && whereClause === 'user_id = ?') {
           const userId = params[0];
           filtered = filtered.filter(item => item.user_id === userId);
         } else if (
           tableName === 'contract' && (
-            whereClause === '(contract.id = ? and contract.user_id = ?)' || 
-            whereClause === 'contract.id = ? and contract.user_id = ?' || 
+            whereClause === '(contract.id = ? and contract.user_id = ?)' ||
+            whereClause === 'contract.id = ? and contract.user_id = ?' ||
             whereClause === 'id = ? and user_id = ?'
           )
         ) {
@@ -197,7 +197,7 @@ export class MockD1Database {
       if (!this.tables[tableName]) {
         this.tables[tableName] = [];
       }
-      
+
       const setPart = sql.split(/SET/i)[1].split(/WHERE/i)[0].trim();
       const wherePart = sql.split(/WHERE/i)[1].trim();
 
@@ -282,7 +282,7 @@ export async function dispatchRequest(
   const headers = {
     'Content-Type': 'application/json',
   } satisfies Record<string, string>;
-  
+
   const request = new Request(`http://localhost${path}`, {
     method,
     headers,

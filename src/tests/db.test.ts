@@ -1,5 +1,5 @@
 import { expect, test, describe } from 'vitest';
-import { handleApiRequest } from '../server/dispatcher';
+import { handleApiRequest } from './mocks/apiHarness';
 
 describe('Database Integration', () => {
   test('GET /api/users is not exposed to authenticated users', async () => {

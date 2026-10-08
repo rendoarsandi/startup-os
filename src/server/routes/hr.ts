@@ -1,6 +1,8 @@
+import type { DrizzleD1Database } from 'drizzle-orm/d1';
+import type { AppEnv } from '../env';
 import { eq, and, desc } from 'drizzle-orm';
 import { employees, attendance, leaveRequests, expenseClaims } from '../../db/schema';
-import { GeminiService } from '../gemini';
+import { createAIService } from '../ai';
 import { v4 as uuidv4 } from 'uuid';
 import {
   decodeEmployee,
@@ -14,7 +16,7 @@ import {
 } from '../schemas';
 import { getValidatedBody, jsonResponse, matchRoute } from '../utils';
 
-export async function handleHrRoutes(request: Request, path: string, method: string, db: any, userId: string, env: any): Promise<Response | null> {
+export async function handleHrRoutes(request: Request, path: string, method: string, db: DrizzleD1Database, userId: string, env: AppEnv): Promise<Response | null> {
   if (path === '/api/hr/employees') {
     if (method === 'GET') {
       const results = await db.select().from(employees).where(eq(employees.userId, userId)).all();
@@ -35,6 +37,7 @@ export async function handleHrRoutes(request: Request, path: string, method: str
         updatedAt: new Date()
       };
       const existing = await db.select().from(employees).where(and(eq(employees.id, newEmployee.id), eq(employees.userId, userId))).get();
+      if (body.id && !existing) return jsonResponse({ error: 'Employee not found.' }, 404);
       if (existing) {
         await db.update(employees).set({
           name: newEmployee.name,
@@ -52,12 +55,12 @@ export async function handleHrRoutes(request: Request, path: string, method: str
   }
 
   if (path === '/api/hr/generate-doc' && method === 'POST') {
-    const gemini = new GeminiService(env.GEMINI_API_KEY);
+    const gemini = createAIService(env);
     const { docType, title, department, salary, details } = await getValidatedBody(request, decodeGenerateDoc);
     let prompt: string;
     if (docType === "job_description") {
-      prompt = `Create a professional Job Description for a "${title}" in the "${department}" department. 
-      Salary Range: ${salary}. 
+      prompt = `Create a professional Job Description for a "${title}" in the "${department}" department.
+      Salary Range: ${salary}.
       Additional details/responsibilities: ${details || 'None'}.
       Include:
       - Position Summary
@@ -67,8 +70,8 @@ export async function handleHrRoutes(request: Request, path: string, method: str
     } else if (docType === "offer_letter") {
       prompt = `Draft a standard professional Employee Offer Letter for a candidate named "${details || 'Candidate Name'}" for the position of "${title}" in the "${department}" department.
       Annual Base Salary: ${salary}.
-      Assume start date is two weeks from today.
-      Include standard sections: Job Title, Salary, Benefits (medical, dental, 401k), At-Will Employment statement, and sign-off blocks.`;
+      Use placeholders for any unprovided start date and benefits.
+      Include standard sections: Job Title, Salary, Benefits (only if explicitly provided), employment terms for human review, and sign-off blocks.`;
     } else {
       prompt = `Draft a company HR Policy regarding "${title}" for the "${department}" department / general company-wide policy.
       Key constraints/context: ${details || 'None'}.
@@ -121,11 +124,11 @@ export async function handleHrRoutes(request: Request, path: string, method: str
     const existing = await db.select().from(attendance).where(
       and(eq(attendance.userId, userId), eq(attendance.employeeId, body.employeeId))
     ).all();
-    
+
     const activeRecord = existing
       .filter((a: any) => new Date(a.date).getTime() >= today.getTime())
       .find((a: any) => !a.clockOut);
-      
+
     if (activeRecord) {
       await db.update(attendance).set({ clockOut: nowStr }).where(eq(attendance.id, activeRecord.id)).run();
       return jsonResponse({ success: true });
@@ -144,7 +147,8 @@ export async function handleHrRoutes(request: Request, path: string, method: str
         and(eq(employees.id, body.employeeId), eq(employees.userId, userId))
       ).get();
       if (!employee) return jsonResponse({ error: "Employee not found" }, 404);
-      const newLeave = {
+      if (new Date(body.endDate) < new Date(body.startDate)) return jsonResponse({ error: 'End date must follow start date.' }, 400);
+      const newLeave: typeof leaveRequests.$inferInsert = {
         id: uuidv4(),
         userId,
         employeeId: body.employeeId,
@@ -165,8 +169,8 @@ export async function handleHrRoutes(request: Request, path: string, method: str
   if (leaveParams && method === 'PUT') {
     const id = leaveParams.id;
     const { status } = await getValidatedBody(request, decodeUpdateLeaveStatus);
-    await db.update(leaveRequests).set({ status, updatedAt: new Date() }).where(and(eq(leaveRequests.id, id), eq(leaveRequests.userId, userId))).run();
-    return jsonResponse({ success: true });
+    const updated = await db.update(leaveRequests).set({ status, updatedAt: new Date() }).where(and(eq(leaveRequests.id, id), eq(leaveRequests.userId, userId))).returning().get();
+    return updated ? jsonResponse({ success: true }) : jsonResponse({ error: 'Leave request not found.' }, 404);
   }
 
   if (path === '/api/hr/expenses') {
@@ -180,7 +184,7 @@ export async function handleHrRoutes(request: Request, path: string, method: str
         and(eq(employees.id, body.employeeId), eq(employees.userId, userId))
       ).get();
       if (!employee) return jsonResponse({ error: "Employee not found" }, 404);
-      const newClaim = {
+      const newClaim: typeof expenseClaims.$inferInsert = {
         id: uuidv4(),
         userId,
         employeeId: body.employeeId,
@@ -200,8 +204,8 @@ export async function handleHrRoutes(request: Request, path: string, method: str
   if (expenseParams && method === 'PUT') {
     const id = expenseParams.id;
     const { status } = await getValidatedBody(request, decodeUpdateExpenseStatus);
-    await db.update(expenseClaims).set({ status }).where(and(eq(expenseClaims.id, id), eq(expenseClaims.userId, userId))).run();
-    return jsonResponse({ success: true });
+    const updated = await db.update(expenseClaims).set({ status }).where(and(eq(expenseClaims.id, id), eq(expenseClaims.userId, userId))).returning().get();
+    return updated ? jsonResponse({ success: true }) : jsonResponse({ error: 'Expense claim not found.' }, 404);
   }
 
   return null;

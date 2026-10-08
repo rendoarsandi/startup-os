@@ -12,16 +12,7 @@ export async function createRealSqliteD1() {
   const db: SqlJsDatabase = new SQLModule.Database();
 
   if (!cachedStatements) {
-    const migration0Path = path.resolve(process.cwd(), 'drizzle/0000_striped_falcon.sql');
-    const migration1Path = path.resolve(process.cwd(), 'drizzle/0001_overrated_stephen_strange.sql');
-
-    const migration0 = fs.existsSync(migration0Path) ? fs.readFileSync(migration0Path, 'utf-8') : '';
-    const migration1 = fs.existsSync(migration1Path) ? fs.readFileSync(migration1Path, 'utf-8') : '';
-
-    cachedStatements = (migration0 + '\n' + migration1)
-      .split('--> statement-breakpoint')
-      .map(s => s.trim())
-      .filter(Boolean);
+    cachedStatements = fs.readdirSync(path.resolve('drizzle')).filter(name => name.endsWith('.sql')).sort().flatMap(name => fs.readFileSync(path.resolve('drizzle', name), 'utf8').split('--> statement-breakpoint').map(s => s.trim()).filter(Boolean));
   }
 
   for (const stmt of cachedStatements) {
@@ -54,7 +45,7 @@ export async function createRealSqliteD1() {
           const changes = db.getRowsModified();
           return { success: true, meta: { changes, duration: 0 } };
         },
-        async all() {
+        execute() {
           const stmt = db.prepare(sql);
           stmt.bind(boundValues);
           const results: any[] = [];
@@ -64,6 +55,7 @@ export async function createRealSqliteD1() {
           stmt.free();
           return { results, success: true, meta: { duration: 0, changes: 0 } };
         },
+        async all() { return this.execute(); },
         async raw(options?: { columnNames?: boolean }) {
           const stmt = db.prepare(sql);
           stmt.bind(boundValues);
@@ -78,6 +70,11 @@ export async function createRealSqliteD1() {
           return rows;
         }
       };
+    },
+    async batch(statements: any[]) {
+      db.run('BEGIN');
+      try { const results = statements.map(statement => statement.execute()); db.run('COMMIT'); return results; }
+      catch (error) { db.run('ROLLBACK'); throw error; }
     },
     async exec(query: string) {
       db.run(query);
